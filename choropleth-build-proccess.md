@@ -40,7 +40,7 @@
 | ---- | ------------------------------------------------------------------------------------------------- | ------------ |
 | 14   | Limpieza: borrar `placeholder`; `@types/geojson` y `topojson-specification` a `dependencies`      | ✅ Hecho     |
 | 15   | `map-store`: hover, foco, puntero y estado fuera de `Root`                                        | ✅ Hecho*    |
-| 16   | `MapItem` unificado (regiones + puntos) y Pointer Events                                          | ⏳ Pendiente |
+| 16   | `MapItem` unificado (regiones + puntos) y Pointer Events                                          | ✅ Hecho*    |
 | 17   | Selección controlada / no controlada y `dimOthers`                                                | ⏳ Pendiente |
 | 18   | `labels` (i18n): fuera los textos en español fijos                                                | ⏳ Pendiente |
 | 19   | Geometría robusta: regiones sin id, `filterFeatures`, trazos no escalables, `aspectRatio: "auto"` | ⏳ Pendiente |
@@ -1536,3 +1536,94 @@ ambos desaparecen.
 - ¿Por qué `useMapStore` necesita un selector y qué pasa si devuelve un objeto nuevo cada vez?
 - ¿Por qué `Regions` lee `store.getState()` en el manejador en lugar de suscribirse?
 - ¿Cómo demuestra el test que `Root` no se re-renderiza, y por qué hay un test de control?
+
+---
+
+# Paso 16: `MapItem` unificado y Pointer Events
+
+Archivos nuevos: `src/react/map-item.ts`. Tocan: `core/variants.ts` (`Bubble.coordinates`),
+`map-store.ts`, `use-choropleth.ts`, `Regions`, `Bubbles`, `Selection`, `Tooltip`, `Root` y
+`styles.css`. Corrige el problema n.º 5 de la revisión (R.2).
+
+## 16.1 El problema
+
+- Solo había eventos de ratón (`onMouseEnter`…): no funcionaban bien con táctil ni con lápiz.
+- Las burbujas con coordenadas propias (tiendas) no recibían eventos: `pointer-events: none`.
+- `RegionEvent` solo describía regiones. Una tienda no es una región, pero el consumidor quiere **un**
+  handler y **un** tooltip.
+
+## 16.2 Qué se hizo
+
+**Un tipo para todo lo interactivo** (`dd.md §9.2`): `MapItem<TDatum>` es una unión discriminada por `kind`.
+
+| `kind`     | Qué es                                                                    | Campos propios                                                          |
+| ---------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `"region"` | Una región del mapa                                                       | `feature`, `datum` (`undefined` = sin dato)                             |
+| `"point"`  | Una burbuja con coordenadas propias (`getCoordinates`), p. ej. una tienda | `coordinates`, `datum`, `feature` (la región de debajo, si el id cruza) |
+
+Ambos llevan `level` y `drillable`. Mientras no exista el drill, `level` es siempre `{ id: "root", depth: 0 }` y
+`drillable` es `false`. Están ya en el tipo para no romper la API otra vez en la fase C.
+
+**API (se rompe sin alias, permitido antes de 1.0):**
+
+| Antes                                   | Ahora                                                                       |
+| --------------------------------------- | --------------------------------------------------------------------------- |
+| `onRegionClick(event)`                  | `onItemClick(item: MapItem)`                                                |
+| `onRegionHover(event \| null)`          | `onItemHover(item: MapItem \| null)`                                        |
+| `RegionEvent`                           | `MapItem` (`RegionItem` \| `PointItem`)                                     |
+| `getRegionProps` → `onMouseEnter/Leave` | `onPointerEnter/Leave`; nuevo `getPointProps` para `<circle>` de un punto   |
+| `TooltipContext` = región + valor/color | `ItemContext` = `MapItem` + `value`, `formattedValue`, `color`, **`label`** |
+| Store: `hoveredId: string \| null`      | `hovered: { kind, id } \| null` (un punto y una región pueden compartir id) |
+
+El consumidor recibe en `onItemClick` / `onItemHover` un **superconjunto** de `MapItem` (también `value`, `color` y
+`label`): es el mismo objeto que usa el tooltip.
+
+**Dónde vive la lógica.** `useChoropleth` ahora devuelve `hoverItem(ref)`, `clickItem(ref)` y
+`getItemContext(ref)`. `hoverItem` **no hace nada si el item no cambia** (ni toca el store ni llama a
+`onItemHover`), así que el dedupe que antes tenía `Regions` está en un solo sitio y lo heredan el nivel 2 y el 3.
+
+**Burbujas: dos tipos con interacción distinta.**
+
+- En el **centroide de una región** (`coordinates: null`): siguen sin capturar el ratón; el item es la región de debajo.
+- Con **coordenadas propias**: `pointer-events: auto` en su `<circle>` (el `none` del grupo se hereda y se anula
+  ahí). Hover, clic, tooltip y un anillo de hover en `Selection`.
+
+**Táctil.** No hay hover, y el navegador manda `pointerleave` justo al levantar el dedo, lo que quitaría la vista
+previa al instante. Por eso, con `pointerType === "touch"`: el primer toque deja el tooltip y el resalte (vista
+previa) y **se ignora `pointerleave`**; tocar el océano lo quita. `Root` actualiza la posición también en
+`pointerdown`, porque un toque no genera `pointermove`.
+
+## 16.3 Decisiones y desviaciones respecto a `dd.md §21`
+
+| Decisión                                                                                                   | Motivo                                                                                                                                                                                               |
+| ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **El «segundo toque = acción» NO está.** Hoy un toque deja la vista previa y además llama a `onItemClick`. | Esa regla de `dd.md §11.2.5` aplica a items **navegables** (`drillable`), y todavía no hay ninguno. Implementarla ahora sería código muerto sin comportamiento que probar. Va con el drill (fase C). |
+| **Tocar fuera del mapa no quita la vista previa táctil.** Solo la quita tocar el océano o otra región.     | Detectarlo exige un listener global en `document`. Limitación conocida; se resuelve cuando haya más estado táctil (drill).                                                                           |
+| **`selectedId` sigue siendo solo de regiones.**                                                            | La selección de puntos va en el paso 17 (selección controlada/no controlada).                                                                                                                        |
+| El texto «Sin dato» sigue fijo en español en el tooltip.                                                   | Es el paso 18 (`labels`).                                                                                                                                                                            |
+| `ItemContext.label` = `properties.name` de la región, o el id.                                             | Para un punto sin región cruzada es su id; el consumidor puede usar `renderTooltip` para mostrar lo suyo (`datum`).                                                                                  |
+
+## 16.4 Tests
+
+212 en verde (205 + 7 nuevos), `typecheck`, `lint` y `build` limpios; cobertura de `core` sin cambios.
+Nuevos: un punto tiene hover/clic/tooltip/anillo y se desmonta al salir; las burbujas de centroide siguen sin
+capturar; un punto y una región con el mismo id no se confunden; el punto enlaza su `feature`; táctil conserva la
+vista previa tras `pointerleave`; con ratón, `pointerleave` sí quita el hover; `Bubble.coordinates` en `core`.
+Los tests de hover que usaban `mouse*` pasan a `pointer*`, y el contador de renders de `Root` del paso 15 sigue en verde.
+
+## 16.5 Verificación visual (pendiente de ti) \*
+
+No he abierto Storybook. Revisa con `pnpm storybook`:
+
+1. **Variants → BubbleStores**: pasar el ratón por una tienda la resalta con un anillo y muestra su tooltip;
+   no hay hover de región debajo mientras estás sobre la burbuja.
+2. **Variants → BubbleOnCountries**: el hover sigue funcionando a través de las burbujas (la región, no la burbuja).
+3. En un móvil o con el modo táctil de las DevTools: el primer toque deja el tooltip fijo; tocar el mar lo quita.
+4. El resto de stories: hover y clic como en el paso 15.
+
+## 16.6 Antes de pasar al paso 17: ¿lo tienes claro?
+
+- ¿Por qué `hovered` guarda `{ kind, id }` y no solo el id?
+- ¿Por qué las burbujas de centroide no capturan eventos pero las de tienda sí?
+- ¿Qué problema habría en táctil si se tratara `pointerleave` igual que con ratón?
+- ¿Por qué `hoverItem` comprueba que el item haya cambiado antes de llamar a `onItemHover`?

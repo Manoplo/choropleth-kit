@@ -1,11 +1,12 @@
 import { useSyncExternalStore } from "react";
+import type { ItemRef } from "./map-item";
 
 export type PointerPosition = { x: number; y: number };
 
 /** Estado de interacción del mapa. Vive FUERA de React (dd.md §11.0, §12.1 y §14). */
 export type MapState = {
-  /** Región bajo el cursor. */
-  hoveredId: string | null;
+  /** Item (región o punto) bajo el cursor o con el primer toque (táctil). */
+  hovered: ItemRef | null;
   /** Posición del cursor relativa al contenedor; `null` si está fuera. */
   pointer: PointerPosition | null;
 };
@@ -17,7 +18,7 @@ export type MapStore = {
   setState: (patch: Partial<MapState>) => void;
 };
 
-const INITIAL_STATE: MapState = { hoveredId: null, pointer: null };
+const INITIAL_STATE: MapState = { hovered: null, pointer: null };
 
 /**
  * Hover, puntero y (más adelante) foco, cámara confirmada y `interacting`.

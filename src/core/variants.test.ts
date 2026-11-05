@@ -148,11 +148,23 @@ describe("resolveVariant · bubble", () => {
       ["s1", 2, 4],
       ["s2", 6, 8],
     ]);
+    // Las coordenadas propias viajan con la burbuja: así la UI sabe que es un punto, no una región.
+    expect(r.bubbles.map((b) => b.coordinates).sort()).toEqual([
+      [1, 2],
+      [3, 4],
+    ]);
   });
 
   it("región sin centroide no recibe burbuja", () => {
     const r = run(bubble, { centroids: [null, [20, 20], null] });
 
     expect(r.bubbles.map((b) => b.id)).toEqual(["B"]);
+  });
+
+  it("burbuja en el centroide de una región: `coordinates` es null", () => {
+    const r = run(bubble);
+
+    expect(r.bubbles.length).toBeGreaterThan(0);
+    expect(r.bubbles.every((b) => b.coordinates === null)).toBe(true);
   });
 });

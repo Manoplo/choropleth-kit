@@ -78,6 +78,11 @@ export type Bubble<TDatum> = {
   value: number;
   colorValue: number | null;
   datum: TDatum;
+  /**
+   * [lon, lat] propios del dato (`getCoordinates`), o `null` si la burbuja está en el centroide de
+   * su región. Distingue un punto (tienda) de la burbuja de una región, a efectos de interacción.
+   */
+  coordinates: Point | null;
 };
 
 export type VariantResult<TDatum> = {
@@ -180,19 +185,21 @@ const resolveBubbles = <TDatum>(
   const values = entries.map((e) => (e.datum === undefined ? null : config.getValue(e.datum)));
 
   // Posición: por coordenadas propias del dato (tiendas) o por el centroide de su región (países).
-  type Source = { id: string; datum: TDatum; at: Point };
+  type Source = { id: string; datum: TDatum; at: Point; coordinates: Point | null };
   const sources: Source[] = [];
   if (config.getCoordinates !== undefined) {
     for (const datum of data) {
       const coordinates = config.getCoordinates(datum);
       const at = coordinates === null ? null : project(coordinates);
-      if (at !== null) sources.push({ id: getId(datum), datum, at });
+      if (coordinates !== null && at !== null) {
+        sources.push({ id: getId(datum), datum, at, coordinates });
+      }
     }
   } else {
     entries.forEach((entry, index) => {
       const at = centroids[index];
       if (entry.id !== undefined && entry.datum !== undefined && at != null) {
-        sources.push({ id: entry.id, datum: entry.datum, at });
+        sources.push({ id: entry.id, datum: entry.datum, at, coordinates: null });
       }
     });
   }
@@ -234,6 +241,7 @@ const resolveBubbles = <TDatum>(
       value: s.value,
       colorValue: colorValues[i] ?? null,
       datum: s.datum,
+      coordinates: s.coordinates,
     }))
     // Las grandes primero: las pequeñas se dibujan encima y no quedan tapadas.
     .sort((a, b) => b.r - a.r);

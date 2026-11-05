@@ -59,7 +59,7 @@ const Preset = ({ variant, legend, legendPosition, themed }: Props) => {
         formatValue={(v) => `${v} %`}
         legend={legend ? { title: "Variación vs A-1", position: legendPosition } : false}
         selectedId={selectedId}
-        onRegionClick={({ id }) => setSelectedId((cur) => (cur === id ? null : id))}
+        onItemClick={({ id }) => setSelectedId((cur) => (cur === id ? null : id))}
         ariaLabel="Variación por país (datos sintéticos)"
       />
     </div>

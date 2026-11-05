@@ -36,7 +36,7 @@ const CompoundMap = ({ variant, customTooltip, showCount }: Props) => {
         variant={variant}
         formatValue={(v) => `${v} %`}
         selectedId={selectedId}
-        onRegionClick={({ id }) => setSelectedId((cur) => (cur === id ? null : id))}
+        onItemClick={({ id }) => setSelectedId((cur) => (cur === id ? null : id))}
       >
         <Choropleth.Svg ariaLabel="Mapa del mundo con datos sintéticos" />
         {/* La leyenda es HTML: va fuera del <svg>, como hermana, y se posiciona con CSS. */}

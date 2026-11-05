@@ -2,11 +2,20 @@ export { useChoropleth } from "./use-choropleth";
 export type {
   JoinReport,
   Region,
-  RegionEvent,
+  PointProps,
   RegionProps,
   UseChoroplethOptions,
   UseChoroplethResult,
 } from "./use-choropleth";
+export { ROOT_LEVEL } from "./map-item";
+export type {
+  DrillLevelInfo,
+  ItemContext,
+  ItemRef,
+  MapItem,
+  PointItem,
+  RegionItem,
+} from "./map-item";
 export { createMapStore, useMapStore } from "./map-store";
 export type { MapState, MapStore, PointerPosition } from "./map-store";
 export { useContainerSize } from "./use-container-size";

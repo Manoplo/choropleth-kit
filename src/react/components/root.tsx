@@ -1,4 +1,4 @@
-import type { CSSProperties, MouseEvent, ReactNode } from "react";
+import type { CSSProperties, PointerEvent, ReactNode } from "react";
 import { ChoroplethContext } from "../choropleth-context";
 import {
   useChoropleth,
@@ -28,7 +28,7 @@ export const Root = <TDatum,>({
   const choropleth = useChoropleth<TDatum>(options as UseChoroplethOptions<TDatum>);
   const { containerRef, store } = choropleth;
 
-  const handleMove = (event: MouseEvent<HTMLDivElement>) => {
+  const handlePointer = (event: PointerEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     store.setState({ pointer: { x: event.clientX - rect.left, y: event.clientY - rect.top } });
   };
@@ -43,8 +43,12 @@ export const Root = <TDatum,>({
         // `relative`: el tooltip y la leyenda se posicionan respecto a este contenedor.
         data-unstyled={unstyled ? "" : undefined}
         style={{ position: "relative", ...style }}
-        onMouseMove={handleMove}
-        onMouseLeave={() => store.setState({ pointer: null })}
+        // `pointerdown` además de `move`: un toque no mueve el puntero, y el tooltip necesita posición.
+        onPointerMove={handlePointer}
+        onPointerDown={handlePointer}
+        onPointerLeave={(event) => {
+          if (event.pointerType !== "touch") store.setState({ pointer: null });
+        }}
       >
         {children}
       </div>

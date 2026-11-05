@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState, type MouseEventHandler } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type MouseEventHandler,
+  type PointerEventHandler,
+} from "react";
 import type { Feature, FeatureCollection, MultiLineString } from "geojson";
 import { geoPath } from "d3-geo";
 import type { Topology } from "topojson-specification";
@@ -20,18 +26,16 @@ import {
   type SizeLegendItem,
   type VariantConfig,
 } from "../core";
+import { isSameItem, ROOT_LEVEL, type ItemContext, type ItemRef, type MapItem } from "./map-item";
 import { createMapStore, type MapStore } from "./map-store";
 import { useContainerSize } from "./use-container-size";
 
-export type RegionEvent<TDatum> = {
+/** Una región lista para pintar. */
+export type Region<TDatum> = {
   id: string;
   feature: Feature;
   /** `undefined` = región sin dato. */
   datum: TDatum | undefined;
-};
-
-/** Una región lista para pintar. */
-export type Region<TDatum> = RegionEvent<TDatum> & {
   /** Atributo `d` del `<path>`. */
   path: string;
   fill: string;
@@ -60,8 +64,10 @@ type BaseOptions<TDatum> = {
   width?: number;
   height?: number;
   selectedId?: string | null;
-  onRegionClick?: (event: RegionEvent<TDatum>) => void;
-  onRegionHover?: (event: RegionEvent<TDatum> | null) => void;
+  /** Clic en una región o en un punto (`item.kind`). */
+  onItemClick?: (item: MapItem<TDatum>) => void;
+  /** Hover (o primer toque, en táctil). `null` al salir. Solo se llama cuando cambia el item. */
+  onItemHover?: (item: MapItem<TDatum> | null) => void;
   /** Se llama cada vez que cambia el resultado del cruce datos↔regiones (también en producción). */
   onJoinReport?: (report: JoinReport) => void;
   /** Aviso en consola de ids sin cruzar. Solo fuera de producción. Por defecto `true`. */
@@ -71,12 +77,21 @@ type BaseOptions<TDatum> = {
 /** Opciones comunes + las de cada `variant` (unión discriminada, ver `core/variants.ts`). */
 export type UseChoroplethOptions<TDatum> = BaseOptions<TDatum> & VariantConfig<TDatum>;
 
+/** Props listas para esparcir en el `<path>` de una región (`<path {...getRegionProps(r)} />`). */
 export type RegionProps = {
   "data-region-id": string;
   "data-selected": true | undefined;
   onClick: MouseEventHandler;
-  onMouseEnter: MouseEventHandler;
-  onMouseLeave: MouseEventHandler;
+  onPointerEnter: PointerEventHandler;
+  onPointerLeave: PointerEventHandler;
+};
+
+/** Props para el `<circle>` de una burbuja con coordenadas propias (un punto). */
+export type PointProps = {
+  "data-point-id": string;
+  onClick: MouseEventHandler;
+  onPointerEnter: PointerEventHandler;
+  onPointerLeave: PointerEventHandler;
 };
 
 export type UseChoroplethResult<TDatum> = {
@@ -98,7 +113,7 @@ export type UseChoroplethResult<TDatum> = {
   joinReport: JoinReport;
   /** Formateador efectivo (el del usuario o el de por defecto), para tooltip y leyenda. */
   formatValue: (value: number) => string;
-  /** `true` si hay `onRegionClick`: los componentes ponen cursor `pointer`. */
+  /** `true` si hay `onItemClick`: los componentes ponen cursor `pointer`. */
   clickable: boolean;
   /**
    * Estado de interacción (hover, puntero) fuera de React. Léelo con `useMapStore(store, s => s.hoveredId)`:
@@ -106,7 +121,14 @@ export type UseChoroplethResult<TDatum> = {
    */
   store: MapStore;
   selectedId: string | null;
+  /** Hover de un item (o `null`). Actualiza el store y llama a `onItemHover` solo si cambia. */
+  hoverItem: (ref: ItemRef | null) => void;
+  /** Clic en un item: llama a `onItemClick`. */
+  clickItem: (ref: ItemRef) => void;
+  /** El item completo (con valor, color y nombre) para el tooltip; `undefined` si ya no existe. */
+  getItemContext: (ref: ItemRef) => ItemContext<TDatum> | undefined;
   getRegionProps: (region: Region<TDatum>) => RegionProps;
+  getPointProps: (bubble: Bubble<TDatum>) => PointProps;
 };
 
 /**
@@ -238,26 +260,93 @@ export const useChoropleth = <TDatum>(
 
   // ── interacción ───────────────────────────────────────────────────────────────────────────────
   const [store] = useState(createMapStore);
-  const { selectedId = null, onRegionClick, onRegionHover } = options;
+  const { selectedId = null, onItemClick, onItemHover } = options;
+
+  const regionsById = new Map(regions.map((region) => [region.id, region]));
+  const featuresById = new Map<string, Feature>();
+  features.features.forEach((feature) => {
+    const id = idOf(feature);
+    if (id !== undefined) featuresById.set(id, feature);
+  });
+  const bubblesById = new Map(
+    variant.bubbles.filter((b) => b.coordinates !== null).map((b) => [b.id, b]),
+  );
+
+  const getItemContext = (ref: ItemRef): ItemContext<TDatum> | undefined => {
+    if (ref.kind === "region") {
+      const region = regionsById.get(ref.id);
+      if (region === undefined) return undefined;
+      return {
+        kind: "region",
+        id: region.id,
+        feature: region.feature,
+        datum: region.datum,
+        level: ROOT_LEVEL,
+        drillable: false,
+        value: region.value,
+        formattedValue: region.formattedValue,
+        color: region.fill,
+        label: nameOf(region.feature) ?? region.id,
+      };
+    }
+    const bubble = bubblesById.get(ref.id);
+    if (bubble?.coordinates == null) return undefined;
+    const feature = featuresById.get(bubble.id);
+    return {
+      kind: "point",
+      id: bubble.id,
+      coordinates: bubble.coordinates,
+      feature,
+      datum: bubble.datum,
+      level: ROOT_LEVEL,
+      drillable: false,
+      value: bubble.value,
+      formattedValue: formatValue(bubble.value),
+      color: bubble.fill,
+      label: (feature === undefined ? undefined : nameOf(feature)) ?? bubble.id,
+    };
+  };
+
+  const hoverItem = (ref: ItemRef | null) => {
+    // Sin cambio no hay nada que contar: ni el store ni el consumidor se enteran.
+    if (isSameItem(store.getState().hovered, ref)) return;
+    store.setState({ hovered: ref });
+    onItemHover?.(ref === null ? null : (getItemContext(ref) ?? null));
+  };
+
+  const clickItem = (ref: ItemRef) => {
+    const item = getItemContext(ref);
+    if (item !== undefined) onItemClick?.(item);
+  };
+
+  // En táctil no hay «salir»: el navegador manda `pointerleave` justo al levantar el dedo, y
+  // quitaría la vista previa al instante. El hover se retira al tocar fuera de cualquier item.
+  const leaveHandler =
+    (ref: ItemRef): PointerEventHandler =>
+    (event) => {
+      if (event.pointerType !== "touch" && isSameItem(store.getState().hovered, ref)) {
+        hoverItem(null);
+      }
+    };
 
   const getRegionProps = (region: Region<TDatum>): RegionProps => {
-    const event: RegionEvent<TDatum> = {
-      id: region.id,
-      feature: region.feature,
-      datum: region.datum,
-    };
+    const ref: ItemRef = { kind: "region", id: region.id };
     return {
       "data-region-id": region.id,
       "data-selected": region.id === selectedId ? true : undefined,
-      onClick: () => onRegionClick?.(event),
-      onMouseEnter: () => {
-        store.setState({ hoveredId: region.id });
-        onRegionHover?.(event);
-      },
-      onMouseLeave: () => {
-        store.setState({ hoveredId: null });
-        onRegionHover?.(null);
-      },
+      onClick: () => clickItem(ref),
+      onPointerEnter: () => hoverItem(ref),
+      onPointerLeave: leaveHandler(ref),
+    };
+  };
+
+  const getPointProps = (bubble: Bubble<TDatum>): PointProps => {
+    const ref: ItemRef = { kind: "point", id: bubble.id };
+    return {
+      "data-point-id": bubble.id,
+      onClick: () => clickItem(ref),
+      onPointerEnter: () => hoverItem(ref),
+      onPointerLeave: leaveHandler(ref),
     };
   };
 
@@ -273,10 +362,14 @@ export const useChoropleth = <TDatum>(
     scale: variant.scale,
     joinReport,
     formatValue,
-    clickable: onRegionClick !== undefined,
+    clickable: onItemClick !== undefined,
     store,
     selectedId,
+    hoverItem,
+    clickItem,
+    getItemContext,
     getRegionProps,
+    getPointProps,
   };
 };
 
@@ -287,6 +380,11 @@ const EMPTY_FILL_VAR = `var(--cm-empty-fill, ${DEFAULT_EMPTY_FILL})`;
 // `process` no existe en un navegador sin bundler; los bundlers lo sustituyen por una constante.
 const isProduction = (): boolean =>
   typeof process !== "undefined" && process.env["NODE_ENV"] === "production";
+
+const nameOf = (feature: Feature): string | undefined => {
+  const name = (feature.properties as { name?: unknown } | null)?.name;
+  return typeof name === "string" ? name : undefined;
+};
 
 const defaultFeatureId = (feature: Feature): string | undefined =>
   feature.id === undefined ? undefined : String(feature.id);

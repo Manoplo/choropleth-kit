@@ -136,9 +136,9 @@ describe("useChoropleth", () => {
   });
 
   it("getRegionProps: click, hover y selección", () => {
-    const onRegionClick = vi.fn<(event: unknown) => void>();
-    const onRegionHover = vi.fn<(event: unknown) => void>();
-    const { result } = setup({ onRegionClick, onRegionHover, selectedId: "B" });
+    const onItemClick = vi.fn<(event: unknown) => void>();
+    const onItemHover = vi.fn<(event: unknown) => void>();
+    const { result } = setup({ onItemClick, onItemHover, selectedId: "B" });
     const [a, b] = result.current.regions;
     if (a === undefined || b === undefined) throw new Error("faltan regiones");
 
@@ -147,15 +147,25 @@ describe("useChoropleth", () => {
     expect(result.current.getRegionProps(a)["data-region-id"]).toBe("A");
 
     act(() => result.current.getRegionProps(a).onClick({} as never));
-    expect(onRegionClick).toHaveBeenCalledWith({ id: "A", feature: a.feature, datum: a.datum });
+    expect(onItemClick).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "region",
+        id: "A",
+        feature: a.feature,
+        datum: a.datum,
+        level: { id: "root", depth: 0 },
+        drillable: false,
+        label: "Alpha",
+      }),
+    );
 
-    act(() => result.current.getRegionProps(a).onMouseEnter({} as never));
-    expect(result.current.store.getState().hoveredId).toBe("A");
-    expect(onRegionHover).toHaveBeenLastCalledWith(expect.objectContaining({ id: "A" }));
+    act(() => result.current.getRegionProps(a).onPointerEnter({} as never));
+    expect(result.current.store.getState().hovered).toEqual({ kind: "region", id: "A" });
+    expect(onItemHover).toHaveBeenLastCalledWith(expect.objectContaining({ id: "A" }));
 
-    act(() => result.current.getRegionProps(a).onMouseLeave({} as never));
-    expect(result.current.store.getState().hoveredId).toBeNull();
-    expect(onRegionHover).toHaveBeenLastCalledWith(null);
+    act(() => result.current.getRegionProps(a).onPointerLeave({} as never));
+    expect(result.current.store.getState().hovered).toBeNull();
+    expect(onItemHover).toHaveBeenLastCalledWith(null);
   });
 
   it("sin handlers, click y hover no fallan", () => {
@@ -165,9 +175,9 @@ describe("useChoropleth", () => {
 
     act(() => {
       result.current.getRegionProps(a).onClick({} as never);
-      result.current.getRegionProps(a).onMouseEnter({} as never);
+      result.current.getRegionProps(a).onPointerEnter({} as never);
     });
-    expect(result.current.store.getState().hoveredId).toBe("A");
+    expect(result.current.store.getState().hovered).toEqual({ kind: "region", id: "A" });
   });
 
   it("omite regiones sin id", () => {
@@ -197,7 +207,7 @@ describe("useChoropleth · diagnóstico", () => {
     rerender({ data: [{ code: "ES", v: 2 }] }); // otro valor, mismo cruce
     const a = result.current.regions[0];
     if (a === undefined) throw new Error("falta región");
-    act(() => result.current.getRegionProps(a).onMouseEnter({} as never));
+    act(() => result.current.getRegionProps(a).onPointerEnter({} as never));
 
     expect(warn()).toHaveBeenCalledTimes(1);
   });

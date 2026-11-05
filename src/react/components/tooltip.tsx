@@ -1,16 +1,10 @@
 import type { ReactNode } from "react";
-import type { RegionEvent } from "../use-choropleth";
+import type { ItemContext } from "../map-item";
 import { useChoroplethContext } from "../choropleth-context";
 import { useMapStore } from "../map-store";
 
-export type TooltipContext<TDatum> = RegionEvent<TDatum> & {
-  /** Número, categoría (`categorical`) o `null` si no hay dato. */
-  value: number | string | null;
-  /** `value` formateado; cadena vacía si no hay valor. */
-  formattedValue: string;
-  /** Color con el que está pintada la región. */
-  color: string;
-};
+/** Lo que recibe el tooltip: el `MapItem` (región o punto) + valor, color y nombre. */
+export type TooltipContext<TDatum> = ItemContext<TDatum>;
 
 export type TooltipProps<TDatum> = {
   className?: string;
@@ -20,11 +14,10 @@ export type TooltipProps<TDatum> = {
 
 const OFFSET = 12;
 
-const DefaultContent = <TDatum,>({ feature, id, formattedValue }: TooltipContext<TDatum>) => {
-  const name = (feature.properties as { name?: unknown } | null)?.name;
+const DefaultContent = <TDatum,>({ label, formattedValue }: TooltipContext<TDatum>) => {
   return (
     <>
-      <strong>{typeof name === "string" ? name : id}</strong>
+      <strong>{label}</strong>
       <div>{formattedValue === "" ? "Sin dato" : formattedValue}</div>
     </>
   );
@@ -40,19 +33,10 @@ const DefaultContent = <TDatum,>({ feature, id, formattedValue }: TooltipContext
 export const Tooltip = <TDatum,>({ className, children }: TooltipProps<TDatum>) => {
   const { choropleth, store } = useChoroplethContext<TDatum>();
   const point = useMapStore(store, (s) => s.pointer);
-  const hoveredId = useMapStore(store, (s) => s.hoveredId);
+  const hovered = useMapStore(store, (s) => s.hovered);
 
-  const region = choropleth.regions.find((r) => r.id === hoveredId);
-  if (region === undefined || point === null) return null;
-
-  const context: TooltipContext<TDatum> = {
-    id: region.id,
-    feature: region.feature,
-    datum: region.datum,
-    value: region.value,
-    formattedValue: region.formattedValue,
-    color: region.fill,
-  };
+  const context = hovered === null ? undefined : choropleth.getItemContext(hovered);
+  if (context === undefined || point === null) return null;
 
   const flipX = point.x > choropleth.width / 2;
   const flipY = point.y > choropleth.height / 2;

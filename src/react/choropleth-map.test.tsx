@@ -27,8 +27,8 @@ describe("ChoroplethMap (preset)", () => {
     expect(container.querySelectorAll("[data-region-id]")).toHaveLength(2);
     expect(screen.getByText("Sin dato")).toBeTruthy();
 
-    fireEvent.mouseOver(container.querySelector('[data-region-id="A"]') as Element);
-    fireEvent.mouseMove(container.querySelector("svg") as Element, { clientX: 5, clientY: 5 });
+    fireEvent.pointerOver(container.querySelector('[data-region-id="A"]') as Element);
+    fireEvent.pointerMove(container.querySelector("svg") as Element, { clientX: 5, clientY: 5 });
     expect(screen.getByRole("tooltip").textContent).toContain("Alpha");
   });
 
@@ -75,25 +75,25 @@ describe("ChoroplethMap (preset)", () => {
     expect(screen.queryByText("Sin dato")).toBeNull();
   });
 
-  it("renderTooltip recibe el datum tipado; onRegionClick y selectedId funcionan", () => {
-    const onRegionClick = vi.fn<(e: { id: string }) => void>();
+  it("renderTooltip recibe el datum tipado; onItemClick y selectedId funcionan", () => {
+    const onItemClick = vi.fn<(e: { id: string }) => void>();
     const { container } = render(
       <ChoroplethMap
         {...common}
         variant="sequential"
         selectedId="B"
-        onRegionClick={onRegionClick}
+        onItemClick={onItemClick}
         renderTooltip={({ datum }) => <span>{`code:${datum?.code}`}</span>}
       />,
     );
     const b = container.querySelector('[data-region-id="B"]') as Element;
 
     fireEvent.click(b);
-    expect(onRegionClick).toHaveBeenCalledWith(expect.objectContaining({ id: "B" }));
+    expect(onItemClick).toHaveBeenCalledWith(expect.objectContaining({ id: "B" }));
     expect(container.querySelector('[data-selection="selected"]')).not.toBeNull();
 
-    fireEvent.mouseOver(b);
-    fireEvent.mouseMove(b, { clientX: 5, clientY: 5 });
+    fireEvent.pointerOver(b);
+    fireEvent.pointerMove(b, { clientX: 5, clientY: 5 });
     expect(screen.getByText("code:B")).toBeTruthy();
   });
 

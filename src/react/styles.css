@@ -59,7 +59,7 @@
   stroke-width: var(--cm-border-width);
 }
 
-.cm-root:not([data-unstyled]) .cm-selection path {
+.cm-root:not([data-unstyled]) .cm-selection :is(path, circle) {
   fill: none;
   /* El trazo no engorda al hacer zoom. */
   vector-effect: non-scaling-stroke;

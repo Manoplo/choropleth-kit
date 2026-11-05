@@ -48,12 +48,12 @@ const HeadlessMap = ({ variant, projection, method, selectable }: MapProps) => {
       classification,
       selectedId,
       emptyLabel: "Sin dato",
-      onRegionClick: selectable
+      onItemClick: selectable
         ? ({ id }) => setSelectedId((cur) => (cur === id ? null : id))
         : undefined,
     });
   // El hover vive fuera del hook: este componente solo se re-renderiza porque lo lee aquí.
-  const hoveredId = useMapStore(store, (s) => s.hoveredId);
+  const hoveredId = useMapStore(store, (s) => s.hovered?.id ?? null);
 
   return (
     <div ref={containerRef} style={{ width: "100%", maxWidth: 1100 }}>
