@@ -21,7 +21,9 @@
 | 5     | Paletas, clasificación y escalas                                 | ✅ Hecho                                               |
 | 6     | Proyección y primer mapa visible                                 | ✅ Hecho                                               |
 | 7     | `core/legend.ts`: leyenda con conteos                            | ✅ Hecho                                               |
-| 8     | Capa React: `use-container-size` + `use-choropleth`              | ⏳ Pendiente                                           |
+| 8     | React nivel 3 (headless): `use-container-size` + `useChoropleth` | ✅ Hecho                                               |
+| 9     | React nivel 2: compound (`Choropleth.Root` + piezas)             | ⏳ Pendiente                                           |
+| 10    | React nivel 1: preset `<ChoroplethMap>`                          | ⏳ Pendiente                                           |
 | …     | (siguientes tareas del §20 de `dd.md`)                           | ⏳ Pendiente                                           |
 
 ---
@@ -817,9 +819,142 @@ en cada clase**. Una leyenda es lo que da significado a los colores.
 
 ---
 
+# Paso 8: la capa React, nivel 3 (headless): `useChoropleth`
+
+Archivos: `src/react/use-container-size.ts`, `src/react/use-choropleth.ts`, `src/core/borders.ts` (+ tests y
+`tests/fixtures.ts`). La story provisional `first-map` pasa a ser `stories/headless.stories.tsx`.
+
+## 8.1 Las tres APIs son UNA implementación
+
+`dd.md §9` define tres niveles. La clave para que **coexistan** es que no son tres códigos, sino tres
+envoltorios de lo mismo:
+
+```
+ core (funciones puras)
+   └─► useChoropleth()            ← Nivel 3 (headless): devuelve DATOS. Este paso.
+         └─► <Choropleth.Root>    ← Nivel 2 (compound): llama al hook y lo reparte por Context.
+               │   <Choropleth.Regions/> <Borders/> <Legend/> <Tooltip/>  leen ese Context
+               └─► <ChoroplethMap>  ← Nivel 1 (preset): Root + las piezas por defecto, ya montado.
+```
+
+| Nivel        | Estado       | Qué añade sobre el anterior                                                     |
+| ------------ | ------------ | ------------------------------------------------------------------------------- |
+| 3 · hook     | ✅ este paso | Todo el cálculo. No pinta nada.                                                 |
+| 2 · compound | ⏳ paso 9    | Un `Context` + componentes que consumen `regions`, `borders`, `legend`.         |
+| 1 · preset   | ⏳ paso 10   | Compone el compound con valores por defecto. `ChoroplethMap` = `Root` + piezas. |
+
+Por eso se construye **de abajo arriba**: si el hook devuelve todo lo necesario, los otros dos son
+trozos de JSX. Y por eso `dd.md` dice «un solo código interno».
+
+## 8.2 `useContainerSize`
+
+Mide un elemento con `ResizeObserver` y devuelve `{ ref, width, height }`. Es el **único `useEffect`** de la
+librería (observar el DOM es un efecto real; lo demás se deriva al renderizar).
+
+- **Nunca devuelve 0.** Un contenedor oculto daría `width = 0` y `createProjection` lanza error. Se ignoran
+  las medidas con ancho 0 y se conserva la anterior.
+- **Tamaño inicial 960 × 500** hasta tener medida (primer render, SSR, jsdom sin `ResizeObserver`).
+- **El alto se deriva del ancho** (`aspectRatio`, por defecto 960/500). Si usáramos el alto medido y el
+  `<svg>` fijara la altura de su contenedor, al estrechar la ventana el alto nunca bajaría y el mapa
+  perdería su proporción. `useContainerHeight: true` usa el alto real si el contenedor tiene altura propia.
+
+## 8.3 `createBorders` (core)
+
+Fronteras interiores como una sola línea, con `mesh(topology, object, (a, b) => a !== b)`. Una frontera
+compartida se dibuja **una vez** (con un `stroke` por país se dibujaría dos veces y se solaparía), y `a !== b`
+descarta las costas. Con **GeoJSON devuelve `null`**: sin topología no se sabe qué polígonos se tocan; ahí se
+usa `stroke` en cada región. Test: con los dos cuadrados, solo sale el lado compartido.
+
+## 8.4 `useChoropleth`: qué recibe y qué devuelve
+
+```ts
+const {
+  containerRef,
+  width,
+  height,
+  regions,
+  borders,
+  legend,
+  scale,
+  joinReport,
+  hoveredId,
+  selectedId,
+  getRegionProps,
+} = useChoropleth({
+  geography,
+  data,
+  getId,
+  getValue,
+  variant: "diverging" /* projection, classification, palette… */,
+});
+```
+
+| Devuelve         | Qué es                                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------------------------- |
+| `regions`        | `{ id, feature, path, fill, datum, value }[]`: lo que se pinta con `<path d fill>`.                     |
+| `borders`        | `d` de las fronteras interiores, o `null` (GeoJSON).                                                    |
+| `legend`         | `LegendItem[]` del paso 7, con conteos.                                                                 |
+| `scale`          | La `ColorScale` completa (para leyendas continuas o lógica propia).                                     |
+| `joinReport`     | `unmatchedData`, `featuresWithoutData`, `duplicateDataIds`. Alimentará el aviso del paso 11.            |
+| `getRegionProps` | `data-region-id`, `data-selected`, `onClick`, `onMouseEnter`, `onMouseLeave` listos para `{...spread}`. |
+| `hoveredId`      | Región bajo el ratón (estado del hook).                                                                 |
+
+## 8.5 Por qué el orden interno es ese
+
+| #   | Paso                       | Por qué va aquí                                                       | Qué pasaría si se invierte                                                    |
+| --- | -------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| 1   | Tamaño                     | Las rutas necesitan `width`/`height`.                                 | `createProjection` sin tamaño válido lanza error.                             |
+| 2   | Geometría (`useMemo`)      | Depende solo de `geography`.                                          | —                                                                             |
+| 3   | Rutas (`useMemo`)          | Geometría + proyección + tamaño. **Sin datos.**                       | Si dependieran de los datos, cambiar de indicador recalcularía todos los `d`. |
+| 4   | Join → un valor por región | La escala necesita valores ya cruzados.                               | —                                                                             |
+| 5   | Escala → `fill` → leyenda  | La leyenda reutiliza los cortes de la escala; el `fill` sale de ella. | Leyenda y mapa podrían discrepar.                                             |
+| 6   | Handlers                   | Necesitan las regiones ya construidas.                                | —                                                                             |
+
+## 8.6 Decisiones con impacto real
+
+- **Los valores de la escala son uno por región, no uno por fila de `data`.** Un dato huérfano (`"ES"` cuando
+  la geometría usa `"724"`) no entra en la escala: con una fila `{ ZZ: 1000 }` sin región, el máximo seguiría
+  siendo el de las regiones reales. Además la leyenda cuenta regiones, no filas. Hay test.
+- **Solo se memoizan las rutas y la geometría.** El join y la escala cuestan O(regiones) y se recalculan en cada
+  render: memoizarlos exigiría que el consumidor estabilizara `getId`, `getValue` y `classification`
+  (funciones y objetos inline cambian de identidad en cada render), y casi nadie lo hace. Test: cambiar
+  `data` conserva rutas y `borders` y cambia los `fill`; cambiar el tamaño sí recalcula rutas.
+- **`geography` debe tener referencia estable** (constante de módulo o `useMemo`): es la clave de la memoización.
+  Esto va a la documentación pública.
+- **Las regiones sin `id` o sin ruta no se devuelven** (p. ej. Kosovo en `world-atlas` no tiene id): no se pueden
+  cruzar ni seleccionar. Se pierden visualmente; si molesta, se decide cómo pintarlas.
+- **Hover = estado dentro del hook (`hoveredId`)**, no la posición del ratón. La posición del tooltip la
+  gestionará el componente `Tooltip` del paso 9 para no re-renderizar todas las regiones en cada `mousemove`.
+- **`selectedId` es controlado** (lo da el consumidor), como en `dd.md §9.2`.
+- **Fuera de este paso:** `geography` como función de carga diferida, `projection` como instancia, `palette: string[]`,
+  accesibilidad (teclado/`aria`), zoom. Siguen pendientes según el roadmap.
+
+## 8.7 La story
+
+`stories/headless.stories.tsx` (**Headless → useChoropleth**) pinta el mapa del mundo **solo con el hook**: regiones,
+fronteras, borde de hover/selección (clic para seleccionar), y una leyenda HTML con conteos y el item «Sin dato».
+Sustituye a la story provisional (que montaba todo a mano) y se conserva como ejemplo del nivel 3.
+
+## 8.8 Tests
+
+113 tests en total; `typecheck` y `oxlint` limpios; `build` y `build-storybook` compilan; cobertura de `src/core`
+100 % líneas / 97,7 % ramas. Los de React usan `renderHook` y un `ResizeObserver` simulado. **No se ha mirado
+la story en un navegador**: lo comprobado es que compila y que los datos del hook son correctos.
+
+## 8.9 Antes de pasar al paso 9: ¿lo tienes claro?
+
+- ¿Por qué el hook devuelve datos (`regions`) y no elementos (`<path>`)? ¿Qué nivel de API lo necesita así?
+- ¿Por qué las rutas no dependen de los datos, y qué criterio de `dd.md` garantiza eso?
+- ¿Por qué el alto se deriva del ancho en vez de medirse?
+- ¿Por qué un dato huérfano no debe influir en la escala?
+- ¿Por qué `borders` es `null` con GeoJSON?
+
+---
+
 ## Siguiente paso (propuesta, no iniciado)
 
-**Paso 8: capa React, `use-container-size` y `use-choropleth`** (tareas 7 y 8 de `dd.md §20`). El hook headless
-encadena lo que hoy hace a mano la story provisional (`toFeatureCollection → joinData → createColorScale →
-createProjection → buildLegend`) y devuelve `regions`, `legend` y `getRegionProps`. Con él se podrá borrar
-`first-map.stories.tsx`.
+**Paso 9: nivel 2, compound.** `Choropleth.Root` (llama a `useChoropleth` y lo pone en un Context) y los
+componentes `Regions`, `Borders`, `Legend` (HTML, con render prop para leyenda headless) y `Tooltip`
+(posicionado junto al cursor, contenido por render prop). **Paso 10:** `<ChoroplethMap>` = Root + piezas por
+defecto, con la unión discriminada de props de `dd.md §9.2`. Después el diagnóstico en consola (paso 11) y la story
+final.

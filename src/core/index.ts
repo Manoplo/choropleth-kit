@@ -13,3 +13,5 @@ export { createProjection, DEFAULT_PROJECTION } from "./projection";
 export type { CreateProjectionOptions, ProjectionName } from "./projection";
 export { buildLegend } from "./legend";
 export type { BuildLegendOptions, LegendItem } from "./legend";
+export { createBorders } from "./borders";
+export type { CreateBordersOptions } from "./borders";
