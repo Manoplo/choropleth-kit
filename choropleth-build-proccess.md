@@ -4,8 +4,13 @@
 > hizo, por qué y cómo comprobar que funciona**. Está escrito para una persona que sabe crear
 > aplicaciones React pero no librerías, y para cualquier agente que retome el trabajo sin contexto.
 >
-> **Documento de diseño de referencia:** `../dd.md` (briefing con la definición de la librería).
-> Aquí no se repite el diseño, solo se explica cómo se va construyendo.
+> **Documento de diseño de referencia:** `coropleth-library.md` (en esta misma carpeta). En este
+> diario y en los comentarios del código se cita con su alias histórico **`dd.md`**; los números de
+> sección (`dd.md §9.2`, `§11`…) son los de ese archivo. Aquí no se repite el diseño, solo se explica
+> cómo se va construyendo.
+>
+> **Handoff vigente:** `dd.md §21` (v0.2-v0.5). Antes de seguir, leer la sección final de este diario,
+> **«Revisión de Opus 5.5 tras el paso 13»**: corrige varias decisiones y reordena los pasos.
 >
 > **Regla de trabajo:** un paso cada vez, acotado y verificable. No se empieza el siguiente hasta que
 > quien aprende confirma que entiende el actual.
@@ -27,9 +32,25 @@
 | 11    | Diagnóstico en consola + `onJoinReport`                          | ✅ Hecho                                               |
 | 12    | CSS y theming (`styles.css`, `--cm-*`, `unstyled`)               | ✅ Hecho                                               |
 | 13    | Presets por variant: `categorical` y `bubble`                    | ✅ Hecho                                               |
-| 14    | Reflexión: zoom y drill-down (§11) + interacción (§12)           | ⏳ Pendiente                                           |
-| 15    | Geodatos propios: `src/geo/` (ISO numérico → alpha-2)            | ⏳ Pendiente                                           |
-| …     | (siguientes tareas del §20 de `dd.md`)                           | ⏳ Pendiente                                           |
+| R     | **Revisión de Opus 5.5** (al final de este diario)               | ✅ Hecha: leer antes del paso 14                       |
+
+**Fase A, cimientos (v0.2)**: lo que el zoom y el drill-down necesitan que esté bien.
+
+| Paso | Título                                                                                            | Estado       |
+| ---- | ------------------------------------------------------------------------------------------------- | ------------ |
+| 14   | Limpieza: borrar `placeholder`; `@types/geojson` y `topojson-specification` a `dependencies`      | ⏳ Pendiente |
+| 15   | `map-store`: hover, foco, puntero y estado fuera de `Root`                                        | ⏳ Pendiente |
+| 16   | `MapItem` unificado (regiones + puntos) y Pointer Events                                          | ⏳ Pendiente |
+| 17   | Selección controlada / no controlada y `dimOthers`                                                | ⏳ Pendiente |
+| 18   | `labels` (i18n): fuera los textos en español fijos                                                | ⏳ Pendiente |
+| 19   | Geometría robusta: regiones sin id, `filterFeatures`, trazos no escalables, `aspectRatio: "auto"` | ⏳ Pendiente |
+| 20   | `getFocusGeometry` + anclas `polylabel`                                                           | ⏳ Pendiente |
+| 21   | `geography` asíncrona con caché + `data: undefined` = cargando                                    | ⏳ Pendiente |
+| 22   | `src/geo`: `world-110m` alpha-2, tabla ISO, `fallbackPoints`                                      | ⏳ Pendiente |
+
+**Fase B, cámara (v0.3)** · **Fase C, drill-down (v0.4)** · **Fase D, pulido visual (v0.5)**:
+pasos 23-37, en el orden exacto de las tareas 10-24 de `dd.md §21`. Cada uno se añade a esta tabla al
+empezarlo.
 
 ---
 
@@ -253,7 +274,7 @@ extrae para no duplicarlo. Es normal.
 ### `.gitignore`
 
 Lo que no se sube al repositorio, porque se **regenera**: `node_modules`, `dist`, `coverage`,
-`storybook-static`. (El repositorio git aún **no está inicializado**: ver §1.7.)
+`storybook-static`.
 
 ## 1.5 Cómo comprobar que todo funciona
 
@@ -304,8 +325,7 @@ Storybook. Evita `pnpm audit --fix` a ciegas: puede romper versiones.
 ## 1.7 Pendiente / preguntas para ti
 
 1. **¿Nombre y licencia definitivos?** Puede esperar, pero conviene decidirlo antes de publicar.
-2. **¿Inicializamos git?** El proyecto aún no es un repositorio. Es un comando (`git init`), pero te lo
-   dejo a ti para no tomar la decisión por ti.
+2. ~~**¿Inicializamos git?**~~ Resuelto: el proyecto ya es un repositorio con remoto (`origin/master`).
 3. **¿Quieres soportar React 17?** `dd.md §20` lo pregunta. Ahora mismo declaramos `react >=18`.
 4. **Node 23.5**: funciona, pero no es LTS. Tienes instaladas la 22.13.1 y la 20.11.0 con nvm. Para un
    proyecto que quieras mantener, lo recomendable es una LTS (22 o 24).
@@ -1340,12 +1360,85 @@ stories en un navegador** (`Variants → ChoroplethMap`: `Categorical`, `BubbleO
 
 ---
 
-## Siguiente paso (propuesta, no iniciado)
+# Revisión de Opus 5.5 tras el paso 13
 
-Antes de zoom y drill-down conviene **reflexionar** (lo que has propuesto) sobre tres cosas que se tocan entre sí:
+> **Para el agente que retome el trabajo:** esta sección es de lectura obligatoria. Responde a las tres
+> preguntas que dejaba abiertas el paso 13 (evento unificado, dónde vive el zoom, qué es un nivel),
+> corrige varias decisiones y fija el orden de los pasos 14 en adelante. El diseño completo está en
+> `dd.md §11` (zoom, pan, drill-down), `§12` (interacción, estilado, animaciones) y `§21` (handoff).
 
-1. **Evento unificado** (`RegionEvent` vs. burbuja/punto): condiciona hover, clic, tooltip y teclado de `§12`.
-2. **Dónde vive el zoom:** `d3-zoom` aplica un `transform` a un `<g>` (rutas intactas, `dd.md §14`) pero los trazos y las burbujas deben
-   compensar la escala (`vector-effect` ya está; el radio de burbuja no).
-3. **Qué es un «nivel» en drill-down:** otra geometría + otros datos + otro `variant` (`dd.md §11`), y quién es dueño del estado (controlado por el consumidor).
-   Después, `src/geo/` (ISO numérico → alpha-2 y `world-110m` publicable), `geography` diferida, README y accesibilidad por teclado.
+## R.1 Valoración general
+
+El trabajo es **sólido y por encima de lo habitual** para una v0.1: comprobado con `pnpm typecheck`,
+`pnpm lint` y `pnpm test` (202 tests en verde).
+
+| Aspecto                                  | Valoración | Comentario                                                                                                                  |
+| ---------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Separación `core` / `react`              | Excelente  | `core` puro, testeable, con funciones pequeñas y nombres claros. Es la base que permite todo lo que viene.                  |
+| Tres niveles de API, un solo código      | Excelente  | El preset es composición pura; el compound comparte un Context; el hook es el motor.                                        |
+| Tipos                                    | Muy bien   | Uniones discriminadas por `variant`, paletas tipadas por variant, `@ts-expect-error` como test de API.                      |
+| Memoización de rutas                     | Muy bien   | Las rutas no dependen de datos; GeoJSON devuelto por referencia. Criterio clave cumplido.                                   |
+| Eventos delegados, `memo`, pointer-store | Muy bien   | Buen instinto de rendimiento. El patrón del pointer-store es justo el que hay que generalizar.                              |
+| Diagnóstico                              | Excelente  | Pistas solo cuando son claras, efecto con clave de resultado. Diferencial real de DX.                                       |
+| Cartografía                              | Muy bien   | `sqrt` + dominio desde 0, simetría divergente, `SEQUENTIAL_START`, categorías alfabéticas, «sin dato» ≠ 0.                  |
+| Documentación (este diario)              | Excelente  | Didáctica, con el «por qué» y el «qué pasaría si». Mantener el formato.                                                     |
+| **Verificación visual**                  | **Débil**  | Ninguna story se ha visto en un navegador (pasos 8-13). Para lo que viene (zoom, animaciones) **no es aceptable**: ver R.4. |
+
+## R.2 Problemas encontrados (a corregir en la fase A)
+
+| #   | Severidad | Dónde                                                  | Problema                                                                                                                                                                                                                             | Corrección (paso)                                                                  |
+| --- | --------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| 1   | **Alta**  | `use-choropleth.ts`                                    | `hoveredId` es `useState` del hook: **cada cambio de región re-renderiza `Root`** y recalcula join, escala, leyenda y burbujas. Con zoom, drill y miles de regiones esto produce tirones. El `memo` de `RegionPath` lo disimula hoy. | `map-store` (15)                                                                   |
+| 2   | **Alta**  | `use-choropleth.ts`, `regions.tsx`                     | Regiones sin id **no se pintan**: en `world-atlas` quedan **agujeros** (Kosovo, Chipre del Norte, Somalilandia). Visible en cualquier demo de Europa.                                                                                | Capa no interactiva en `emptyFill` (19)                                            |
+| 3   | **Alta**  | `variants.ts` (centroides)                             | `geoPath.centroid` con territorios lejanos: la burbuja de **Francia cae en el Atlántico**, la de EE. UU. desplazada. El mismo cálculo romperá el «zoom a región».                                                                    | `getFocusGeometry` + `polylabel` (20)                                              |
+| 4   | **Alta**  | `package.json`                                         | La API pública expone tipos de `geojson` y `topojson-specification` (`Feature`, `Topology`), pero `@types/geojson` y `@types/topojson-specification` están en `devDependencies`: un consumidor con TS verá `any` o errores.          | Pasarlos a `dependencies` (14). Ya lo anticipaba el paso 2.2.                      |
+| 5   | Media     | `regions.tsx`, `root.tsx`, `bubbles.tsx`               | Solo eventos de ratón; burbujas con coordenadas no interactivas; `RegionEvent` no sirve para puntos.                                                                                                                                 | `MapItem` + Pointer Events (16)                                                    |
+| 6   | Media     | `tooltip.tsx`, `choropleth-map.tsx`                    | Textos de UI en español fijos («Sin dato»). Para una librería pensada para OS, el idioma no puede ser fijo.                                                                                                                          | `labels` (18)                                                                      |
+| 7   | Media     | `styles.css`                                           | `vector-effect: non-scaling-stroke` solo en la selección; las fronteras engordarán al hacer zoom.                                                                                                                                    | (19)                                                                               |
+| 8   | Media     | `use-container-size.ts`                                | Proporción fija 960/500 aunque la geometría sea Chile o Noruega.                                                                                                                                                                     | `aspectRatio: "auto"` (19)                                                         |
+| 9   | Media     | `svg.tsx`                                              | `role="img"` oculta los hijos a lectores de pantalla: incompatible con un mapa navegable por teclado.                                                                                                                                | Decisión en a11y (`dd.md §13.4`); de momento no añadir más interacción bajo `img`. |
+| 10  | Media     | `tooltip.tsx`                                          | Volteo por mitades del mapa: con tooltips anchos se sale del contenedor (criterio de §20 no cumplido del todo).                                                                                                                      | `placeTooltip` puro + medición (fase D o antes si molesta)                         |
+| 11  | Baja      | `src/core/placeholder.ts`, `src/react/placeholder.tsx` | Código provisional **exportado en la API pública** (`describeLibrary`, `Placeholder`).                                                                                                                                               | Borrar (14)                                                                        |
+| 12  | Baja      | `styles.css` (burbujas)                                | `transition: r` no es fiable en todos los navegadores (Safari).                                                                                                                                                                      | FLIP con WAAPI (fase D, `dd.md §12.4.4` #8)                                        |
+| 13  | Baja      | `projection.ts`                                        | Solo proyecciones por nombre; el drill necesita fábricas y `fitExtent` a una geometría de foco.                                                                                                                                      | `rebaseProjection` (fase C)                                                        |
+
+## R.3 Correcciones a afirmaciones de este diario
+
+| Dónde          | Decía                                                           | Ahora                                                                                                                    |
+| -------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Cabecera       | `../dd.md`                                                      | `coropleth-library.md`, alias `dd.md` (corregido).                                                                       |
+| 1.7 / 1.4      | Git sin inicializar                                             | Ya es repositorio con remoto (corregido).                                                                                |
+| 2.4            | `d3-zoom`, `d3-transition`, `d3-interpolate` «son de v0.2»      | Son de la fase B (v0.3). Se añaden además `d3-selection` y `d3-ease`; **ninguna librería de animación** (`dd.md §12.6`). |
+| 8.6            | Regiones sin id: «si molesta, se decide»                        | Decidido: se pintan como capa no interactiva (R.2 #2).                                                                   |
+| 8.6 / 9.2      | Hover como estado del hook / `Root`                             | Se mueve al `map-store` (R.2 #1). El razonamiento del pointer-store era correcto: se generaliza.                         |
+| 11.4           | «`dd.md §20` ya no limita el uso de `useEffect`»                | Ahora es verdad: `dd.md §20` y `§21` lo dicen explícitamente (efectos reales sí; derivar estado no).                     |
+| 12.4           | `prefers-reduced-motion` es «la mitad CSS de la prop `animate`» | La prop se llama `animation` (`boolean \| AnimationOptions`) y tiene tokens de movimiento (`dd.md §12.4`).               |
+| 13.4           | «Transición de `r` … sin verificar»                             | Se sustituye por FLIP (R.2 #12).                                                                                         |
+| Siguiente paso | Tres preguntas abiertas                                         | Respondidas abajo (R.5).                                                                                                 |
+
+## R.4 Reglas nuevas de trabajo
+
+1. **Verificación visual obligatoria**: desde el paso 14, ningún paso con efecto visible se marca ✅
+   sin haber abierto su story en un navegador. Si el agente no puede, lo escribe en el paso y el humano
+   lo revisa antes de seguir.
+2. **Contador de renders** en los tests de interacción: es la forma de demostrar las reglas de
+   rendimiento («mover el ratón no re-renderiza `Root`», «el zoom no re-renderiza nada»).
+3. **Lo puro, a `core`** con tests antes que el componente (cámara, límites, foco, rebase, máquina del
+   drill, navegación espacial, colocación del tooltip).
+4. **Romper la API está permitido hasta 1.0**, sin alias de compatibilidad, actualizando tests y
+   stories en el mismo paso.
+
+## R.5 Respuestas a las tres preguntas del paso 13
+
+1. **Evento unificado**: `MapItem<TDatum>` con `kind: "region" | "point"`, un solo `onItemClick` /
+   `onItemHover` y un solo tooltip (`dd.md §9.2` y `§12.1`).
+2. **Dónde vive el zoom**: en el DOM, no en React. `d3-zoom` escribe el `transform` del viewport y
+   las variables `--cm-k` / `--cm-bubble-scale`; el CSS compensa trazos y burbujas; React solo se entera
+   al **terminar** el gesto, vía `map-store` (`dd.md §11.0` y `§11.1.3`).
+3. **Qué es un nivel**: geometría (cargada por la librería, con caché) + datos (del consumidor) +
+   codificación visual, declarados con `defineDrillLevels`. El estado es no controlado por defecto
+   (`drill={levels}`) y controlable (`useDrillDown({ path, onPathChange })`). Cada nivel se proyecta
+   con un **rebase** de la proyección del padre para que el cambio de nivel sea invisible
+   (`dd.md §11.2`).
+
+**Siguiente paso: 14 (limpieza).** Después, los pasos de la fase A en orden.
