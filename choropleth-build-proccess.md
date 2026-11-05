@@ -672,9 +672,103 @@ y el error de tipos de paleta equivocada.
 
 ---
 
+# Paso 6: proyección y primer mapa visible
+
+Archivos: `src/core/projection.ts` + `projection.test.ts`, y la story provisional
+`stories/first-map.stories.tsx`. Con este paso **la cadena de `core` queda completa** y por primera vez
+se ve un mapa.
+
+## 6.1 Qué hace `createProjection`
+
+```ts
+createProjection({ name?, width, height, featureCollection }): GeoProjection
+```
+
+Una **proyección** convierte `[longitud, latitud]` en `[x, y]` de píxeles. Aquí se crea una proyección
+d3 y se **ajusta** (`fitSize`) para que toda la geometría quepa justa en el contenedor. Sin ese ajuste,
+d3 usa una escala fija pensada para 960×500: en otro tamaño el mapa saldría cortado o diminuto.
+
+| `name`                  | Cuándo                                                                          |
+| ----------------------- | ------------------------------------------------------------------------------- |
+| `equalEarth` (defecto)  | Mundo. **Áreas iguales**: cada país pesa lo que le corresponde.                 |
+| `naturalEarth`          | Mundo, alternativa agradable; deforma algo las áreas.                           |
+| `mercator`              | Infla los polos (Groenlandia ≈ África). Hay una story para verlo; no para coropletas de mundo. |
+| `albers`                | EE. UU.                                                                         |
+| `orthographic`          | Globo; solo se ve un hemisferio.                                                |
+
+**Por qué importa en un coropleta:** el ojo asocia más área pintada con más importancia. Una proyección que
+infla Rusia hace que su color "pese" más de lo que debe.
+
+## 6.2 Por qué el orden interno es ese
+
+| # | Paso                    | Por qué va aquí                                                                                                           | Qué pasaría si se invierte                                                                  |
+| - | ----------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| 1 | Validar `width`/`height` | Con 0 o `NaN` (contenedor oculto o aún sin medir) `fitSize` **no falla**: da escala 0/NaN y cada path sale `"MNaN,NaN…"`. | Mapa invisible, sin ningún error en consola.                                                |
+| 2 | Crear una instancia nueva | `fitSize` **modifica** la proyección. Antes del ajuste, porque es lo que se va a mutar.                                  | —                                                                                           |
+| 3 | `fitSize`               | Necesita el tamaño validado y la instancia. Con 0 features se omite (el área vacía daría infinitos).                      | Escala `Infinity`/`NaN` con colección vacía.                                                |
+
+**Dato clave del diseño:** el registro `PROJECTIONS` guarda **fábricas** (`geoEqualEarth`), no instancias.
+Una proyección d3 es un objeto mutable; si se compartiera una, dos mapas en la misma página o un mapa que
+cambia de tamaño se pisarían la escala. Hay un test: ajustar una proyección a 200×100 no cambia la de 960×500.
+
+## 6.3 La story provisional: el primer mapa
+
+`stories/first-map.stories.tsx` encadena **todo** lo hecho hasta ahora, a mano, en 4 pasos:
+
+```
+toFeatureCollection (3) → joinData (4) → createColorScale (5) → createProjection (6) → <path d fill/>
+```
+
+Es **lo que luego hará el hook `useChoropleth`** (tarea 8 de `dd.md §20`); está aquí para comprobar que las
+piezas encajan antes de construir React encima. Cuando exista `<ChoroplethMap>`, esta story se borra.
+
+Cómo verla: `pnpm storybook` → **Setup → First map (provisional)**. Los controles permiten cambiar variant,
+proyección y método de clasificación. Hay tres stories: `Diverging`, `Sequential` y `MercatorInflatesPoles`.
+
+Qué buscar en el mapa (datos **sintéticos**, deterministas por id):
+
+- Cada 7.º país **sin dato** (`null`) en gris `#d4d4d4`, y cada 11.º con valor **0** coloreado: se ve que
+  "sin dato" ≠ 0.
+- En `Diverging`: rojo para negativos, azul para positivos, neutro cerca de 0.
+- Cambia la proyección a `mercator` y compara el tamaño de Rusia, Canadá o Groenlandia con `equalEarth`.
+
+Comprobado automáticamente (renderizando las tres stories en jsdom): **177 `<path>`**, ninguno con `NaN`,
+6 fills distintos (5 clases + `emptyFill`) y 26 regiones en gris. El build de Storybook también compila.
+
+> **Importante, y la razón por la que React no necesita nada más:** el componente solo hace
+> `world.features.map(f => <path d={toPath(f)} fill={scale.getColor(...)} />)`. d3 calcula, React dibuja.
+
+## 6.4 Decisiones
+
+- **Solo se aceptan proyecciones por nombre** (`name`), como pide la tarea 6 de `dd.md §20`. `dd.md §9.2` también
+  permite pasar una instancia `GeoProjection` propia; se dejó fuera porque `fitSize` la mutaría y habría que
+  copiarla antes. Se añadirá cuando la prop `projection` exista.
+- **Tamaño inválido lanza error** en `core`. La capa React deberá evitar llegar con tamaño 0 (tarea 7: un
+  tamaño inicial razonable en el hook de `ResizeObserver`).
+- **Colección vacía no lanza error**: devuelve una proyección válida que no pinta nada. Un mapa sin
+  geometría es un caso legítimo (datos que aún no han cargado).
+- **No se incluye `geoConicConformal`/España con Canarias**; llegará con `d3-composite-projections` si se necesita.
+- **La story vive en `stories/` y es descartable**; la lógica de `core` no depende de ella.
+
+## 6.5 Tests
+
+80 tests en total; `typecheck`, `oxlint` y `build-storybook` limpios. Los de proyección comprueban con
+`geoPath().bounds()` que la geometría **cabe** en el contenedor y que lo **llena** (todo el ancho o todo el
+alto), que la escala crece con el tamaño, el default, las instancias independientes, los tamaños inválidos
+y que ninguno de los 177 países produce un path con `NaN`.
+
+## 6.6 Antes de pasar al paso 7: ¿lo tienes claro?
+
+- ¿Por qué `fitSize` está al final y la validación del tamaño al principio?
+- ¿Por qué el registro guarda funciones y no proyecciones ya creadas?
+- ¿Qué diferencia se ve entre `equalEarth` y `mercator` en la story, y por qué importa en un coropleta?
+- En la story, ¿qué hace d3 y qué hace React?
+- ¿Cómo distingues en el mapa un país "sin dato" de uno con valor 0?
+
+---
+
 ## Siguiente paso (propuesta, no iniciado)
 
-**Paso 6: `core/projection.ts` y `core/legend.ts`.** La proyección (`createProjection` con `fitSize`,
-Equal Earth por defecto) es lo que permitirá, por fin, calcular los `path` SVG y **ver el primer mapa en
-Storybook**. La leyenda reutiliza los `thresholds` y `colors` del paso 5 y cuenta cuántas regiones caen
-en cada clase. Propongo empezar por la proyección: es lo que desbloquea la primera visualización.
+**Paso 7: `core/legend.ts`.** `buildLegend` convierte la escala del paso 5 (`thresholds` + `colors`) en una
+lista de items `{ color, from, to, label, count }`, contando cuántas regiones caen en cada clase. Una leyenda
+es la que permite **leer** el mapa; sin ella los colores no significan nada. Después empezaría la capa React.

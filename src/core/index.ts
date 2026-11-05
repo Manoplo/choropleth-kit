@@ -9,3 +9,5 @@ export { createColorScale, DEFAULT_EMPTY_FILL } from "./scales";
 export type { ColorScale, ColorScaleOptions } from "./scales";
 export { DIVERGING_PALETTES, SEQUENTIAL_PALETTES } from "./palettes";
 export type { DivergingPaletteName, SequentialPaletteName } from "./palettes";
+export { createProjection, DEFAULT_PROJECTION } from "./projection";
+export type { CreateProjectionOptions, ProjectionName } from "./projection";
