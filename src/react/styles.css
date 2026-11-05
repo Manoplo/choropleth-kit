@@ -1,0 +1,145 @@
+/*
+ * Estilos base de choropleth-kit. Se importan una vez: `import "choropleth-kit/styles.css"`.
+ *
+ * Dos mecanismos de personalización (dd.md §9.7):
+ *  1. Variables CSS `--cm-*`, sobrescribibles en cualquier ancestro de `.cm-root`.
+ *  2. `unstyled` en el componente: no se aplica NINGUNA regla de este archivo salvo las variables.
+ *
+ * Los estilos "visuales" viven aquí; los "funcionales" (posición del tooltip, cursor, el
+ * `fill` calculado de cada región) van en línea porque dependen de datos o del cursor.
+ */
+
+.cm-root {
+  --cm-empty-fill: #d4d4d4;
+  --cm-border-color: #ffffff;
+  --cm-border-width: 0.5px;
+  --cm-hover-stroke: #000000;
+  --cm-hover-stroke-width: 1.5px;
+  --cm-selected-stroke: #0b5fff;
+  --cm-selected-stroke-width: 2px;
+  --cm-bubble-fill: #2563eb;
+  --cm-bubble-stroke: #ffffff;
+  --cm-bubble-opacity: 0.75;
+  --cm-transition-duration: 250ms;
+  --cm-font-family: inherit;
+  --cm-font-size: 12px;
+  --cm-tooltip-bg: #ffffff;
+  --cm-tooltip-color: #111111;
+  --cm-tooltip-border: #cccccc;
+}
+
+/* Quien tiene «reducir movimiento» no ve el fundido de color al cambiar de indicador. */
+@media (prefers-reduced-motion: reduce) {
+  .cm-root {
+    --cm-transition-duration: 0ms;
+  }
+}
+
+.cm-root:not([data-unstyled]) {
+  font-family: var(--cm-font-family);
+  font-size: var(--cm-font-size);
+}
+
+/* ── mapa ─────────────────────────────────────────────────────────────────────────────────── */
+
+/* OJO: aquí NO se define `fill`: una regla CSS ganaría al `fill` de cada región (el color del dato). */
+.cm-root:not([data-unstyled]) .cm-region {
+  transition: fill var(--cm-transition-duration);
+}
+
+/* Con GeoJSON no hay capa de fronteras (mesh): cada región dibuja su propio contorno. */
+.cm-root:not([data-unstyled]) .cm-regions[data-outlined] .cm-region {
+  stroke: var(--cm-border-color);
+  stroke-width: var(--cm-border-width);
+}
+
+.cm-root:not([data-unstyled]) .cm-borders {
+  fill: none;
+  stroke: var(--cm-border-color);
+  stroke-width: var(--cm-border-width);
+}
+
+.cm-root:not([data-unstyled]) .cm-selection path {
+  fill: none;
+  /* El trazo no engorda al hacer zoom. */
+  vector-effect: non-scaling-stroke;
+}
+.cm-root:not([data-unstyled]) .cm-selection [data-selection="hover"] {
+  stroke: var(--cm-hover-stroke);
+  stroke-width: var(--cm-hover-stroke-width);
+}
+.cm-root:not([data-unstyled]) .cm-selection [data-selection="selected"] {
+  stroke: var(--cm-selected-stroke);
+  stroke-width: var(--cm-selected-stroke-width);
+}
+
+/* Como el `fill` de las regiones, el de cada burbuja va en línea (es el color del dato). */
+.cm-root:not([data-unstyled]) .cm-bubble {
+  stroke: var(--cm-bubble-stroke);
+  stroke-width: 0.5px;
+  fill-opacity: var(--cm-bubble-opacity);
+  transition:
+    r var(--cm-transition-duration),
+    fill var(--cm-transition-duration);
+}
+
+/* ── leyenda ──────────────────────────────────────────────────────────────────────────────── */
+
+.cm-root:not([data-unstyled]) .cm-legend__title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.cm-root:not([data-unstyled]) .cm-legend__items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.cm-root:not([data-unstyled]) .cm-legend__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cm-root:not([data-unstyled]) .cm-legend__swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+}
+.cm-root:not([data-unstyled]) .cm-legend__count {
+  opacity: 0.6;
+}
+.cm-root:not([data-unstyled]) .cm-legend__gradient {
+  width: 160px;
+  height: 10px;
+}
+.cm-root:not([data-unstyled]) .cm-legend__range {
+  display: flex;
+  justify-content: space-between;
+  width: 160px;
+}
+
+.cm-root:not([data-unstyled]) .cm-legend__sizes {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+}
+.cm-root:not([data-unstyled]) .cm-legend__size {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cm-root:not([data-unstyled]) .cm-legend__circle circle {
+  fill: none;
+  stroke: currentColor;
+}
+
+/* ── tooltip ──────────────────────────────────────────────────────────────────────────────── */
+
+/* Solo el tooltip por defecto lleva caja: si pasas tu propio contenido, la caja es tuya. */
+.cm-root:not([data-unstyled]) .cm-tooltip--default {
+  background: var(--cm-tooltip-bg);
+  color: var(--cm-tooltip-color);
+  border: 1px solid var(--cm-tooltip-border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
