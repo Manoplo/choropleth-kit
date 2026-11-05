@@ -11,3 +11,5 @@ export { DIVERGING_PALETTES, SEQUENTIAL_PALETTES } from "./palettes";
 export type { DivergingPaletteName, SequentialPaletteName } from "./palettes";
 export { createProjection, DEFAULT_PROJECTION } from "./projection";
 export type { CreateProjectionOptions, ProjectionName } from "./projection";
+export { buildLegend } from "./legend";
+export type { BuildLegendOptions, LegendItem } from "./legend";

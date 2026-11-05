@@ -17,7 +17,11 @@
 | **1** | **Scaffolding: proyecto, bundler, tests y Storybook**            | ✅ Hecho                                               |
 | **2** | **Dependencias mínimas para dibujar el primer mapa**             | ✅ Hecho (paquetes instalados; el código es el paso 3) |
 | **3** | **Primer código real: `core/geography.ts` (TopoJSON → GeoJSON)** | ✅ Hecho                                               |
-| 4     | `core/join.ts`: cruzar datos con regiones + diagnóstico          | ⏳ Pendiente                                           |
+| 4     | `core/join.ts`: cruzar datos con regiones + diagnóstico          | ✅ Hecho                                               |
+| 5     | Paletas, clasificación y escalas                                 | ✅ Hecho                                               |
+| 6     | Proyección y primer mapa visible                                 | ✅ Hecho                                               |
+| 7     | `core/legend.ts`: leyenda con conteos                            | ✅ Hecho                                               |
+| 8     | Capa React: `use-container-size` + `use-choropleth`              | ⏳ Pendiente                                           |
 | …     | (siguientes tareas del §20 de `dd.md`)                           | ⏳ Pendiente                                           |
 
 ---
@@ -518,11 +522,11 @@ alpha-2 a numérico) escondería el error; la ayuda para hacerlo es una tabla ex
 
 ## 4.2 Por qué el orden interno es ese
 
-| # | Paso                                              | Por qué va aquí                                                                                                                  | Qué pasaría si se invierte                                                                 |
-| - | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| 1 | Sacar los ids de las regiones (`Set`)             | Hasta saber qué ids existen en la geometría no se puede decir qué dato "sobra".                                                  | No habría contra qué comparar en el paso 3.                                                |
-| 2 | Indexar los datos por id (`Map`) y detectar duplicados | Convierte el array en búsqueda O(1). Los duplicados solo se ven al indexar; se conserva el **primero** y se reporta.         | Con `data.find()` por región sería O(regiones × datos); y un duplicado se pisaría en silencio. |
-| 3 | Clasificar con ambos índices                      | Necesita los dos ya construidos: recorre los datos (¿existe su región?) y las regiones (¿existe su dato?).                       | —                                                                                          |
+| #   | Paso                                                   | Por qué va aquí                                                                                                      | Qué pasaría si se invierte                                                                     |
+| --- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| 1   | Sacar los ids de las regiones (`Set`)                  | Hasta saber qué ids existen en la geometría no se puede decir qué dato "sobra".                                      | No habría contra qué comparar en el paso 3.                                                    |
+| 2   | Indexar los datos por id (`Map`) y detectar duplicados | Convierte el array en búsqueda O(1). Los duplicados solo se ven al indexar; se conserva el **primero** y se reporta. | Con `data.find()` por región sería O(regiones × datos); y un duplicado se pisaría en silencio. |
+| 3   | Clasificar con ambos índices                           | Necesita los dos ya construidos: recorre los datos (¿existe su región?) y las regiones (¿existe su dato?).           | —                                                                                              |
 
 Dos efectos concretos en el código generado:
 
@@ -533,13 +537,13 @@ Dos efectos concretos en el código generado:
 
 ## 4.3 Trampas que el código ya cubre
 
-| Trampa                                                                  | Qué se hace                                                                                                                                 |
-| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `feature.id` puede ser `724` (number) y el dato `"724"` (string)        | Se convierte con `String(...)`. Sin ello `724 !== "724"` en un `Map`: todo gris sin error. Hay test.                                        |
-| El id no está en `feature.id` sino en `properties.iso_a2`               | Parámetro `getFeatureId`. Hay test.                                                                                                         |
-| Algunas regiones de `world-atlas` no tienen id                          | Se ignoran (no se pueden cruzar ni nombrar en un aviso); se pintarán con `emptyFill` igualmente.                                            |
-| **"Sin dato" ≠ "valor 0" ≠ "valor `null`"**                             | Aquí solo se decide lo primero (no hay fila). Un dato con `value: null` **sí cruza**; convertirlo en `emptyFill` es trabajo de la escala (paso 5). |
-| Ceros a la izquierda: `"004"` (Afganistán) ≠ `"4"`                      | No se normaliza: el id debe coincidir exactamente. Si los datos vienen de Excel/CSV con ceros perdidos, el aviso lo hará visible.           |
+| Trampa                                                           | Qué se hace                                                                                                                                        |
+| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `feature.id` puede ser `724` (number) y el dato `"724"` (string) | Se convierte con `String(...)`. Sin ello `724 !== "724"` en un `Map`: todo gris sin error. Hay test.                                               |
+| El id no está en `feature.id` sino en `properties.iso_a2`        | Parámetro `getFeatureId`. Hay test.                                                                                                                |
+| Algunas regiones de `world-atlas` no tienen id                   | Se ignoran (no se pueden cruzar ni nombrar en un aviso); se pintarán con `emptyFill` igualmente.                                                   |
+| **"Sin dato" ≠ "valor 0" ≠ "valor `null`"**                      | Aquí solo se decide lo primero (no hay fila). Un dato con `value: null` **sí cruza**; convertirlo en `emptyFill` es trabajo de la escala (paso 5). |
+| Ceros a la izquierda: `"004"` (Afganistán) ≠ `"4"`               | No se normaliza: el id debe coincidir exactamente. Si los datos vienen de Excel/CSV con ceros perdidos, el aviso lo hará visible.                  |
 
 ## 4.4 Decisiones
 
@@ -568,8 +572,8 @@ cruza; con `"ES"` no cruza y aparece en `unmatchedData`.
 # Paso 5: de un valor a un color (paletas, clasificación y escalas)
 
 Archivos: `src/core/palettes.ts`, `classify.ts`, `scales.ts` (+ un `.test.ts` cada uno).
-Es el paso que convierte un mapa en un **coropleta**: hasta ahora sabíamos *qué dato va a qué región*
-(paso 4); ahora decidimos *de qué color se pinta*.
+Es el paso que convierte un mapa en un **coropleta**: hasta ahora sabíamos _qué dato va a qué región_
+(paso 4); ahora decidimos _de qué color se pinta_.
 
 ## 5.1 Las tres piezas y cómo se encadenan
 
@@ -580,11 +584,11 @@ Es el paso que convierte un mapa en un **coropleta**: hasta ahora sabíamos *qu�
                                            si diverg.)
 ```
 
-| Archivo       | Responde a                         | Devuelve                                      |
-| ------------- | ---------------------------------- | --------------------------------------------- |
-| `palettes.ts` | ¿Qué colores existen?              | Interpoladores por nombre + muestreo de N colores |
-| `classify.ts` | ¿Dónde se parten los datos en clases? | **Números** (los cortes), nunca colores     |
-| `scales.ts`   | ¿De qué color es este valor?       | `createColorScale(...)` → `{ getColor, thresholds, colors, domain, kind }` |
+| Archivo       | Responde a                            | Devuelve                                                                   |
+| ------------- | ------------------------------------- | -------------------------------------------------------------------------- |
+| `palettes.ts` | ¿Qué colores existen?                 | Interpoladores por nombre + muestreo de N colores                          |
+| `classify.ts` | ¿Dónde se parten los datos en clases? | **Números** (los cortes), nunca colores                                    |
+| `scales.ts`   | ¿De qué color es este valor?          | `createColorScale(...)` → `{ getColor, thresholds, colors, domain, kind }` |
 
 **Por qué `classify` devuelve números y no colores:** se puede testear la estadística sin mirar colores,
 y la leyenda (paso siguiente) reutilizará **los mismos cortes y colores** que el mapa, sin recalcular nada.
@@ -594,31 +598,31 @@ Por eso `createColorScale` expone `thresholds` y `colors` además de `getColor`.
 
 **Variant: ¿qué tipo de dato es?**
 
-| Variant        | Cuándo                                             | Ejemplo                          |
-| -------------- | -------------------------------------------------- | -------------------------------- |
-| `sequential`   | De menos a más. Un solo color que se intensifica.  | Población, ventas                |
-| `diverging`    | Hay un **valor central con significado**; se aleja hacia ambos lados. | Variación respecto al año pasado (−20 … +20), con 0 como centro |
+| Variant      | Cuándo                                                                | Ejemplo                                                         |
+| ------------ | --------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `sequential` | De menos a más. Un solo color que se intensifica.                     | Población, ventas                                               |
+| `diverging`  | Hay un **valor central con significado**; se aleja hacia ambos lados. | Variación respecto al año pasado (−20 … +20), con 0 como centro |
 
 **Método de clasificación: ¿cómo se cortan los datos en clases?**
 
-| Método      | Corta por…                                  | Ventaja                                   | Riesgo                                                          |
-| ----------- | ------------------------------------------- | ----------------------------------------- | --------------------------------------------------------------- |
-| `quantile`  | Mismo **nº de regiones** en cada clase      | Aprovecha todos los colores               | Un salto de color puede ser una diferencia mínima o enorme; con muchos valores repetidos (ceros) salen clases vacías |
-| `quantize`  | Tramos de **igual anchura** del rango       | Fiel a la escala numérica                 | Un valor extremo deja casi todo en las primeras clases          |
-| `threshold` | Cortes que tú eliges (`[0, 5, 10]`)         | Control total, comparable entre mapas     | Hay que saber qué cortes tienen sentido                         |
-| `linear`    | No hay clases: degradado continuo           | Máximo detalle                            | Difícil leer un valor concreto y comparar colores               |
+| Método      | Corta por…                             | Ventaja                               | Riesgo                                                                                                               |
+| ----------- | -------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `quantile`  | Mismo **nº de regiones** en cada clase | Aprovecha todos los colores           | Un salto de color puede ser una diferencia mínima o enorme; con muchos valores repetidos (ceros) salen clases vacías |
+| `quantize`  | Tramos de **igual anchura** del rango  | Fiel a la escala numérica             | Un valor extremo deja casi todo en las primeras clases                                                               |
+| `threshold` | Cortes que tú eliges (`[0, 5, 10]`)    | Control total, comparable entre mapas | Hay que saber qué cortes tienen sentido                                                                              |
+| `linear`    | No hay clases: degradado continuo      | Máximo detalle                        | Difícil leer un valor concreto y comparar colores                                                                    |
 
 Los defaults vienen de `dd.md`: secuencial → **quantile, 5 clases**; divergente → **quantize sobre un
 dominio simétrico, 5 clases**.
 
 ## 5.3 Por qué el orden interno es ese (`createColorScale`)
 
-| # | Paso                        | Por qué va aquí                                                                                                                       | Qué pasaría si se invierte                                                     |
-| - | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| 1 | Limpiar valores (`finiteValues`) | Un solo `NaN` contamina mínimo, máximo y cuantiles: todo sería `NaN` y el mapa saldría de un color.                              | Dominio `NaN`, colores incoherentes sin error.                                 |
-| 2 | Dominio                     | Depende de los valores limpios. En divergente se **simetriza** respecto al punto medio.                                               | Con datos −20…+5 un +5 parecería tan intenso como un −20.                      |
-| 3 | Cortes (`computeThresholds`) | `quantize` necesita el dominio; `quantile`, los valores.                                                                             | No hay de dónde sacar los cortes.                                              |
-| 4 | Colores y escala            | **Nº de colores = nº de cortes + 1**; solo se conoce tras el paso 3. Un `threshold` con 3 cortes da 4 colores, no 5.                  | Colores de más o de menos respecto a las clases reales.                        |
+| #   | Paso                             | Por qué va aquí                                                                                                      | Qué pasaría si se invierte                                |
+| --- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| 1   | Limpiar valores (`finiteValues`) | Un solo `NaN` contamina mínimo, máximo y cuantiles: todo sería `NaN` y el mapa saldría de un color.                  | Dominio `NaN`, colores incoherentes sin error.            |
+| 2   | Dominio                          | Depende de los valores limpios. En divergente se **simetriza** respecto al punto medio.                              | Con datos −20…+5 un +5 parecería tan intenso como un −20. |
+| 3   | Cortes (`computeThresholds`)     | `quantize` necesita el dominio; `quantile`, los valores.                                                             | No hay de dónde sacar los cortes.                         |
+| 4   | Colores y escala                 | **Nº de colores = nº de cortes + 1**; solo se conoce tras el paso 3. Un `threshold` con 3 cortes da 4 colores, no 5. | Colores de más o de menos respecto a las clases reales.   |
 
 ## 5.4 Decisiones con impacto real en lo que se ve
 
@@ -645,13 +649,13 @@ diverging  (quantize)  -20→rgb(172,32,47) (rojo) · 0→rgb(242,239,238) (neut
 
 ## 5.5 Qué se dejó fuera (a propósito)
 
-| Pendiente                                  | Por qué                                                                                             |
-| ------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| `palette: string[]` (colores propios)      | `dd.md §9.2` lo contempla; no es necesario para el mapa mínimo y añade casos (¿cuántos colores por clase?). |
-| Invertir una paleta                        | `rdbu` va de rojo (bajo) a azul (alto). Para "variación" suele querer lo contrario. Se añadirá con `reverse` cuando haya UI para probarlo. |
-| `ckmeans` (Jenks)                          | Está en el tipo de `dd.md` pero no en las tareas de v0.1.                                           |
-| `categorical`                              | v0.2.                                                                                               |
-| Valores `midpoint` por clase en `quantile` divergente | `quantile` no garantiza clases simétricas; sigue permitido, pero el neutro puede no coincidir con el midpoint. |
+| Pendiente                                             | Por qué                                                                                                                                    |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `palette: string[]` (colores propios)                 | `dd.md §9.2` lo contempla; no es necesario para el mapa mínimo y añade casos (¿cuántos colores por clase?).                                |
+| Invertir una paleta                                   | `rdbu` va de rojo (bajo) a azul (alto). Para "variación" suele querer lo contrario. Se añadirá con `reverse` cuando haya UI para probarlo. |
+| `ckmeans` (Jenks)                                     | Está en el tipo de `dd.md` pero no en las tareas de v0.1.                                                                                  |
+| `categorical`                                         | v0.2.                                                                                                                                      |
+| Valores `midpoint` por clase en `quantile` divergente | `quantile` no garantiza clases simétricas; sigue permitido, pero el neutro puede no coincidir con el midpoint.                             |
 
 `d3-array` **sigue sin hacer falta**: `scaleQuantile` y `scaleQuantize` ya calculan cuantiles y rangos.
 
@@ -688,24 +692,24 @@ Una **proyección** convierte `[longitud, latitud]` en `[x, y]` de píxeles. Aqu
 d3 y se **ajusta** (`fitSize`) para que toda la geometría quepa justa en el contenedor. Sin ese ajuste,
 d3 usa una escala fija pensada para 960×500: en otro tamaño el mapa saldría cortado o diminuto.
 
-| `name`                  | Cuándo                                                                          |
-| ----------------------- | ------------------------------------------------------------------------------- |
-| `equalEarth` (defecto)  | Mundo. **Áreas iguales**: cada país pesa lo que le corresponde.                 |
-| `naturalEarth`          | Mundo, alternativa agradable; deforma algo las áreas.                           |
-| `mercator`              | Infla los polos (Groenlandia ≈ África). Hay una story para verlo; no para coropletas de mundo. |
-| `albers`                | EE. UU.                                                                         |
-| `orthographic`          | Globo; solo se ve un hemisferio.                                                |
+| `name`                 | Cuándo                                                                                         |
+| ---------------------- | ---------------------------------------------------------------------------------------------- |
+| `equalEarth` (defecto) | Mundo. **Áreas iguales**: cada país pesa lo que le corresponde.                                |
+| `naturalEarth`         | Mundo, alternativa agradable; deforma algo las áreas.                                          |
+| `mercator`             | Infla los polos (Groenlandia ≈ África). Hay una story para verlo; no para coropletas de mundo. |
+| `albers`               | EE. UU.                                                                                        |
+| `orthographic`         | Globo; solo se ve un hemisferio.                                                               |
 
 **Por qué importa en un coropleta:** el ojo asocia más área pintada con más importancia. Una proyección que
 infla Rusia hace que su color "pese" más de lo que debe.
 
 ## 6.2 Por qué el orden interno es ese
 
-| # | Paso                    | Por qué va aquí                                                                                                           | Qué pasaría si se invierte                                                                  |
-| - | ----------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| 1 | Validar `width`/`height` | Con 0 o `NaN` (contenedor oculto o aún sin medir) `fitSize` **no falla**: da escala 0/NaN y cada path sale `"MNaN,NaN…"`. | Mapa invisible, sin ningún error en consola.                                                |
-| 2 | Crear una instancia nueva | `fitSize` **modifica** la proyección. Antes del ajuste, porque es lo que se va a mutar.                                  | —                                                                                           |
-| 3 | `fitSize`               | Necesita el tamaño validado y la instancia. Con 0 features se omite (el área vacía daría infinitos).                      | Escala `Infinity`/`NaN` con colección vacía.                                                |
+| #   | Paso                      | Por qué va aquí                                                                                                           | Qué pasaría si se invierte                   |
+| --- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| 1   | Validar `width`/`height`  | Con 0 o `NaN` (contenedor oculto o aún sin medir) `fitSize` **no falla**: da escala 0/NaN y cada path sale `"MNaN,NaN…"`. | Mapa invisible, sin ningún error en consola. |
+| 2   | Crear una instancia nueva | `fitSize` **modifica** la proyección. Antes del ajuste, porque es lo que se va a mutar.                                   | —                                            |
+| 3   | `fitSize`                 | Necesita el tamaño validado y la instancia. Con 0 features se omite (el área vacía daría infinitos).                      | Escala `Infinity`/`NaN` con colección vacía. |
 
 **Dato clave del diseño:** el registro `PROJECTIONS` guarda **fábricas** (`geoEqualEarth`), no instancias.
 Una proyección d3 es un objeto mutable; si se compartiera una, dos mapas en la misma página o un mapa que
@@ -767,8 +771,55 @@ y que ninguno de los 177 países produce un path con `NaN`.
 
 ---
 
+# Paso 7: `buildLegend` (leer el mapa)
+
+Archivos: `src/core/legend.ts` + `legend.test.ts`, exportada desde `src/core/index.ts`.
+
+## 7.1 Qué hace
+
+```ts
+buildLegend({ scale, values, formatValue?, emptyLabel? }) → LegendItem[]
+// LegendItem = { color, label, from?, to?, count }
+```
+
+Convierte la escala del paso 5 en una lista de clases listas para pintar, **reutilizando sus `thresholds` y
+`colors`** (no recalcula nada: leyenda y mapa no pueden desincronizarse) y **contando cuántas regiones caen
+en cada clase**. Una leyenda es lo que da significado a los colores.
+
+| Caso                           | Resultado                                                                           |
+| ------------------------------ | ----------------------------------------------------------------------------------- |
+| Escala `classed`               | Un item por clase; `from`/`to` salen de los cortes y del dominio de la escala.      |
+| Escala `continuous` (`linear`) | `[]`: no hay clases. Se dibujará como degradado usando `scale.domain` (capa React). |
+| `emptyLabel` presente          | Se añade al final un item "sin dato" con `emptyFill` y el nº de `null`/`NaN`.       |
+
+## 7.2 Decisiones
+
+- **El conteo usa la misma regla que el mapa:** un valor justo en un corte va a la clase de arriba
+  (búsqueda binaria sobre los cortes). Hay un test que verifica que, para cada clase, el nº de regiones que
+  `scale.getColor` pinta de ese color coincide con `count`.
+- **`classification` no es parámetro** (a diferencia de `dd.md §20`): ya está dentro de la escala
+  (`thresholds`), pasarlo otra vez permitiría contradecirla.
+- **El item "sin dato" es opcional** y se pide con `emptyLabel`, para que el texto (i18n) lo ponga quien usa la librería.
+  El `0` no cuenta como sin dato.
+- **Formato por defecto:** enteros tal cual, decimales con máximo 2. `formatValue` lo sustituye (p. ej. `v => `${v} %``).
+- **Los límites se muestran como `from – to`** también en la última clase (`to` = máximo del dominio). En
+  una escala `threshold` manual el primero y el último vienen del dominio de los datos, no son infinitos.
+
+## 7.3 Tests
+
+88 tests en total, `typecheck` y `oxlint` limpios; cobertura de `src/core` 100 % líneas, 97,5 % ramas.
+
+## 7.4 Antes de pasar al paso 8: ¿lo tienes claro?
+
+- ¿Por qué la leyenda recibe la escala y no vuelve a calcular cortes?
+- ¿En qué clase cuenta un valor igual a un corte, y por qué debe coincidir con el mapa?
+- ¿Por qué una escala continua devuelve `[]`?
+
+---
+
 ## Siguiente paso (propuesta, no iniciado)
 
-**Paso 7: `core/legend.ts`.** `buildLegend` convierte la escala del paso 5 (`thresholds` + `colors`) en una
-lista de items `{ color, from, to, label, count }`, contando cuántas regiones caen en cada clase. Una leyenda
-es la que permite **leer** el mapa; sin ella los colores no significan nada. Después empezaría la capa React.
+**Paso 8: capa React, `use-container-size` y `use-choropleth`** (tareas 7 y 8 de `dd.md §20`). El hook headless
+encadena lo que hoy hace a mano la story provisional (`toFeatureCollection → joinData → createColorScale →
+createProjection → buildLegend`) y devuelve `regions`, `legend` y `getRegionProps`. Con él se podrá borrar
+`first-map.stories.tsx`.
