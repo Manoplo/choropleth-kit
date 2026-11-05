@@ -18,6 +18,7 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./styles.css": "./dist/styles.css",
     "./core": {
       "types": "./dist/core.d.ts",
       "import": "./dist/core.js"

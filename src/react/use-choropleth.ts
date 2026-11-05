@@ -1,4 +1,4 @@
-import { useMemo, useState, type MouseEventHandler } from "react";
+import { useEffect, useMemo, useState, type MouseEventHandler } from "react";
 import type { Feature, FeatureCollection, MultiLineString } from "geojson";
 import { geoPath } from "d3-geo";
 import type { Topology } from "topojson-specification";
@@ -7,6 +7,9 @@ import {
   createBorders,
   createColorScale,
   createProjection,
+  DEFAULT_EMPTY_FILL,
+  defaultFormatValue,
+  formatJoinDiagnostics,
   joinData,
   toFeatureCollection,
   type Classification,
@@ -58,6 +61,10 @@ type BaseOptions<TDatum> = {
   selectedId?: string | null;
   onRegionClick?: (event: RegionEvent<TDatum>) => void;
   onRegionHover?: (event: RegionEvent<TDatum> | null) => void;
+  /** Se llama cada vez que cambia el resultado del cruce datos↔regiones (también en producción). */
+  onJoinReport?: (report: JoinReport) => void;
+  /** Aviso en consola de ids sin cruzar. Solo fuera de producción. Por defecto `true`. */
+  diagnostics?: boolean;
 };
 
 export type UseChoroplethOptions<TDatum> = BaseOptions<TDatum> &
@@ -85,6 +92,10 @@ export type UseChoroplethResult<TDatum> = {
   legend: LegendItem[];
   scale: ColorScale;
   joinReport: JoinReport;
+  /** Formateador efectivo (el del usuario o el de por defecto), para tooltip y leyenda. */
+  formatValue: (value: number) => string;
+  /** `true` si hay `onRegionClick`: los componentes ponen cursor `pointer`. */
+  clickable: boolean;
   hoveredId: string | null;
   selectedId: string | null;
   getRegionProps: (region: Region<TDatum>) => RegionProps;
@@ -153,7 +164,7 @@ export const useChoropleth = <TDatum>(
   const scale = createColorScale({
     values,
     classification: options.classification,
-    emptyFill: options.emptyFill,
+    emptyFill: options.emptyFill ?? EMPTY_FILL_VAR,
     ...(options.variant === "diverging"
       ? { variant: "diverging", palette: options.palette, midpoint: options.midpoint }
       : { variant: "sequential", palette: options.palette }),
@@ -174,6 +185,27 @@ export const useChoropleth = <TDatum>(
     formatValue: options.formatValue,
     emptyLabel: options.emptyLabel,
   });
+
+  // ── diagnóstico ───────────────────────────────────────────────────────────────────────────────
+  // Es un efecto de verdad (escribe en la consola y llama a un callback externo), así que no puede
+  // ir en el render: React puede renderizar varias veces y el hover renderiza en cada movimiento.
+  // La clave hace que solo se ejecute cuando cambia el RESULTADO del cruce, no en cada render.
+  const reportKey = [
+    data.length,
+    joinReport.unmatchedData.join("\u0001"),
+    joinReport.featuresWithoutData.join("\u0001"),
+    joinReport.duplicateDataIds.join("\u0001"),
+  ].join("\u0000");
+  const { onJoinReport, diagnostics = true } = options;
+  useEffect(() => {
+    onJoinReport?.(joinReport);
+    if (!diagnostics || isProduction()) return;
+    const message = formatJoinDiagnostics({ ...joinReport, dataCount: data.length });
+    if (message !== null) console.warn(message);
+    // Solo `reportKey`: el contenido de `joinReport` ya está resumido en ella, y volver a ejecutar
+    // por la identidad de `onJoinReport` (casi siempre una función inline) avisaría en cada render.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [reportKey]);
 
   // ── interacción ───────────────────────────────────────────────────────────────────────────────
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -209,11 +241,21 @@ export const useChoropleth = <TDatum>(
     legend,
     scale,
     joinReport,
+    formatValue: options.formatValue ?? defaultFormatValue,
+    clickable: onRegionClick !== undefined,
     hoveredId,
     selectedId,
     getRegionProps,
   };
 };
+
+// Color de «sin dato» tematizable con `--cm-empty-fill`; el valor tras la coma es el de respaldo
+// si no se ha cargado `styles.css`.
+const EMPTY_FILL_VAR = `var(--cm-empty-fill, ${DEFAULT_EMPTY_FILL})`;
+
+// `process` no existe en un navegador sin bundler; los bundlers lo sustituyen por una constante.
+const isProduction = (): boolean =>
+  typeof process !== "undefined" && process.env["NODE_ENV"] === "production";
 
 const defaultFeatureId = (feature: Feature): string | undefined =>
   feature.id === undefined ? undefined : String(feature.id);

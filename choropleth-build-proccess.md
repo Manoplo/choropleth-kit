@@ -22,8 +22,11 @@
 | 6     | Proyección y primer mapa visible                                 | ✅ Hecho                                               |
 | 7     | `core/legend.ts`: leyenda con conteos                            | ✅ Hecho                                               |
 | 8     | React nivel 3 (headless): `use-container-size` + `useChoropleth` | ✅ Hecho                                               |
-| 9     | React nivel 2: compound (`Choropleth.Root` + piezas)             | ⏳ Pendiente                                           |
-| 10    | React nivel 1: preset `<ChoroplethMap>`                          | ⏳ Pendiente                                           |
+| 9     | React nivel 2: compound (`Choropleth.Root` + piezas)             | ✅ Hecho                                               |
+| 10    | React nivel 1: preset `<ChoroplethMap>`                          | ✅ Hecho                                               |
+| 11    | Diagnóstico en consola + `onJoinReport`                          | ✅ Hecho                                               |
+| 12    | CSS y theming (`styles.css`, `--cm-*`, `unstyled`)               | ✅ Hecho                                               |
+| 13    | Geodatos propios: `src/geo/` (ISO numérico → alpha-2)            | ⏳ Pendiente                                           |
 | …     | (siguientes tareas del §20 de `dd.md`)                           | ⏳ Pendiente                                           |
 
 ---
@@ -951,10 +954,299 @@ la story en un navegador**: lo comprobado es que compila y que los datos del hoo
 
 ---
 
+# Paso 9: nivel 2 (compound): `Choropleth.Root` y sus piezas
+
+Archivos: `src/react/components/{root,svg,regions,borders,selection,legend,tooltip}.tsx`,
+`choropleth-context.ts`, `pointer-store.ts`, `choropleth.ts` (+ `choropleth.test.tsx`) y
+`stories/compound.stories.tsx`. Ajuste menor al hook: ahora devuelve también `formatValue` y `clickable`.
+
+## 9.1 Idea: un Context con el resultado del hook
+
+```tsx
+<Choropleth.Root geography data getId getValue variant>
+  {" "}
+  {/* llama a useChoropleth UNA vez */}
+  <Choropleth.Svg /> {/* <svg>: Regions + Borders + Selection por defecto */}
+  <Choropleth.Legend title="…" /> {/* HTML */}
+  <Choropleth.Tooltip /> {/* HTML */}
+</Choropleth.Root>
+```
+
+`Root` ejecuta `useChoropleth`, mete el resultado en un `Context` y renderiza un `<div>` (el contenedor medido).
+Cada pieza lee del Context lo que necesita. **Ninguna recibe `data`, `scale` ni `regions` por props**: por eso se
+pueden quitar, reordenar o sustituir sin romper nada. El preset del paso 10 será solo esto con las piezas puestas.
+
+| Pieza       | Dónde vive | Qué hace                                                                                            |
+| ----------- | ---------- | --------------------------------------------------------------------------------------------------- |
+| `Root`      | HTML       | Hook + Context + contenedor `position: relative` + seguimiento del cursor.                          |
+| `Svg`       | `<svg>`    | El lienzo. Sin hijos pinta `Regions`, `Borders`, `Selection`.                                       |
+| `Regions`   | SVG        | Un `<path>` por región con su `fill`. Eventos delegados.                                            |
+| `Borders`   | SVG        | Fronteras interiores (una ruta). No se pinta con GeoJSON.                                           |
+| `Selection` | SVG        | Resalta hover y seleccionada, **encima** de las fronteras.                                          |
+| `Legend`    | HTML       | Swatches con rangos, o barra de degradado si la escala es `linear`. Render prop = leyenda headless. |
+| `Tooltip`   | HTML       | Junto al cursor. Por defecto nombre + valor; render prop con contexto tipado.                       |
+
+## 9.2 Decisiones con impacto real
+
+- **`Svg` es una pieza nueva respecto a `dd.md §9.3`.** El ejemplo del documento pone `Regions` y `Legend` como
+  hermanas dentro de `Root`, pero un `<path>` solo existe dentro de un `<svg>` y un `<div>` de leyenda no puede
+  vivir dentro de uno. Alguien tiene que ser el `<svg>`. `Svg` sin hijos reproduce el comportamiento esperado.
+- **Eventos delegados** (`dd.md §14`): un `onClick`/`onMouseOver` en el `<g>` de `Regions` que busca el
+  `data-region-id` con `closest()`, en vez de un listener por país. Con ello cada `<path>` es un `memo` cuyas
+  props son solo primitivos (`id`, `d`, `fill`, `stroke`): **mover el ratón no re-renderiza los 177 paths**.
+- **Hover y selección se pintan en `Selection`, no en cada región.** Si el borde de resaltado fuera del propio
+  `<path>`, los vecinos (pintados después) lo taparían a medias. Una capa superior con `pointer-events: none`
+  lo resuelve y además evita que el resalte invalide el `memo`. Si coinciden hover y selección, se ven ambos
+  trazos, con el azul de selección encima.
+- **La posición del cursor no es estado de React.** Un `useState` en `Root` re-renderizaría todo en cada
+  `mousemove`. Vive en un mini-store (`pointer-store.ts`) al que solo se suscribe el tooltip con
+  `useSyncExternalStore`: tampoco hace falta `useEffect` (el único sigue siendo el `ResizeObserver`).
+- **Tooltip sin medir su tamaño:** se voltea (`translate(-100%)`) cuando el cursor está en la mitad derecha o
+  inferior. Es aproximado, pero no mide el DOM ni usa efectos. Si hace falta precisión, `@floating-ui/react` (`dd.md §6`).
+- **Theming con CSS variables inline con valor por defecto**: `stroke="var(--cm-border-color, #ffffff)"`,
+  `--cm-border-width`, `--cm-hover-stroke`, `--cm-selected-stroke`, `--cm-transition-duration`. Sobrescribibles
+  desde el consumidor y **sin archivo CSS** que importar (por eso aún no hay prop `unstyled`).
+- **Con GeoJSON no hay `borders`**: `Regions` pinta entonces el contorno de cada región. Hay test de ambos casos.
+- **Los genéricos no llegan al Context** (un Context no puede ser genérico): `useChoroplethContext<TDatum>()` es
+  una aserción de tipo. En JSX el tipo se indica así: `<Choropleth.Tooltip<Row>>{({ datum }) => …}</…>`.
+- **Una pieza fuera de `Root` lanza un error claro** en vez de un `Cannot read properties of null`.
+
+## 9.3 Qué NO hace todavía
+
+Accesibilidad por teclado (el tooltip al enfocar, `dd.md §12.2`), `defaultSelectedId` (selección no controlada),
+`dimUnselected`, `position` de la leyenda (hoy se coloca con CSS desde fuera, como en la story), tooltip con
+`@floating-ui`, regiones sin dato con trama (_hatch_), `unstyled`. Cada uno es una mejora acotada para después.
+
+## 9.4 La story
+
+`pnpm storybook` → **Compound → Choropleth.Root**: `Default`, `CustomTooltip` (render prop) y `Sequential`.
+Clic para seleccionar; la leyenda se coloca con un `<div>` absoluto fuera del `<svg>`.
+
+## 9.5 Tests
+
+138 tests, `typecheck` y `oxlint` limpios; `build` y `build-storybook` compilan; cobertura de `src/core` 100 %
+líneas. Los de compound usan Testing Library: render por defecto, composición parcial, clic, hover (incluido
+el océano y el cambio de región), `Selection`, las cuatro variantes de leyenda, posición y volteo del tooltip, y el
+error fuera de `Root`. **No se ha visto la story en un navegador** (se cerró el IDE durante la sesión y no se
+reabrió): compila y los tests pasan, pero conviene mirarla.
+
+## 9.6 Antes de pasar al paso 10: ¿lo tienes claro?
+
+- ¿Por qué `Svg` existe como pieza si `dd.md` no la nombra?
+- ¿Por qué se delega el evento en el `<g>` y qué evita en cuanto a renders?
+- ¿Por qué hover y selección se dibujan en una capa aparte y encima de `Borders`?
+- ¿Por qué la posición del cursor no es un `useState`?
+- ¿Cómo permite el Context quitar la leyenda o cambiar el orden de las piezas sin tocar nada más?
+
+---
+
+# Paso 10: nivel 1 (preset): `<ChoroplethMap>`
+
+Archivos: `src/react/choropleth-map.tsx` (+ test) y `stories/choropleth-map.stories.tsx`.
+Con este paso **las tres APIs de `dd.md §9` coexisten**.
+
+## 10.1 Es solo composición
+
+```tsx
+<ChoroplethMap
+  geography={world} data={markets}
+  getId={(m) => m.isoCode} getValue={(m) => m.variation}
+  variant="diverging"
+  legend={{ title: "Var. % vs A-1", position: "bottom-left" }}
+  renderTooltip={({ datum, formattedValue }) => <MarketTooltip … />}
+  selectedId={id} onRegionClick={({ id }) => setId(id)}
+/>
+```
+
+Por dentro no hay lógica: `Root` + `Svg` + `Legend` (en una esquina) + `Tooltip`. Todo el cálculo está en el hook
+(paso 8) y todo el dibujo en las piezas (paso 9). Resultado: un solo código interno para tres niveles de control.
+
+| Si necesitas…                                 | Usas                                           |
+| --------------------------------------------- | ---------------------------------------------- |
+| Un mapa ya                                    | `<ChoroplethMap>`                              |
+| Quitar/reordenar piezas o leyenda propia      | `<Choropleth.Root>` + piezas (copia el preset) |
+| Pintar tú todo (otra librería de UI, canvas…) | `useChoropleth()`                              |
+
+## 10.2 Props y decisiones
+
+- **Props = las del hook + `legend`, `renderTooltip`, `className`, `style`, `ariaLabel`.** La unión discriminada
+  por `variant` viene del hook, así que el preset no la redefine: una sola fuente de verdad.
+- **Errores de compilación comprobados** (con `@ts-expect-error`, que falla si el código llegara a compilar):
+  falta `getValue`, `palette="rdbu"` con `sequential`, `midpoint` con `sequential`, falta `variant`.
+- **`TDatum` se infiere** de `data` y `getId`: `renderTooltip` y `onRegionClick` reciben `datum` con el tipo real.
+- **`legend`**: `false` la oculta; `{ title, position, showCount }` la configura. Posiciones: las cuatro esquinas,
+  por defecto `bottom-left`. Es un `div` absoluto sobre el mapa; si hace falta otra cosa, usar el compound.
+- **«Sin dato» aparece en la leyenda por defecto** (`emptyLabel`), porque es el aviso visual de que el gris no es
+  un cero. Se cambia con `emptyLabel="…"`. (Texto en español fijo: la i18n está sin resolver.)
+- **Tooltip por defecto siempre activo.** No hay `tooltip={false}` todavía.
+
+## 10.3 Lo que sigue sin existir (`dd.md §9.1` lo promete)
+
+| Falta                                                              | Nota                                                                                            |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| `geography` como `() => import("…")`                               | Carga diferida. Pide estado asíncrono; hay que decidir cómo sin `useEffect` (¿`use`/Suspense?). |
+| Geodatos propios (`geo/world-110m`) y tabla ISO numérico → alpha-2 | Hoy la story usa `world-atlas` y ids numéricos (`"724"`). Es la tarea de `src/geo/`.            |
+| Zoom/pan, regiones sin dato con trama, teclado                     | Fuera de v0.1 (zoom) o pendientes de accesibilidad.                                             |
+| `projection` como instancia, `palette: string[]`                   | Recortados en pasos anteriores.                                                                 |
+| Aviso en consola de ids sin cruzar                                 | Tarea 11 (siguiente).                                                                           |
+
+## 10.4 Tests
+
+147 tests, `typecheck` y `oxlint` limpios; `build` y `build-storybook` compilan; cobertura de `src/core` 100 %
+líneas. Cubren: props mínimas, `diverging` con `midpoint`, leyenda (oculta / título / esquina / conteos),
+`emptyLabel`, `renderTooltip` con datum tipado, `onRegionClick`, `selectedId`, `className`/`style`/`ariaLabel` y los
+errores de tipos. **Sigo sin haber visto las stories en un navegador**: conviene abrir `pnpm storybook` →
+**Preset → ChoroplethMap**.
+
+## 10.5 Antes de pasar al paso 11: ¿lo tienes claro?
+
+- ¿Por qué el preset no tiene lógica propia y qué ventaja da eso?
+- ¿Qué parte de los tipos del preset viene del hook y por qué no se redefine?
+- ¿Por qué «Sin dato» sale en la leyenda por defecto?
+- ¿Cuándo usarías el compound en lugar del preset, y cuándo el hook?
+
+---
+
+# Paso 11: diagnóstico en desarrollo
+
+Archivos: `src/core/diagnostics.ts` (+ test) y cambios en `use-choropleth.ts`.
+
+## 11.1 El problema
+
+Un mapa con ids que no cruzan sale **gris sin ningún error**. `joinData` ya detectaba el problema (paso 4) y el
+hook exponía `joinReport` (paso 8), pero nadie se lo decía al desarrollador. Ahora sí:
+
+```
+[choropleth] 3 datum(s) have no matching geometry: "ES", "FR", "IT".
+             Hint: your data ids look like ISO 3166-1 alpha-2 (e.g. "ES") but the geometry ids look like
+             ISO 3166-1 numeric (e.g. "724"). Convert one of them, or use `getFeatureId`…
+             41 region(s) have no data and will use `emptyFill`.
+```
+
+## 11.2 Dos piezas separadas, a propósito
+
+| Pieza                     | Dónde | Qué hace                                                                            |
+| ------------------------- | ----- | ----------------------------------------------------------------------------------- |
+| `formatJoinDiagnostics`   | core  | **Pura**: informe → texto (o `null` si no hay nada que avisar). No toca la consola. |
+| Efecto en `useChoropleth` | react | Decide **cuándo** avisar, escribe en consola y llama a `onJoinReport`.              |
+
+Mismo criterio que en el paso 4: separar «calcular» de «mostrar» permite testear los textos sin simular la
+consola ni `process.env`.
+
+## 11.3 Las pistas: solo cuando son claras
+
+Una pista equivocada es peor que ninguna, así que solo se da en tres casos concretos:
+
+1. **Ceros a la izquierda:** dato `"4"` y la geometría tiene `"004"` (Excel/CSV los pierde).
+2. **Mayúsculas:** dato `"es"` y la geometría tiene `"ES"`.
+3. **Sistema de ids distinto:** _todos_ los ids huérfanos son de un estilo (numérico / alpha-2 / alpha-3) y _todos_
+   los de las regiones sin dato son de otro. Si están mezclados o no son reconocibles, no hay pista.
+
+Para comparar estilos se usan las regiones sin dato como muestra del estilo de la geometría.
+
+## 11.4 Decisiones
+
+- **Es un `useEffect` y es deliberado.** `dd.md §20` pide «evitar `useEffect` salvo `ResizeObserver`», pero escribir
+  en consola y llamar a un callback externo es un efecto secundario real: hacerlo durante el render lo ejecutaría
+  varias veces (React puede repetir renders; el hover renderiza en cada movimiento). Es el segundo y último
+  `useEffect` de la librería.
+- **«Una vez por cambio de datos»:** el efecto depende de una _clave_ construida con el resultado del cruce
+  (ids huérfanos, regiones sin dato, duplicados, nº de filas), no de `data` ni de funciones. Cambiar solo los
+  valores, pasar el ratón o redefinir `onJoinReport` inline **no** avisa de nuevo. Hay un test para cada caso.
+  Consecuencia asumida: `onJoinReport` se lee del render que provocó el cambio, no se re-suscribe.
+- **Con 0 filas no se avisa:** es lo normal mientras cargan los datos; avisar «todas las regiones sin dato» sería ruido.
+- **Solo fuera de producción** (`NODE_ENV !== "production"`, protegido con `typeof process` por si no hay bundler).
+  **`onJoinReport` sí se llama en producción**: es para UI o telemetría, no para el desarrollador.
+- **`diagnostics={false}`** silencia la consola (no el callback).
+- **Mensajes en inglés**, como en `dd.md §9.6`: son para quien programa. Los textos de interfaz («Sin dato») son otro tema.
+- **`tests/setup.ts` silencia `console.warn` en todos los tests** (los datos de prueba tienen huérfanos a propósito);
+  los tests de diagnóstico lo vuelven a espiar. En el Storybook el aviso sí saldrá en la consola del navegador.
+- Un id huérfano de verdad (típico: Kosovo) **sigue avisando**: no hay lista de exclusiones.
+
+## 11.5 Tests
+
+170 tests. `diagnostics.test.ts` (12) cubre cada línea y cada pista, y los casos sin pista; los del hook comprueban
+una sola llamada, no repetición con hover ni con cambio de valores, repetición al cambiar el cruce, silencio
+(sin datos / todo cruza / `diagnostics={false}` / producción) y cuándo se llama a `onJoinReport`.
+
+---
+
+# Paso 12: CSS y theming
+
+Archivos: `src/react/styles.css`, `tsup.config.ts`, `package.json` (`exports`), `.storybook/preview.ts` y las clases
+de cada componente.
+
+## 12.1 Qué cambia
+
+Hasta el paso 10 los estilos eran _inline_ con `var(--cm-…, respaldo)`. Funcionaba, pero sin clases no se puede
+tematizar con CSS normal, no hay `unstyled` y todo el mundo carga estilos que no puede quitar. Ahora:
+
+| Mecanismo              | Cómo se usa                                                                                                |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Variables `--cm-*`** | `.cm-root { --cm-border-color: … }` o en cualquier ancestro. Es el 90 % de la personalización.             |
+| **Clases `cm-*`**      | Cada pieza tiene la suya (`cm-region`, `cm-borders`, `cm-legend__item`, `cm-tooltip`…) para ajustes finos. |
+| **`className`**        | En `Root`, `Legend`, `Tooltip`, `Svg` y `ChoroplethMap`.                                                   |
+| **`unstyled`**         | Quita **todas** las reglas de `styles.css` salvo las variables. Para quien aporta su propio CSS.           |
+
+Variables disponibles (`dd.md §9.7` más algunas): `--cm-empty-fill`, `--cm-border-color`, `--cm-border-width`,
+`--cm-hover-stroke(-width)`, `--cm-selected-stroke(-width)`, `--cm-transition-duration`, `--cm-font-family`,
+`--cm-font-size`, `--cm-tooltip-bg/-color/-border`.
+
+## 12.2 Cómo se carga: import explícito
+
+```ts
+import "choropleth-kit/styles.css";
+```
+
+`tsup` compila `styles.css` como una entrada más (`dist/styles.css`) y `exports` la publica. **No se importa desde el
+JS de la librería**: eso obligaría a todo consumidor a tener un bundler configurado para CSS, y un import
+automático no se puede quitar. `sideEffects: ["**/*.css"]` (paso 1) evita que el bundler descarte el CSS importado.
+Storybook lo importa en `.storybook/preview.ts`.
+
+**Riesgo conocido:** si el consumidor olvida el import, el mapa se ve pero sin fronteras, sin resaltado y con el
+tooltip sin caja — y no hay error. Se documentará en el README. (Lo que _no_ depende del CSS: el color de cada
+región y la posición del tooltip.) Existe `dist/styles.d.ts` con `export {}`: lo genera tsup, es inofensivo.
+
+## 12.3 Qué va en el CSS y qué sigue en línea
+
+- **En el CSS (visual):** trazos, anchos, fuentes, caja del tooltip, leyenda, transición de color.
+- **En línea (funcional):** el `fill` de cada región, el fondo de cada swatch y del degradado, la posición del
+  tooltip, `position: relative` del contenedor y `cursor: pointer`. Dependen de datos o del cursor.
+- **Trampa evitada:** el CSS **no define `fill`** en `.cm-region`; una regla CSS ganaría al color del dato.
+  Por eso el `fill` de la región pasó de atributo a `style={{ fill }}` (también porque puede valer `var(…)`).
+
+## 12.4 Detalles con impacto real
+
+- **«Sin dato» ahora es tematizable:** el `emptyFill` por defecto es `var(--cm-empty-fill, #d4d4d4)`. Un `emptyFill`
+  pasado por props sigue teniendo prioridad. El respaldo hace que sin `styles.css` siga siendo gris.
+- **Con GeoJSON** (sin capa de fronteras) las regiones llevan `data-outlined` en su `<g>` y el CSS les dibuja el
+  contorno; con TopoJSON lo hace `.cm-borders`, una vez por frontera.
+- **`prefers-reduced-motion`:** el CSS pone `--cm-transition-duration: 0ms`, sin código JS. Es la mitad CSS de la
+  prop `animate` de `dd.md §9.2` (que sigue sin existir).
+- **El tooltip por defecto lleva la clase `cm-tooltip--default`; el personalizado, no.** Si pasas tu contenido,
+  la caja es tuya (antes ya era así, ahora se puede sobrescribir por clase).
+- **Hay una story `Themed`** (Preset → ChoroplethMap) que cambia 8 variables desde un `div` padre.
+
+## 12.5 Tests y comprobaciones
+
+170 tests; `typecheck`, `oxlint` y `prettier` limpios; `build` genera `dist/styles.css` (2,3 KB) y `build-storybook`
+compila. Los tests nuevos cubren la variable de «sin dato», la prioridad de `emptyFill`, `unstyled` (en `Root` y en el
+preset) y la clase del tooltip. **Lo que NO puede comprobar jsdom: que las reglas CSS se apliquen de verdad** (jsdom
+no resuelve el CSS importado). Eso exige abrir Storybook; sigo sin haberlo visto en un navegador.
+
+## 12.6 Antes de pasar al siguiente paso: ¿lo tienes claro?
+
+- ¿Por qué el aviso de consola es un `useEffect` si la librería dice evitarlos? ¿Qué lo hace «una vez por cambio»?
+- ¿Por qué una pista de diagnóstico se da solo cuando es clara?
+- ¿Por qué `styles.css` no se importa solo desde el JS de la librería?
+- ¿Por qué el CSS no puede definir `fill` en las regiones?
+- ¿Qué diferencia hay entre sobrescribir una variable `--cm-*` y usar `unstyled`?
+
+---
+
 ## Siguiente paso (propuesta, no iniciado)
 
-**Paso 9: nivel 2, compound.** `Choropleth.Root` (llama a `useChoropleth` y lo pone en un Context) y los
-componentes `Regions`, `Borders`, `Legend` (HTML, con render prop para leyenda headless) y `Tooltip`
-(posicionado junto al cursor, contenido por render prop). **Paso 10:** `<ChoroplethMap>` = Root + piezas por
-defecto, con la unión discriminada de props de `dd.md §9.2`. Después el diagnóstico en consola (paso 11) y la story
-final.
+**Paso 13: geodatos propios (`src/geo/`).** La tabla `iso-numeric-to-alpha2.ts` y un `world-110m` ya convertido a
+alpha-2 y publicable (`choropleth-kit/geo/world-110m`), que es lo que `dd.md §9.1` da por hecho en su ejemplo y lo
+que hace que el diagnóstico de este paso casi nunca salte en el caso común. Después: `geography` como carga diferida,
+README y accesibilidad por teclado.

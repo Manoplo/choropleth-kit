@@ -181,3 +181,66 @@ describe("useChoropleth", () => {
     expect(setup({ geography: geo, data: [] }).result.current.regions).toEqual([]);
   });
 });
+
+describe("useChoropleth · diagnóstico", () => {
+  const warn = () => vi.mocked(console.warn);
+
+  it("avisa una vez por consola con las pistas cuando hay ids sin cruzar", () => {
+    setup({ data: [{ code: "ES", v: 1 }] });
+
+    expect(warn()).toHaveBeenCalledTimes(1);
+    expect(String(warn().mock.calls[0]?.[0])).toContain("1 datum(s) have no matching geometry");
+  });
+
+  it("no vuelve a avisar en renders que no cambian el resultado (hover incluido)", () => {
+    const { result, rerender } = setup({ data: [{ code: "ES", v: 1 }] });
+    rerender({ data: [{ code: "ES", v: 2 }] }); // otro valor, mismo cruce
+    const a = result.current.regions[0];
+    if (a === undefined) throw new Error("falta región");
+    act(() => result.current.getRegionProps(a).onMouseEnter({} as never));
+
+    expect(warn()).toHaveBeenCalledTimes(1);
+  });
+
+  it("vuelve a avisar cuando cambia el resultado del cruce", () => {
+    const { rerender } = setup({ data: [{ code: "ES", v: 1 }] });
+    rerender({ data: [{ code: "FR", v: 1 }] });
+
+    expect(warn()).toHaveBeenCalledTimes(2);
+  });
+
+  it("no avisa si todo cruza, si no hay datos aún, ni con diagnostics={false}", () => {
+    setup({
+      data: [
+        { code: "A", v: 1 },
+        { code: "B", v: 2 },
+      ],
+    });
+    setup({ data: [] });
+    setup({ data: [{ code: "ES", v: 1 }], diagnostics: false });
+
+    expect(warn()).not.toHaveBeenCalled();
+  });
+
+  it("no escribe en consola en producción, pero onJoinReport sí se llama", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const onJoinReport = vi.fn<(report: unknown) => void>();
+    setup({ data: [{ code: "ES", v: 1 }], onJoinReport });
+    vi.unstubAllEnvs();
+
+    expect(warn()).not.toHaveBeenCalled();
+    expect(onJoinReport).toHaveBeenCalledWith(
+      expect.objectContaining({ unmatchedData: ["ES"], featuresWithoutData: ["A", "B"] }),
+    );
+  });
+
+  it("onJoinReport se llama al montar y al cambiar el cruce, no en cada render", () => {
+    const onJoinReport = vi.fn<(report: unknown) => void>();
+    const { rerender } = setup({ data: [{ code: "A", v: 1 }], onJoinReport });
+    rerender({ data: [{ code: "A", v: 5 }], onJoinReport: () => onJoinReport(1) });
+    expect(onJoinReport).toHaveBeenCalledTimes(1);
+
+    rerender({ data: [{ code: "B", v: 5 }], onJoinReport });
+    expect(onJoinReport).toHaveBeenCalledTimes(2);
+  });
+});

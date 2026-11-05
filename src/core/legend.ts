@@ -20,7 +20,7 @@ export type BuildLegendOptions = {
   emptyLabel?: string;
 };
 
-const defaultFormat = (value: number): string =>
+export const defaultFormatValue = (value: number): string =>
   Number.isInteger(value) ? String(value) : String(Number(value.toFixed(2)));
 
 // Índice de clase = nº de cortes <= valor. Un valor justo en un corte cae en la clase de ARRIBA,
@@ -45,7 +45,7 @@ const classIndex = (thresholds: readonly number[], value: number): number => {
  */
 export const buildLegend = (options: BuildLegendOptions): LegendItem[] => {
   const { scale, values, emptyLabel } = options;
-  const format = options.formatValue ?? defaultFormat;
+  const format = options.formatValue ?? defaultFormatValue;
   if (scale.kind === "continuous") return [];
 
   const counts = Array.from({ length: scale.colors.length }, () => 0);
