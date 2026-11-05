@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
 import { useChoroplethContext } from "../choropleth-context";
 import { Borders } from "./borders";
+import { Bubbles } from "./bubbles";
 import { Regions } from "./regions";
 import { Selection } from "./selection";
 
 export type SvgProps = {
-  /** Capas del mapa, de abajo arriba. Por defecto: `Regions`, `Borders` y `Selection`. */
+  /** Capas del mapa, de abajo arriba. Por defecto: `Regions`, `Borders`, `Bubbles` y `Selection`. */
   children?: ReactNode;
   className?: string;
   ariaLabel?: string;
@@ -32,6 +33,7 @@ export const Svg = ({ children, className, ariaLabel }: SvgProps) => {
         <>
           <Regions />
           <Borders />
+          <Bubbles />
           <Selection />
         </>
       )}

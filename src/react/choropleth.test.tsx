@@ -208,7 +208,7 @@ describe("Choropleth (compound)", () => {
         { formatValue: (v) => `${v}%` },
         <Choropleth.Legend>
           {({ items, scale, formatValue }) => (
-            <p>{`${items.length}|${scale.kind}|${formatValue(7)}`}</p>
+            <p>{`${items.length}|${scale?.kind}|${formatValue(7)}`}</p>
           )}
         </Choropleth.Legend>,
       );
@@ -376,5 +376,69 @@ describe("Choropleth (compound)", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     expect(() => render(<Choropleth.Regions />)).toThrow(/dentro de <Choropleth.Root>/);
     spy.mockRestore();
+  });
+});
+
+describe("Choropleth (compound) · variants categorical y bubble", () => {
+  it("categorical: leyenda de categorías y tooltip con la etiqueta", () => {
+    const { path } = renderMap(
+      {
+        variant: "categorical",
+        getCategory: (r: Row) => (r.v === 1 ? "bajo" : "alto"),
+        categories: [
+          { id: "bajo", label: "Bajo" },
+          { id: "alto", label: "Alto" },
+        ],
+      } as never,
+      <>
+        <Choropleth.Svg />
+        <Choropleth.Legend showCount />
+        <Choropleth.Tooltip />
+      </>,
+    );
+
+    expect(screen.getAllByRole("listitem").map((li) => li.textContent)).toEqual([
+      "Bajo(1)",
+      "Alto(1)",
+    ]);
+    fireEvent.mouseOver(path("A"));
+    fireEvent.mouseMove(path("A"), { clientX: 5, clientY: 5 });
+    expect(screen.getByRole("tooltip").textContent).toContain("Bajo");
+  });
+
+  it("bubble: dibuja círculos, no capturan el ratón y la leyenda muestra los tamaños", () => {
+    const { container, path } = renderMap({
+      variant: "bubble",
+      getValue: (r: Row) => r.v,
+      formatValue: (v: number) => `${v} €`,
+    } as never);
+
+    const circles = container.querySelectorAll("circle.cm-bubble");
+    expect(circles).toHaveLength(2);
+    expect(container.querySelector(".cm-bubbles")?.getAttribute("pointer-events")).toBe("none");
+    expect(container.querySelectorAll(".cm-legend__size")).toHaveLength(3);
+    expect(screen.getByText("9 €")).toBeTruthy();
+
+    // el hover sigue funcionando a través de la región
+    fireEvent.mouseOver(path("B"));
+    expect(container.querySelector('[data-selection="hover"]')).not.toBeNull();
+  });
+
+  it("sin burbujas (variant numérica) no hay capa de burbujas ni tamaños", () => {
+    const { container } = renderMap();
+
+    expect(container.querySelector(".cm-bubbles")).toBeNull();
+    expect(container.querySelector(".cm-legend__sizes")).toBeNull();
+  });
+
+  it("la leyenda headless recibe sizeItems", () => {
+    renderMap(
+      { variant: "bubble", getValue: (r: Row) => r.v } as never,
+      <Choropleth.Legend>
+        {({ sizeItems }) => <p>{`tamaños:${sizeItems.length}`}</p>}
+      </Choropleth.Legend>,
+    );
+
+    expect(screen.getByText("tamaños:3")).toBeTruthy();
   });
 });

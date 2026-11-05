@@ -118,6 +118,18 @@ describe("ChoroplethMap (preset)", () => {
     expect(screen.getByRole("img", { name: "Ventas por país" })).toBeTruthy();
   });
 
+  it("categorical y bubble desde el preset", () => {
+    const { container } = render(
+      <>
+        <ChoroplethMap {...common} variant="categorical" getCategory={(r) => (r.v ? "a" : null)} />
+        <ChoroplethMap {...common} variant="bubble" />
+      </>,
+    );
+
+    expect(container.querySelectorAll("circle.cm-bubble")).toHaveLength(2);
+    expect(screen.getAllByText("a").length).toBeGreaterThan(0);
+  });
+
   // Estas líneas solo se COMPRUEBAN en `pnpm typecheck`: el @ts-expect-error falla si compilan.
   it("los errores de uso son errores de compilación", () => {
     const { getValue: _omit, ...withoutGetValue } = common;
@@ -129,6 +141,10 @@ describe("ChoroplethMap (preset)", () => {
         <ChoroplethMap {...common} variant="sequential" palette="rdbu" />
         {/* @ts-expect-error: midpoint solo existe en diverging */}
         <ChoroplethMap {...common} variant="sequential" midpoint={0} />
+        {/* @ts-expect-error: categorical exige getCategory, no getValue */}
+        <ChoroplethMap {...withoutGetValue} variant="categorical" />
+        {/* @ts-expect-error: getCoordinates solo existe en bubble */}
+        <ChoroplethMap {...common} variant="sequential" getCoordinates={() => null} />
         {/* @ts-expect-error: falta variant */}
         <ChoroplethMap {...common} />
       </>

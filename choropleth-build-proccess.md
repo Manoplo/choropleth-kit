@@ -26,7 +26,9 @@
 | 10    | React nivel 1: preset `<ChoroplethMap>`                          | ✅ Hecho                                               |
 | 11    | Diagnóstico en consola + `onJoinReport`                          | ✅ Hecho                                               |
 | 12    | CSS y theming (`styles.css`, `--cm-*`, `unstyled`)               | ✅ Hecho                                               |
-| 13    | Geodatos propios: `src/geo/` (ISO numérico → alpha-2)            | ⏳ Pendiente                                           |
+| 13    | Presets por variant: `categorical` y `bubble`                    | ✅ Hecho                                               |
+| 14    | Reflexión: zoom y drill-down (§11) + interacción (§12)           | ⏳ Pendiente                                           |
+| 15    | Geodatos propios: `src/geo/` (ISO numérico → alpha-2)            | ⏳ Pendiente                                           |
 | …     | (siguientes tareas del §20 de `dd.md`)                           | ⏳ Pendiente                                           |
 
 ---
@@ -851,8 +853,8 @@ trozos de JSX. Y por eso `dd.md` dice «un solo código interno».
 
 ## 8.2 `useContainerSize`
 
-Mide un elemento con `ResizeObserver` y devuelve `{ ref, width, height }`. Es el **único `useEffect`** de la
-librería (observar el DOM es un efecto real; lo demás se deriva al renderizar).
+Mide un elemento con `ResizeObserver` y devuelve `{ ref, width, height }`. Es un `useEffect` legítimo (observar
+el DOM es un efecto real) (observar el DOM es un efecto real; lo demás se deriva al renderizar).
 
 - **Nunca devuelve 0.** Un contenedor oculto daría `width = 0` y `createProjection` lanza error. Se ignoran
   las medidas con ancho 0 y se conserva la anterior.
@@ -1000,7 +1002,7 @@ pueden quitar, reordenar o sustituir sin romper nada. El preset del paso 10 ser�
   trazos, con el azul de selección encima.
 - **La posición del cursor no es estado de React.** Un `useState` en `Root` re-renderizaría todo en cada
   `mousemove`. Vive en un mini-store (`pointer-store.ts`) al que solo se suscribe el tooltip con
-  `useSyncExternalStore`: tampoco hace falta `useEffect` (el único sigue siendo el `ResizeObserver`).
+  `useSyncExternalStore`: tampoco hace falta `useEffect` para registrar listeners.
 - **Tooltip sin medir su tamaño:** se voltea (`translate(-100%)`) cuando el cursor está en la mitad derecha o
   inferior. Es aproximado, pero no mide el DOM ni usa efectos. Si hace falta precisión, `@floating-ui/react` (`dd.md §6`).
 - **Theming con CSS variables inline con valor por defecto**: `stroke="var(--cm-border-color, #ffffff)"`,
@@ -1082,13 +1084,13 @@ Por dentro no hay lógica: `Root` + `Svg` + `Legend` (en una esquina) + `Tooltip
 
 ## 10.3 Lo que sigue sin existir (`dd.md §9.1` lo promete)
 
-| Falta                                                              | Nota                                                                                            |
-| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| `geography` como `() => import("…")`                               | Carga diferida. Pide estado asíncrono; hay que decidir cómo sin `useEffect` (¿`use`/Suspense?). |
-| Geodatos propios (`geo/world-110m`) y tabla ISO numérico → alpha-2 | Hoy la story usa `world-atlas` y ids numéricos (`"724"`). Es la tarea de `src/geo/`.            |
-| Zoom/pan, regiones sin dato con trama, teclado                     | Fuera de v0.1 (zoom) o pendientes de accesibilidad.                                             |
-| `projection` como instancia, `palette: string[]`                   | Recortados en pasos anteriores.                                                                 |
-| Aviso en consola de ids sin cruzar                                 | Tarea 11 (siguiente).                                                                           |
+| Falta                                                              | Nota                                                                                 |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| `geography` como `() => import("…")`                               | Carga diferida. Pide estado asíncrono (`useEffect` + `import()`, o Suspense/`use`).  |
+| Geodatos propios (`geo/world-110m`) y tabla ISO numérico → alpha-2 | Hoy la story usa `world-atlas` y ids numéricos (`"724"`). Es la tarea de `src/geo/`. |
+| Zoom/pan, regiones sin dato con trama, teclado                     | Fuera de v0.1 (zoom) o pendientes de accesibilidad.                                  |
+| `projection` como instancia, `palette: string[]`                   | Recortados en pasos anteriores.                                                      |
+| Aviso en consola de ids sin cruzar                                 | Tarea 11 (siguiente).                                                                |
 
 ## 10.4 Tests
 
@@ -1146,10 +1148,9 @@ Para comparar estilos se usan las regiones sin dato como muestra del estilo de l
 
 ## 11.4 Decisiones
 
-- **Es un `useEffect` y es deliberado.** `dd.md §20` pide «evitar `useEffect` salvo `ResizeObserver`», pero escribir
-  en consola y llamar a un callback externo es un efecto secundario real: hacerlo durante el render lo ejecutaría
-  varias veces (React puede repetir renders; el hover renderiza en cada movimiento). Es el segundo y último
-  `useEffect` de la librería.
+- **Es un `useEffect`, y es lo correcto.** Escribir en consola y llamar a un callback externo es un efecto secundario
+  real: hacerlo durante el render lo ejecutaría varias veces (React puede repetir renders; el hover renderiza en cada
+  movimiento). (`dd.md §20` ya no limita el uso de `useEffect`: se usa cuando hace falta un efecto de verdad.)
 - **«Una vez por cambio de datos»:** el efecto depende de una _clave_ construida con el resultado del cruce
   (ids huérfanos, regiones sin dato, duplicados, nº de filas), no de `data` ni de funciones. Cambiar solo los
   valores, pasar el ratón o redefinir `onJoinReport` inline **no** avisa de nuevo. Hay un test para cada caso.
@@ -1236,7 +1237,7 @@ no resuelve el CSS importado). Eso exige abrir Storybook; sigo sin haberlo visto
 
 ## 12.6 Antes de pasar al siguiente paso: ¿lo tienes claro?
 
-- ¿Por qué el aviso de consola es un `useEffect` si la librería dice evitarlos? ¿Qué lo hace «una vez por cambio»?
+- ¿Por qué el aviso de consola va en un `useEffect` y no en el render? ¿Qué lo hace «una vez por cambio»?
 - ¿Por qué una pista de diagnóstico se da solo cuando es clara?
 - ¿Por qué `styles.css` no se importa solo desde el JS de la librería?
 - ¿Por qué el CSS no puede definir `fill` en las regiones?
@@ -1244,9 +1245,107 @@ no resuelve el CSS importado). Eso exige abrir Storybook; sigo sin haberlo visto
 
 ---
 
+# Paso 13: presets por `variant` (`categorical` y `bubble`)
+
+Archivos: `src/core/{variants,categories,bubbles}.ts`, `src/react/components/bubbles.tsx`, cambios en el hook,
+`Legend`, `Tooltip`, `Svg` y `styles.css`; `stories/variants.stories.tsx`. Implementa `dd.md §10`.
+
+## 13.1 La idea de `dd.md §10`: un variant es una función pura
+
+Hasta ahora el hook tenía la lógica de «secuencial/divergente» escrita dentro. Ahora cada variant es una rama de
+**`resolveVariant`** (en `core`, sin React): recibe las regiones ya cruzadas con sus datos y devuelve **cómo se pintan**.
+
+```
+resolveVariant({ config, entries, data, centroids, project, … })
+   → { fills, values, labels, scale, legend, bubbles, sizeLegend }
+```
+
+| Variant       | Escala                            | Regiones              | Leyenda                                      | Burbujas |
+| ------------- | --------------------------------- | --------------------- | -------------------------------------------- | -------- |
+| `sequential`  | quantile/quantize/… (paso 5)      | Coloreadas            | Swatches con rangos                          | —        |
+| `diverging`   | simétrica alrededor de `midpoint` | Coloreadas            | Swatches con rangos                          | —        |
+| `categorical` | ordinal (paleta categórica)       | Coloreadas            | Una entrada por categoría                    | —        |
+| `bubble`      | **raíz cuadrada** (radio)         | Neutras (`emptyFill`) | Círculos de tamaño (+ swatches si hay color) | Sí       |
+
+Añadir un variant nuevo = una rama en `resolveVariant` + un caso en `VariantConfig`. El hook, `Root`, el preset y
+las piezas no cambian (salvo que el variant traiga una capa nueva, como `Bubbles`). Es lo que hace que cambiar
+`variant` en caliente **no recalcule rutas**: solo se vuelve a ejecutar esta función, y las rutas siguen en su `useMemo`.
+
+## 13.2 `categorical`
+
+```tsx
+<ChoroplethMap
+  variant="categorical"
+  getCategory={(r) => r.zone}
+  categories={[
+    { id: "N", label: "Norte" },
+    { id: "S", color: "#e11d48" },
+  ]}
+  palette="tableau10"
+/>
+```
+
+- **Sin `categories`, el orden es alfabético, no el de aparición.** Si dependiera del orden de los datos, recargar
+  con las filas en otro orden cambiaría el color de cada categoría. Para colores estables entre pantallas hay que pasar `categories`.
+- **Más categorías que colores → los colores se repiten** (como hace d3) y dos categorías serían indistinguibles.
+  Hay 7 paletas (`tableau10` por defecto, `set2`, `set3`, `accent`, `dark2`, `paired`, `pastel1`); en `categories` cada una puede llevar su `color`.
+- **Categoría desconocida o `null` → `emptyFill`.** Y se cuenta como «sin dato» en la leyenda.
+- `Region.value` pasa a ser `number | string | null` (en `categorical` es la categoría) y la región trae **`formattedValue`**
+  ya listo («Insignia»): el tooltip deja de formatear por su cuenta, porque ya no todo valor es un número.
+- `scale` es `null`: no hay escala numérica.
+
+## 13.3 `bubble`
+
+Valores **absolutos** → círculos (la regla de oro de `dd.md §3.1`: no pintar absolutos con relleno).
+
+- **Radio con raíz cuadrada** (`dd.md §3.2`): el doble de valor ⇒ el doble de **área** (radio ×1,41). Hay un test que lo mide.
+- **El dominio empieza en 0**, no en el mínimo: con `[min, max]` el valor más pequeño tendría radio 0 y desaparecería, y las
+  razones entre áreas serían falsas.
+- **Los `null`, 0 y negativos no dibujan círculo.** Un área no puede ser negativa.
+- **Se dibujan de mayor a menor** para que las pequeñas queden encima.
+- **Posición:** por defecto, el **centroide de la región** (`geoPath.centroid`, ya proyectado y solo calculado para `bubble`).
+  Con `getCoordinates={(d) => [lon, lat]}` se posiciona con la proyección y **no pasa por las regiones** (tiendas, ciudades).
+- **Bivariante:** `getColorValue` colorea con la escala divergente (misma `classification`/`palette`/`midpoint` del diverging).
+  Sin él, color único (`color` o `--cm-bubble-fill`).
+- **Leyenda de tamaño:** tres círculos de referencia (¼, ½ y máximo) en `Legend` (`sizeItems` en la render prop) y `sizeLegend` en el hook.
+- **Con `getCoordinates` no se avisa de ids sin cruzar** (paso 11): una tienda no tiene por qué corresponder a un país.
+- **Regiones neutras en `emptyFill`**: el color lo ponen las burbujas; colorear también la región competiría con ellas.
+  (Efecto secundario a decidir: en `bubble` «sin dato» y «región neutra» comparten color.)
+
+## 13.4 Lo que NO hace todavía (decisiones abiertas)
+
+| Pendiente                                                        | Por qué importa                                                                                                                                                |
+| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Burbujas con `getCoordinates` no son interactivas**            | `pointer-events: none`. Hover/clic/tooltip de una tienda exige un evento que no sea `RegionEvent` (una tienda no es una región). Es parte del diseño de `§12`. |
+| Centroide de países con territorios lejanos                      | Francia o EE. UU. caen donde el área media, no en la metrópoli. Se resolverá con `getCoordinates` o un «punto de anclaje».                                     |
+| Aviso «variant sequential con valores que suman un total»        | `dd.md §9.6`/`§3.1`: detectar absolutos pintados con relleno. Aún no.                                                                                          |
+| `ckmeans`, leyenda de degradado con ticks, hatch para «sin dato» | Siguen fuera.                                                                                                                                                  |
+| Transición de `r` al cambiar de indicador                        | Está en el CSS (`transition: r`), sin verificar en navegador.                                                                                                  |
+
+## 13.5 Tests
+
+202 tests; `typecheck`, `oxlint` y `prettier` limpios; `build` y `build-storybook` compilan; cobertura de `src/core` 100 % líneas.
+`categories`/`bubbles`/`variants` tienen tests propios (orden alfabético, ciclado de paleta, área ∝ valor, dominio desde 0, orden
+de dibujo, bivariante, coordenadas propias, centroide `null`). En React: hook, compound y preset con ambos variants, y
+errores de compilación nuevos (`categorical` sin `getCategory`, `getCoordinates` en `sequential`). **No he visto las
+stories en un navegador** (`Variants → ChoroplethMap`: `Categorical`, `BubbleOnCountries`, `BubbleBivariate`, `BubbleStores`).
+
+## 13.6 Antes de seguir: ¿lo tienes claro?
+
+- ¿Por qué `resolveVariant` es una función pura de `core` y no parte del hook?
+- ¿Por qué el radio usa raíz cuadrada y el dominio arranca en 0?
+- ¿Por qué las categorías automáticas se ordenan alfabéticamente?
+- ¿Por qué una burbuja con `getCoordinates` no genera aviso de «sin cruzar» y una con centroide sí?
+- ¿Por qué las burbujas con coordenadas propias no pueden usar `RegionEvent` para hover/clic?
+
+---
+
 ## Siguiente paso (propuesta, no iniciado)
 
-**Paso 13: geodatos propios (`src/geo/`).** La tabla `iso-numeric-to-alpha2.ts` y un `world-110m` ya convertido a
-alpha-2 y publicable (`choropleth-kit/geo/world-110m`), que es lo que `dd.md §9.1` da por hecho en su ejemplo y lo
-que hace que el diagnóstico de este paso casi nunca salte en el caso común. Después: `geography` como carga diferida,
-README y accesibilidad por teclado.
+Antes de zoom y drill-down conviene **reflexionar** (lo que has propuesto) sobre tres cosas que se tocan entre sí:
+
+1. **Evento unificado** (`RegionEvent` vs. burbuja/punto): condiciona hover, clic, tooltip y teclado de `§12`.
+2. **Dónde vive el zoom:** `d3-zoom` aplica un `transform` a un `<g>` (rutas intactas, `dd.md §14`) pero los trazos y las burbujas deben
+   compensar la escala (`vector-effect` ya está; el radio de burbuja no).
+3. **Qué es un «nivel» en drill-down:** otra geometría + otros datos + otro `variant` (`dd.md §11`), y quién es dueño del estado (controlado por el consumidor).
+   Después, `src/geo/` (ISO numérico → alpha-2 y `world-110m` publicable), `geography` diferida, README y accesibilidad por teclado.

@@ -3,22 +3,22 @@ import type { Feature, FeatureCollection, MultiLineString } from "geojson";
 import { geoPath } from "d3-geo";
 import type { Topology } from "topojson-specification";
 import {
-  buildLegend,
   createBorders,
-  createColorScale,
   createProjection,
   DEFAULT_EMPTY_FILL,
   defaultFormatValue,
   formatJoinDiagnostics,
   joinData,
+  resolveVariant,
   toFeatureCollection,
-  type Classification,
+  type Bubble,
   type ColorScale,
-  type DivergingPaletteName,
   type JoinResult,
   type LegendItem,
+  type Point,
   type ProjectionName,
-  type SequentialPaletteName,
+  type SizeLegendItem,
+  type VariantConfig,
 } from "../core";
 import { useContainerSize } from "./use-container-size";
 
@@ -34,8 +34,10 @@ export type Region<TDatum> = RegionEvent<TDatum> & {
   /** Atributo `d` del `<path>`. */
   path: string;
   fill: string;
-  /** Valor numérico del dato; `null` si no hay dato o su valor es `null`. */
-  value: number | null;
+  /** Valor del dato: número, categoría (`categorical`) o `null` si no hay dato. */
+  value: number | string | null;
+  /** `value` listo para mostrar («1,5 %», «Europa»); cadena vacía si no hay valor. */
+  formattedValue: string;
 };
 
 export type JoinReport = Omit<JoinResult<unknown>, "joined">;
@@ -46,11 +48,9 @@ type BaseOptions<TDatum> = {
   objectName?: string;
   data: readonly TDatum[];
   getId: (datum: TDatum) => string;
-  getValue: (datum: TDatum) => number | null;
   /** Id de la región si no es `feature.id` (p. ej. `(f) => f.properties?.iso_a2`). */
   getFeatureId?: (feature: Feature) => string | undefined;
   projection?: ProjectionName;
-  classification?: Classification;
   emptyFill?: string;
   formatValue?: (value: number) => string;
   /** Si se pasa, la leyenda incluye un item "sin dato" con este texto. */
@@ -67,11 +67,8 @@ type BaseOptions<TDatum> = {
   diagnostics?: boolean;
 };
 
-export type UseChoroplethOptions<TDatum> = BaseOptions<TDatum> &
-  (
-    | { variant: "sequential"; palette?: SequentialPaletteName }
-    | { variant: "diverging"; palette?: DivergingPaletteName; midpoint?: number }
-  );
+/** Opciones comunes + las de cada `variant` (unión discriminada, ver `core/variants.ts`). */
+export type UseChoroplethOptions<TDatum> = BaseOptions<TDatum> & VariantConfig<TDatum>;
 
 export type RegionProps = {
   "data-region-id": string;
@@ -89,8 +86,14 @@ export type UseChoroplethResult<TDatum> = {
   regions: Region<TDatum>[];
   /** Fronteras interiores (`d` de un `<path>`). `null` con GeoJSON: usa `stroke` en cada región. */
   borders: string | null;
+  /** Leyenda de color (swatches con conteos). Vacía en `bubble` sin `getColorValue`. */
   legend: LegendItem[];
-  scale: ColorScale;
+  /** Círculos de referencia del tamaño (solo `bubble`). */
+  sizeLegend: SizeLegendItem[];
+  /** Burbujas ya posicionadas, de mayor a menor (solo `bubble`). */
+  bubbles: Bubble<TDatum>[];
+  /** Escala numérica de color. `null` en `categorical` y en `bubble` sin `getColorValue`. */
+  scale: ColorScale | null;
   joinReport: JoinReport;
   /** Formateador efectivo (el del usuario o el de por defecto), para tooltip y leyenda. */
   formatValue: (value: number) => string;
@@ -115,7 +118,8 @@ export type UseChoroplethResult<TDatum> = {
 export const useChoropleth = <TDatum>(
   options: UseChoroplethOptions<TDatum>,
 ): UseChoroplethResult<TDatum> => {
-  const { geography, objectName, data, getId, getValue, getFeatureId, projection } = options;
+  const { geography, objectName, data, getId, getFeatureId, projection } = options;
+  const isBubble = options.variant === "bubble";
 
   // ── tamaño ────────────────────────────────────────────────────────────────────────────────────
   const measured = useContainerSize();
@@ -133,57 +137,77 @@ export const useChoropleth = <TDatum>(
   );
 
   // ── rutas (geometría + proyección + tamaño; nada de datos) ────────────────────────────────────
-  const { paths, bordersPath } = useMemo(() => {
-    const toPath = geoPath(
-      createProjection({ name: projection, width, height, featureCollection: features }),
-    );
+  const { paths, bordersPath, centroids, project } = useMemo(() => {
+    const geoProjection = createProjection({
+      name: projection,
+      width,
+      height,
+      featureCollection: features,
+    });
+    const toPath = geoPath(geoProjection);
     return {
       paths: features.features.map((f) => toPath(f)),
       bordersPath: bordersGeometry === null ? null : toPath(bordersGeometry),
+      // Los centroides solo se calculan para `bubble` (es lo único que los usa).
+      centroids: isBubble
+        ? features.features.map((f): Point | null => {
+            const [x, y] = toPath.centroid(f);
+            return Number.isFinite(x) && Number.isFinite(y) ? [x, y] : null;
+          })
+        : [],
+      project: (coordinates: Point): Point | null => geoProjection([...coordinates]),
     };
-  }, [features, bordersGeometry, projection, width, height]);
+  }, [features, bordersGeometry, projection, width, height, isBubble]);
 
   // ── datos → color ─────────────────────────────────────────────────────────────────────────────
   const idOf = getFeatureId ?? defaultFeatureId;
-  const { joined, ...joinReport } = joinData({
-    features: features.features,
-    data,
-    getId,
-    getFeatureId: idOf,
-  });
+  const join = joinData({ features: features.features, data, getId, getFeatureId: idOf });
+
+  // Burbujas con sus propias coordenadas (tiendas): los datos NO tienen por qué corresponder a una
+  // región, así que «sin cruzar» no es un error y no debe avisar.
+  const hasOwnCoordinates = options.variant === "bubble" && options.getCoordinates !== undefined;
+  const joinReport: JoinReport = {
+    unmatchedData: hasOwnCoordinates ? [] : join.unmatchedData,
+    featuresWithoutData: hasOwnCoordinates ? [] : join.featuresWithoutData,
+    duplicateDataIds: join.duplicateDataIds,
+  };
 
   // Un valor por REGIÓN (no por fila de `data`): los datos huérfanos no deben influir en la escala,
   // y la leyenda cuenta regiones.
-  const entries = features.features.map((feature, index) => {
+  const entries = features.features.map((feature) => {
     const id = idOf(feature);
-    const datum = id === undefined ? undefined : joined.get(id);
-    return { feature, index, id, datum, value: datum === undefined ? null : getValue(datum) };
+    return { id, datum: id === undefined ? undefined : join.joined.get(id) };
   });
-  const values = entries.map((e) => e.value);
 
-  const scale = createColorScale({
-    values,
-    classification: options.classification,
+  const formatValue = options.formatValue ?? defaultFormatValue;
+  const variant = resolveVariant<TDatum>({
+    config: options,
+    entries,
+    data,
+    getId,
+    centroids,
+    project,
     emptyFill: options.emptyFill ?? EMPTY_FILL_VAR,
-    ...(options.variant === "diverging"
-      ? { variant: "diverging", palette: options.palette, midpoint: options.midpoint }
-      : { variant: "sequential", palette: options.palette }),
+    formatValue,
+    emptyLabel: options.emptyLabel,
   });
 
   const regions: Region<TDatum>[] = [];
-  for (const { feature, index, id, datum, value } of entries) {
+  features.features.forEach((feature, index) => {
     const path = paths[index];
+    const entry = entries[index];
     // Sin ruta (geometría vacía) o sin id (no se puede seleccionar ni cruzar): no hay nada que pintar
     // con sentido. Las regiones sin id sí existen en world-atlas (p. ej. Kosovo).
-    if (path === null || path === undefined || id === undefined) continue;
-    regions.push({ id, feature, datum, value, path, fill: scale.getColor(value) });
-  }
-
-  const legend = buildLegend({
-    scale,
-    values,
-    formatValue: options.formatValue,
-    emptyLabel: options.emptyLabel,
+    if (path == null || entry?.id === undefined) return;
+    regions.push({
+      id: entry.id,
+      feature,
+      datum: entry.datum,
+      path,
+      value: variant.values[index] ?? null,
+      formattedValue: variant.labels[index] ?? "",
+      fill: variant.fills[index] ?? "",
+    });
   });
 
   // ── diagnóstico ───────────────────────────────────────────────────────────────────────────────
@@ -238,10 +262,12 @@ export const useChoropleth = <TDatum>(
     height,
     regions,
     borders: bordersPath,
-    legend,
-    scale,
+    legend: variant.legend,
+    sizeLegend: variant.sizeLegend,
+    bubbles: variant.bubbles,
+    scale: variant.scale,
     joinReport,
-    formatValue: options.formatValue ?? defaultFormatValue,
+    formatValue,
     clickable: onRegionClick !== undefined,
     hoveredId,
     selectedId,

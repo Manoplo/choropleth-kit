@@ -3,7 +3,8 @@ import type { RegionEvent } from "../use-choropleth";
 import { useChoroplethContext } from "../choropleth-context";
 
 export type TooltipContext<TDatum> = RegionEvent<TDatum> & {
-  value: number | null;
+  /** Número, categoría (`categorical`) o `null` si no hay dato. */
+  value: number | string | null;
   /** `value` formateado; cadena vacía si no hay valor. */
   formattedValue: string;
   /** Color con el que está pintada la región. */
@@ -47,7 +48,7 @@ export const Tooltip = <TDatum,>({ className, children }: TooltipProps<TDatum>) 
     feature: region.feature,
     datum: region.datum,
     value: region.value,
-    formattedValue: region.value === null ? "" : choropleth.formatValue(region.value),
+    formattedValue: region.formattedValue,
     color: region.fill,
   };
 

@@ -1,10 +1,13 @@
 import type { ReactNode } from "react";
-import type { LegendItem } from "../../core";
+import type { LegendItem, SizeLegendItem } from "../../core";
 import { useChoroplethContext } from "../choropleth-context";
 import type { UseChoroplethResult } from "../use-choropleth";
 
 export type LegendRenderContext = {
   items: LegendItem[];
+  /** Círculos de referencia del tamaño (solo `bubble`). */
+  sizeItems: SizeLegendItem[];
+  /** `null` en `categorical` y en `bubble` sin `getColorValue`. */
   scale: UseChoroplethResult<unknown>["scale"];
   formatValue: (value: number) => string;
 };
@@ -23,17 +26,17 @@ const GRADIENT_STOPS = 5;
 /** Leyenda HTML. Por defecto: swatches con rangos (clases) o barra de degradado (`linear`). */
 export const Legend = ({ title, showCount = false, className, children }: LegendProps) => {
   const { choropleth } = useChoroplethContext();
-  const { legend: items, scale, formatValue } = choropleth;
+  const { legend: items, sizeLegend: sizeItems, scale, formatValue } = choropleth;
 
-  if (children !== undefined) return <>{children({ items, scale, formatValue })}</>;
+  if (children !== undefined) return <>{children({ items, sizeItems, scale, formatValue })}</>;
 
   const rootClass = className === undefined ? "cm-legend" : `cm-legend ${className}`;
-  const [min, max] = scale.domain;
+  const [min, max] = scale?.domain ?? [0, 1];
 
   return (
     <div className={rootClass}>
       {title !== undefined && <div className="cm-legend__title">{title}</div>}
-      {scale.kind === "continuous" ? (
+      {scale !== null && scale.kind === "continuous" ? (
         <div>
           <div
             className="cm-legend__gradient"
@@ -52,12 +55,35 @@ export const Legend = ({ title, showCount = false, className, children }: Legend
           </div>
         </div>
       ) : (
-        <ul className="cm-legend__items">
-          {items.map((item) => (
-            <li key={item.label} className="cm-legend__item">
-              <span aria-hidden className="cm-legend__swatch" style={{ background: item.color }} />
+        items.length > 0 && (
+          <ul className="cm-legend__items">
+            {items.map((item) => (
+              <li key={item.label} className="cm-legend__item">
+                <span
+                  aria-hidden
+                  className="cm-legend__swatch"
+                  style={{ background: item.color }}
+                />
+                <span>{item.label}</span>
+                {showCount && <span className="cm-legend__count">({item.count})</span>}
+              </li>
+            ))}
+          </ul>
+        )
+      )}
+      {sizeItems.length > 0 && (
+        <ul className="cm-legend__sizes">
+          {sizeItems.map((item) => (
+            <li key={item.label} className="cm-legend__size">
+              <svg
+                aria-hidden
+                width={item.radius * 2 + 2}
+                height={item.radius * 2 + 2}
+                className="cm-legend__circle"
+              >
+                <circle cx={item.radius + 1} cy={item.radius + 1} r={item.radius} />
+              </svg>
               <span>{item.label}</span>
-              {showCount && <span className="cm-legend__count">({item.count})</span>}
             </li>
           ))}
         </ul>

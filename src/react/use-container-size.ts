@@ -18,8 +18,8 @@ export type UseContainerSizeOptions = {
 const DEFAULT_SIZE: ContainerSize = { width: 960, height: 500 };
 
 /**
- * Mide un elemento con `ResizeObserver`. Es el ÚNICO `useEffect` de la librería (dd.md §20):
- * observar el DOM es un efecto secundario real; todo lo demás se deriva durante el render.
+ * Mide un elemento con `ResizeObserver`. Observar el DOM es un efecto
+ * secundario real, así que `useEffect` es lo correcto aquí; lo que se pueda derivar se deriva al renderizar.
  *
  * Nunca devuelve 0: un contenedor oculto o aún sin medir daría `width = 0` y `createProjection`
  * lanza error con tamaños no positivos. Mientras no haya una medida válida se mantiene la anterior.

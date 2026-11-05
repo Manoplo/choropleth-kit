@@ -17,6 +17,9 @@
   --cm-hover-stroke-width: 1.5px;
   --cm-selected-stroke: #0b5fff;
   --cm-selected-stroke-width: 2px;
+  --cm-bubble-fill: #2563eb;
+  --cm-bubble-stroke: #ffffff;
+  --cm-bubble-opacity: 0.75;
   --cm-transition-duration: 250ms;
   --cm-font-family: inherit;
   --cm-font-size: 12px;
@@ -70,6 +73,16 @@
   stroke-width: var(--cm-selected-stroke-width);
 }
 
+/* Como el `fill` de las regiones, el de cada burbuja va en línea (es el color del dato). */
+.cm-root:not([data-unstyled]) .cm-bubble {
+  stroke: var(--cm-bubble-stroke);
+  stroke-width: 0.5px;
+  fill-opacity: var(--cm-bubble-opacity);
+  transition:
+    r var(--cm-transition-duration),
+    fill var(--cm-transition-duration);
+}
+
 /* ── leyenda ──────────────────────────────────────────────────────────────────────────────── */
 
 .cm-root:not([data-unstyled]) .cm-legend__title {
@@ -102,6 +115,21 @@
   display: flex;
   justify-content: space-between;
   width: 160px;
+}
+
+.cm-root:not([data-unstyled]) .cm-legend__sizes {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+}
+.cm-root:not([data-unstyled]) .cm-legend__size {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cm-root:not([data-unstyled]) .cm-legend__circle circle {
+  fill: none;
+  stroke: currentColor;
 }
 
 /* ── tooltip ──────────────────────────────────────────────────────────────────────────────── */

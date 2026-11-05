@@ -91,7 +91,7 @@ describe("useChoropleth", () => {
   it("diverging usa dominio simétrico con el midpoint", () => {
     const { result } = setup({ variant: "diverging", midpoint: 5 } as never);
 
-    expect(result.current.scale.domain).toEqual([1, 9]);
+    expect(result.current.scale?.domain).toEqual([1, 9]);
   });
 
   it("joinReport informa de datos huérfanos y regiones sin dato", () => {
@@ -114,7 +114,7 @@ describe("useChoropleth", () => {
       ],
     });
 
-    expect(result.current.scale.domain[1]).toBe(1);
+    expect(result.current.scale?.domain[1]).toBe(1);
   });
 
   it("getFeatureId permite cruzar por una propiedad", () => {
@@ -242,5 +242,91 @@ describe("useChoropleth · diagnóstico", () => {
 
     rerender({ data: [{ code: "B", v: 5 }], onJoinReport });
     expect(onJoinReport).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("useChoropleth · variants categorical y bubble", () => {
+  type Shop = {
+    code: string;
+    kind: string;
+    sales: number | null;
+    growth?: number;
+    at?: [number, number];
+  };
+  const shops: Shop[] = [
+    { code: "A", kind: "outlet", sales: 100, growth: -5 },
+    { code: "B", kind: "flagship", sales: 25, growth: 5 },
+  ];
+  const run = (extra: Record<string, unknown>) =>
+    renderHook(() =>
+      useChoropleth<Shop>({
+        geography: twoSquares,
+        data: shops,
+        getId: (s: Shop) => s.code,
+        width: 200,
+        height: 100,
+        ...extra,
+      } as unknown as UseChoroplethOptions<Shop>),
+    ).result.current;
+
+  it("categorical: color por categoría, valor = categoría, etiqueta = label, sin escala numérica", () => {
+    const r = run({
+      variant: "categorical",
+      getCategory: (s: Shop) => s.kind,
+      categories: [{ id: "flagship", label: "Insignia" }, { id: "outlet" }],
+    });
+
+    expect(r.regions[0]?.value).toBe("outlet");
+    expect(r.regions[1]?.formattedValue).toBe("Insignia");
+    expect(r.regions[0]?.fill).not.toBe(r.regions[1]?.fill);
+    expect(r.scale).toBeNull();
+    expect(r.legend.map((i) => i.label)).toEqual(["Insignia", "outlet"]);
+  });
+
+  it("bubble sobre regiones: una burbuja por región con dato, en su centroide, regiones neutras", () => {
+    const r = run({
+      variant: "bubble",
+      getValue: (s: Shop) => s.sales,
+      maxRadius: 20,
+      emptyFill: "#ddd",
+    });
+
+    expect(r.bubbles.map((b) => b.id)).toEqual(["A", "B"]); // grande primero
+    expect(r.bubbles[0]?.r).toBe(20);
+    expect(r.bubbles.every((b) => Number.isFinite(b.x) && Number.isFinite(b.y))).toBe(true);
+    expect(r.regions.map((x) => x.fill)).toEqual(["#ddd", "#ddd"]);
+    expect(r.regions[0]?.formattedValue).toBe("100");
+    expect(r.sizeLegend).toHaveLength(3);
+  });
+
+  it("bubble bivariante: color por getColorValue y leyenda de color", () => {
+    const r = run({
+      variant: "bubble",
+      getValue: (s: Shop) => s.sales,
+      getColorValue: (s: Shop) => s.growth ?? null,
+    });
+
+    expect(r.bubbles[0]?.fill).not.toBe(r.bubbles[1]?.fill);
+    expect(r.scale?.kind).toBe("classed");
+    expect(r.legend.length).toBeGreaterThan(0);
+  });
+
+  it("bubble con getCoordinates: se posiciona con la proyección y no avisa de ids sin región", () => {
+    const stores: Shop[] = [
+      { code: "tienda-1", kind: "x", sales: 10, at: [0.5, 0.5] },
+      { code: "tienda-2", kind: "x", sales: 20, at: [1.5, 0.5] },
+      { code: "tienda-3", kind: "x", sales: 30 },
+    ];
+    const r = run({
+      variant: "bubble",
+      data: stores,
+      getValue: (s: Shop) => s.sales,
+      getCoordinates: (s: Shop) => s.at ?? null,
+    });
+
+    expect(r.bubbles.map((b) => b.id).sort()).toEqual(["tienda-1", "tienda-2"]);
+    expect(r.bubbles[0]?.x).not.toBe(r.bubbles[1]?.x);
+    expect(r.joinReport.unmatchedData).toEqual([]);
+    expect(console.warn).not.toHaveBeenCalled();
   });
 });

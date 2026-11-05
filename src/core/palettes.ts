@@ -14,6 +14,13 @@ import {
   interpolateReds,
   interpolateSpectral,
   interpolateViridis,
+  schemeAccent,
+  schemeDark2,
+  schemePaired,
+  schemePastel1,
+  schemeSet2,
+  schemeSet3,
+  schemeTableau10,
 } from "d3-scale-chromatic";
 
 // Un interpolador es una función t ∈ [0, 1] → color CSS ("rgb(8, 81, 156)").
@@ -84,3 +91,18 @@ export const sampleDivergingColors = ({
   // representar al punto medio. Por eso el divergente no usa SEQUENTIAL_START: su claro está en
   // el centro y es intencionado.
   Array.from({ length: classes }, (_, i) => interpolate((i + 0.5) / classes));
+
+/** Paletas categóricas: colores sueltos sin orden (a diferencia de las rampas de arriba). */
+export const CATEGORICAL_PALETTES = {
+  tableau10: schemeTableau10,
+  set2: schemeSet2,
+  set3: schemeSet3,
+  accent: schemeAccent,
+  dark2: schemeDark2,
+  paired: schemePaired,
+  pastel1: schemePastel1,
+} as const satisfies Record<string, readonly string[]>;
+
+export type CategoricalPaletteName = keyof typeof CATEGORICAL_PALETTES;
+
+export const DEFAULT_CATEGORICAL_PALETTE: CategoricalPaletteName = "tableau10";
