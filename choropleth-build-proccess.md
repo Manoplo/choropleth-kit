@@ -512,7 +512,7 @@ joinData({ features, data, getId, getFeatureId? }) → {
 }
 ```
 
-**No adivina ni corrige ids**: cruza tal cual e **informa**. Corregir en silencio (p. ej. traducir
+**No adivina ni corrige ids** (lo único que normaliza es `feature.id` → string, para poder comparar): cruza tal cual e **informa**. Corregir en silencio (p. ej. traducir
 alpha-2 a numérico) escondería el error; la ayuda para hacerlo es una tabla explícita
 (`src/geo/iso-numeric-to-alpha2.ts`, tarea posterior) que el usuario ve y controla.
 
@@ -565,10 +565,116 @@ cruza; con `"ES"` no cruza y aparece en `unmatchedData`.
 
 ---
 
+# Paso 5: de un valor a un color (paletas, clasificación y escalas)
+
+Archivos: `src/core/palettes.ts`, `classify.ts`, `scales.ts` (+ un `.test.ts` cada uno).
+Es el paso que convierte un mapa en un **coropleta**: hasta ahora sabíamos *qué dato va a qué región*
+(paso 4); ahora decidimos *de qué color se pinta*.
+
+## 5.1 Las tres piezas y cómo se encadenan
+
+```
+ valores del usuario ──► finiteValues ──► dominio ──► computeThresholds ──► colores de la paleta ──► getColor(valor)
+ [-20, 3, null, 12]      quita null/NaN   [min,max]   cortes: [-10, 1, 5]    1 color por clase         "rgb(…)" | emptyFill
+                                          (simétrico  (classify.ts)          (palettes.ts)             (scales.ts)
+                                           si diverg.)
+```
+
+| Archivo       | Responde a                         | Devuelve                                      |
+| ------------- | ---------------------------------- | --------------------------------------------- |
+| `palettes.ts` | ¿Qué colores existen?              | Interpoladores por nombre + muestreo de N colores |
+| `classify.ts` | ¿Dónde se parten los datos en clases? | **Números** (los cortes), nunca colores     |
+| `scales.ts`   | ¿De qué color es este valor?       | `createColorScale(...)` → `{ getColor, thresholds, colors, domain, kind }` |
+
+**Por qué `classify` devuelve números y no colores:** se puede testear la estadística sin mirar colores,
+y la leyenda (paso siguiente) reutilizará **los mismos cortes y colores** que el mapa, sin recalcular nada.
+Por eso `createColorScale` expone `thresholds` y `colors` además de `getColor`.
+
+## 5.2 Conceptos cartográficos que hay que entender
+
+**Variant: ¿qué tipo de dato es?**
+
+| Variant        | Cuándo                                             | Ejemplo                          |
+| -------------- | -------------------------------------------------- | -------------------------------- |
+| `sequential`   | De menos a más. Un solo color que se intensifica.  | Población, ventas                |
+| `diverging`    | Hay un **valor central con significado**; se aleja hacia ambos lados. | Variación respecto al año pasado (−20 … +20), con 0 como centro |
+
+**Método de clasificación: ¿cómo se cortan los datos en clases?**
+
+| Método      | Corta por…                                  | Ventaja                                   | Riesgo                                                          |
+| ----------- | ------------------------------------------- | ----------------------------------------- | --------------------------------------------------------------- |
+| `quantile`  | Mismo **nº de regiones** en cada clase      | Aprovecha todos los colores               | Un salto de color puede ser una diferencia mínima o enorme; con muchos valores repetidos (ceros) salen clases vacías |
+| `quantize`  | Tramos de **igual anchura** del rango       | Fiel a la escala numérica                 | Un valor extremo deja casi todo en las primeras clases          |
+| `threshold` | Cortes que tú eliges (`[0, 5, 10]`)         | Control total, comparable entre mapas     | Hay que saber qué cortes tienen sentido                         |
+| `linear`    | No hay clases: degradado continuo           | Máximo detalle                            | Difícil leer un valor concreto y comparar colores               |
+
+Los defaults vienen de `dd.md`: secuencial → **quantile, 5 clases**; divergente → **quantize sobre un
+dominio simétrico, 5 clases**.
+
+## 5.3 Por qué el orden interno es ese (`createColorScale`)
+
+| # | Paso                        | Por qué va aquí                                                                                                                       | Qué pasaría si se invierte                                                     |
+| - | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 1 | Limpiar valores (`finiteValues`) | Un solo `NaN` contamina mínimo, máximo y cuantiles: todo sería `NaN` y el mapa saldría de un color.                              | Dominio `NaN`, colores incoherentes sin error.                                 |
+| 2 | Dominio                     | Depende de los valores limpios. En divergente se **simetriza** respecto al punto medio.                                               | Con datos −20…+5 un +5 parecería tan intenso como un −20.                      |
+| 3 | Cortes (`computeThresholds`) | `quantize` necesita el dominio; `quantile`, los valores.                                                                             | No hay de dónde sacar los cortes.                                              |
+| 4 | Colores y escala            | **Nº de colores = nº de cortes + 1**; solo se conoce tras el paso 3. Un `threshold` con 3 cortes da 4 colores, no 5.                  | Colores de más o de menos respecto a las clases reales.                        |
+
+## 5.4 Decisiones con impacto real en lo que se ve
+
+- **"Sin dato" ≠ 0.** `null`, `undefined` y `NaN` → `emptyFill` (`#d4d4d4`). El `0` es un dato y se colorea.
+  Hay tests de ambos. Completa lo que `joinData` dejó preparado (región sin fila / fila con `null`).
+- **Un valor justo en un corte cae en la clase de arriba** (`d3.scaleThreshold`). Test de bordes incluido:
+  con cortes `[0, 10]`, el `0` va a la clase 2 y el `10` a la 3.
+- **La rampa secuencial empieza en `t = 0.15`, no en 0.** El extremo claro de ColorBrewer es casi blanco
+  (`blues(0) ≈ #f7fbff`); con fondo blanco la clase más baja parecería "sin dato".
+- **Divergente: la clase central es el color neutro.** Con 5 clases, `t = 0.1, 0.3, 0.5, 0.7, 0.9`; el
+  centro cae en `0.5`. Con `[-20, 20]` los cortes son `[-12, -4, 4, 12]` y el `0` queda en la clase central.
+- **`threshold` desordenado lanza error.** d3 no falla: asigna colores equivocados sin avisar.
+  Mejor un error claro que un mapa que miente.
+- **Paletas tipadas por variant.** `palette: "rdbu"` en un mapa `sequential` **no compila**
+  (`@ts-expect-error` en los tests lo vigila). Es un error cartográfico, no solo de estilo.
+- **`clamp(true)` en las escalas continuas**: un valor fuera del dominio no extrapola colores fuera de la paleta.
+
+Resultado real comprobado sobre `dist/` con `[-20, -8, 0, 3, 12, null]`:
+
+```
+sequential (quantile)  -20→rgb(217,232,245) … 12→rgb(8,48,107)  null→#d4d4d4   (de claro a oscuro)
+diverging  (quantize)  -20→rgb(172,32,47) (rojo) · 0→rgb(242,239,238) (neutro) · 12→rgb(34,101,163) (azul)
+```
+
+## 5.5 Qué se dejó fuera (a propósito)
+
+| Pendiente                                  | Por qué                                                                                             |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `palette: string[]` (colores propios)      | `dd.md §9.2` lo contempla; no es necesario para el mapa mínimo y añade casos (¿cuántos colores por clase?). |
+| Invertir una paleta                        | `rdbu` va de rojo (bajo) a azul (alto). Para "variación" suele querer lo contrario. Se añadirá con `reverse` cuando haya UI para probarlo. |
+| `ckmeans` (Jenks)                          | Está en el tipo de `dd.md` pero no en las tareas de v0.1.                                           |
+| `categorical`                              | v0.2.                                                                                               |
+| Valores `midpoint` por clase en `quantile` divergente | `quantile` no garantiza clases simétricas; sigue permitido, pero el neutro puede no coincidir con el midpoint. |
+
+`d3-array` **sigue sin hacer falta**: `scaleQuantile` y `scaleQuantize` ya calculan cuantiles y rangos.
+
+## 5.6 Tests
+
+65 tests en total, `typecheck`, `oxlint` y `prettier` limpios; cobertura de `src/core` 100 % en líneas
+y 98,9 % en ramas (umbral: 90 %). Casos clave: cortes de `quantile` frente a `quantize` con un valor extremo,
+bordes de clase, simetría del divergente, `midpoint ≠ 0`, todos los valores iguales al medio, ningún valor,
+y el error de tipos de paleta equivocada.
+
+## 5.7 Antes de pasar al paso 6: ¿lo tienes claro?
+
+- ¿Por qué `classify` devuelve cortes (números) y no colores?
+- Con datos `[1, 2, 3, 4, 5, 6, 7, 8, 9, 1000]` y 2 clases, ¿dónde corta `quantile` y dónde `quantize`? ¿Cuál engaña menos?
+- ¿Por qué un mapa de variación necesita dominio simétrico?
+- ¿Cuántos colores genera `threshold: [0, 5, 10]` y por qué?
+- ¿Qué color recibe un país con valor `0` y cuál uno con `null`?
+
+---
+
 ## Siguiente paso (propuesta, no iniciado)
 
-**Paso 5: clasificación, escalas y paletas (`classify.ts`, `scales.ts`, `palettes.ts`).** Aquí entran
-`d3-scale` y `d3-scale-chromatic`: convertir un valor en una clase y una clase en un color, tratando
-`null` como `emptyFill` (el "sin dato ≠ 0" que `joinData` deja preparado). Es el primer paso con
-decisiones cartográficas de fondo (quantile vs quantize vs threshold), así que conviene hacerlo en
-subpasos.
+**Paso 6: `core/projection.ts` y `core/legend.ts`.** La proyección (`createProjection` con `fitSize`,
+Equal Earth por defecto) es lo que permitirá, por fin, calcular los `path` SVG y **ver el primer mapa en
+Storybook**. La leyenda reutiliza los `thresholds` y `colors` del paso 5 y cuenta cuántas regiones caen
+en cada clase. Propongo empezar por la proyección: es lo que desbloquea la primera visualización.
