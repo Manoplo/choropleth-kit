@@ -48,9 +48,18 @@
 | 21   | `geography` asíncrona con caché + `data: undefined` = cargando                                    | ✅ Hecho\* |
 | 22   | `src/geo`: `world-110m` alpha-2, tabla ISO, `fallbackPoints`                                      | ✅ Hecho\* |
 
-**Fase B, cámara (v0.3)** · **Fase C, drill-down (v0.4)** · **Fase D, pulido visual (v0.5)**:
-pasos 23-37, en el orden exacto de las tareas 10-24 de `dd.md §21`. Cada uno se añade a esta tabla al
-empezarlo.
+**Fase B, cámara (v0.3)**: zoom y pan (tareas 10-14 de `dd.md §21`).
+
+| Paso | Título                                                                                                   | Estado       |
+| ---- | -------------------------------------------------------------------------------------------------------- | ------------ |
+| 23   | `core/camera.ts` y `boundsToTransform`: la matemática de la cámara, solo con tests                       | ✅ Hecho     |
+| 24   | `use-zoom.ts` + `Viewport`: `d3-zoom` escribe el transform en el DOM; rueda cooperativa, clic ≠ arrastre | ⏳ Pendiente |
+| 25   | `ZoomControls`, `GestureHint` y teclado de zoom                                                          | ⏳ Pendiente |
+| 26   | Vuelos: `focusId`, handle `zoomTo` / `zoomBy` / `resetView` con `Promise`, reduced-motion                | ⏳ Pendiente |
+| 27   | Contraescalado de burbujas, inercia y resize sin salto                                                   | ⏳ Pendiente |
+
+**Fase C, drill-down (v0.4)** · **Fase D, pulido visual (v0.5)**: pasos 28-37, en el orden exacto de las
+tareas 15-24 de `dd.md §21`. Cada uno se añade a esta tabla al empezarlo.
 
 ---
 
@@ -1806,3 +1815,121 @@ regenerado, y el tamaño real es:
 Es esencialmente la geometría (`world-atlas` con los ids cambiados), ya al mínimo razonable a 1:110m. Para
 bajarlo hay que simplificar (mapshaper, `dd.md §2.6`) o cargarlo bajo demanda con
 `geography={() => import("choropleth-kit/geo")…}`, que el paso 21 ya permite.
+
+---
+
+# Paso 23: `core/camera.ts` y `boundsToTransform` (la matemática de la cámara)
+
+Archivos: `src/core/camera.ts`, `src/core/camera.test.ts`; `boundsToTransform` y `normalizePadding` en
+`src/core/bounds.ts`. Primer paso de la fase B. **No hay efecto visual** y no se toca React: es la
+tarea 10 de `dd.md §21` («solo tests»), y la regla R.4 #3 («lo puro, a `core`, con tests antes que el
+componente»).
+
+## 23.1 El modelo mental (`dd.md §11.0`)
+
+Un mapa se separa en dos cosas:
+
+- **El lienzo**: el mapa ya proyectado a píxeles (las rutas `d`). Se calcula una vez por nivel y tamaño.
+- **La cámara**: un `transform` afín `{ k, x, y }` (escala + traslación). Un punto del lienzo `[px, py]` se
+  ve en pantalla en `[px·k + x, py·k + y]`. **`k = 1` es el encaje**: el mapa cabe justo en el contenedor.
+
+Zoom y pan **no recalculan rutas**: solo cambian la cámara. Por eso toda la lógica de «dónde está la cámara y
+adónde puede ir» es aritmética sobre tres números, sin DOM ni `d3-zoom`. Se escribe y se prueba aquí; el
+paso 24 solo la conecta a los gestos.
+
+## 23.2 Las funciones
+
+| Función                                | Responde a                                                                | Notas                                                                                                                                         |
+| -------------------------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `applyTransform` / `invertTransform`   | Lienzo ↔ pantalla                                                         | Las dos mitades de la misma fórmula; los tests las usan como oráculo.                                                                         |
+| `constrainAxis` / `constrainTransform` | ¿Hasta dónde se puede arrastrar?                                          | Si el contenido **cabe**, lo centra; si no, impide que sus bordes entren en la vista. `overscroll` = holgura elástica (fracción de la vista). |
+| `boundsToTransform` (`bounds.ts`)      | ¿Qué cámara encaja estos límites con margen?                              | Destino de «zoom a un país». Respeta `scaleExtent` y no devuelve `Infinity`/`NaN` con límites degenerados.                                    |
+| `preserveView`                         | ¿Cómo no «volver al encaje» al redimensionar?                             | Conserva el **centro geográfico** y la `k`; si el centro cae fuera del globo, devuelve el encaje.                                             |
+| `flightDuration`                       | ¿Cuánto dura un vuelo?                                                    | La duración natural de `interpolateZoom` × `speed`, acotada a **[350, 1200] ms**.                                                             |
+| `inertiaOffset`                        | ¿Cuánto se desliza el mapa tras soltar?                                   | `v·τ·(1 − e^(−t/τ))`, τ = 325 ms (la de iOS). Tiende a `v·τ` sin superarlo.                                                                   |
+| `toViewState`                          | ¿Qué le digo al consumidor (`onViewChange`)?                              | `{ k, x, y, zoom, center, bounds, level }` con coordenadas geográficas.                                                                       |
+| `transformToZoomView`                  | Cámara → «vista» de `interpolateZoom` (centro x, centro y, ancho visible) | Pieza interna de `flightDuration`; se exporta porque el paso 26 también la necesita.                                                          |
+
+## 23.3 Por qué cada una es como es (lo que no es evidente)
+
+- **`constrainAxis` centra en vez de pegar a una esquina.** El `translateExtent` por defecto de d3 deja un
+  mapa más pequeño que la vista en una esquina. Con `k = 1` el contenido cabe justo: no hay nada que
+  arrastrar (el test lo comprueba: cualquier `t` da 0). Esa propiedad hace que el cursor `grab` no tenga que
+  aparecer en el encaje.
+- **`boundsToTransform` clampa `k` y aun así centra.** Si el país es tan pequeño que haría falta más zoom
+  del permitido, la cámara se queda en `max` pero con el país **en el centro**, no en un lado. Un margen que
+  se come toda la vista baja a `min` en lugar de dar una escala negativa.
+- **`preserveView` trabaja con funciones, no con proyecciones.** Recibe `invertOld` (píxeles → lon/lat) y
+  `projectNew` (lon/lat → píxeles). Así se prueba con proyecciones reales de d3 sin acoplar `core` a una forma
+  concreta, y el test comprueba lo importante: el centro geográfico **antes y después** de redimensionar es el
+  mismo (a 3 decimales).
+- **`toViewState` muestrea la vista.** Un mapa del mundo en Equal Earth no es un rectángulo: las **esquinas
+  de la vista caen fuera del globo** y `invert` da `null`. Los límites se estiman con una rejilla de 5 × 5
+  puntos de la vista, descartando los que no proyectan. Si ninguno proyecta, devuelve el mundo entero y el
+  centro `[0, 0]`. Son límites **aproximados** (no contemplan el antimeridiano), como dice `dd.md §11.1.7`.
+- **`flightDuration` cae al mínimo ante un transform inválido** (`NaN`) en vez de propagar `NaN` a una
+  animación.
+
+## 23.4 Un problema que apareció (y cómo se detectó)
+
+`dd.md §11.1.5` pide `interpolateZoom` con curvatura ρ (1,2–1,3 para dashboards). `@types/d3-interpolate`
+declara `rho` **en el interpolador ya creado** (`interpolateZoom(a, b).rho(r)`), pero **en runtime ese método
+no existe** (`undefined`): vive en la **función** (`interpolateZoom.rho(r)(a, b)`). El `typecheck` pasa con el
+código correcto según los tipos y **rompe con el real**.
+
+Cómo se vio: tras corregir el typecheck, la primera ejecución de los tests dio «38 passed» porque aún
+usaba la otra forma; al reejecutar toda la suite fallaron 6 tests de `flightDuration`, y una prueba de una
+línea con `node -e` lo confirmó (`fn.rho: function`, `instance.rho: undefined`). Se usa lo que hace de verdad
+con un cast tipado y un comentario, y hay un test («la curvatura se aplica de verdad») que falla si alguien
+«arregla» el código para contentar a los tipos.
+
+> **Lección para el resto de la fase:** con d3, los `@types` no son una garantía de runtime. Cuando un
+> método venga de un `@types` y no de la documentación del módulo, probarlo con una línea de `node`.
+
+## 23.5 Decisiones y desviaciones respecto a `dd.md`
+
+| Decisión                                                                                                           | Motivo                                                                                                                                                      |
+| ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `boundsToTransform` está en `bounds.ts` (donde lo sitúa `dd.md §11.1.5`) y el resto en `camera.ts`.                | Es lo que dice el documento; la tarea 10 menciona ambos archivos.                                                                                           |
+| **No** se implementa la velocidad de suelta de la inercia (muestras de los últimos 100 ms, umbral 0,3 px/ms).      | Solo la usa `use-zoom` en el paso 27. Hacerlo ahora sería código sin consumidor. `inertiaOffset`, que sí está en la tarea 10, es lo único que se pide aquí. |
+| `ViewState.level` es `{ id, depth }` (`ViewLevel`), duplicando la forma de `DrillLevelInfo` (`react/map-item.ts`). | `core` no puede importar de `react`. Cuando llegue el drill (fase C) se unifica moviendo el tipo a `core`.                                                  |
+| Dependencia nueva: **`d3-interpolate`** (`dependencies`) + `@types/d3-interpolate` (dev).                          | Permitida por `dd.md §21`; da `interpolateZoom`. Las demás (`d3-zoom`, `d3-selection`, `d3-transition`, `d3-ease`) se añaden en el paso que las usa.        |
+| `DEFAULT_FLIGHT_CURVATURE = 1.25`.                                                                                 | El punto medio del rango 1,2–1,3 que recomienda `dd.md` para dashboards.                                                                                    |
+
+## 23.6 Tests
+
+312 en verde (274 + 38 nuevos), `typecheck`, `lint`, `format:check` y `build` limpios; cobertura de `src/core`
+100 % en líneas. Cubren: ida y vuelta lienzo↔pantalla; centrado cuando cabe y límites duros/elásticos
+(incluido un contenido que no empieza en 0); encaje con margen simétrico y asimétrico, país minúsculo y
+enorme, límites degenerados y margen excesivo; **centro geográfico conservado al redimensionar** con
+proyecciones reales; duración siempre en [350, 1200], más larga cuanto más lejos, sin `NaN`; inercia (0 al
+soltar, límite `v·τ`, 63,2 % a `t = τ`, monotonía, entradas inválidas); `toViewState` con Mercator, con
+Equal Earth (esquinas fuera del globo) y con `invert` que falla.
+
+## 23.7 Verificación visual
+
+No aplica: no hay UI en este paso. Lo primero que se verá es el paso 24.
+
+## 23.8 Antes de pasar al paso 24: ¿lo tienes claro?
+
+- ¿Por qué `k = 1` es «el encaje» y no una escala arbitraria? ¿Qué se simplifica con eso?
+- Con `constrain: "contain"` y `k = 1`, ¿por qué no hay nada que arrastrar?
+- ¿Qué dos cosas conserva `preserveView` al redimensionar, y qué hace si el centro cae fuera del globo?
+- ¿Por qué `toViewState` muestrea una rejilla en vez de invertir las cuatro esquinas?
+- ¿Qué pasó con `interpolateZoom.rho` y qué test lo vigila?
+
+## 23.9 Decisiones del humano para la fase B (respuestas a `dd.md §21`)
+
+1. **Rueda: `wheel` es una prop con tres valores y por defecto `"always"`.** Mientras el ratón esté sobre
+   el mapa, la rueda hace zoom. `"cooperative"` es opt-in: la rueda solo hace zoom con **Ctrl/⌘ + rueda**
+   (la página sigue haciendo scroll y aparece el aviso del `GestureHint`); `"never"` la desactiva.
+   **Desviación de `dd.md §11.1.1`**, que pone `"cooperative"` por defecto: se hace así por decisión del
+   humano. Consecuencia a vigilar: con `"always"`, un mapa dentro de una página con scroll «secuestra» la
+   rueda al pasar por encima (el _scroll-jacking_ del que avisa `dd.md §11.1.2`); la documentación de la prop
+   debe decirlo y recomendar `"cooperative"` para mapas incrustados en dashboards largos. El filtro de
+   gestos de `dd.md §11.1.2` se implementa tal cual, solo cambia el valor por defecto.
+2. **España se encuadra con las islas (Canarias incluidas).** El encuadre por defecto de España no usa el
+   cuerpo principal de `getFocusGeometry` (que descarta Canarias) sino la geometría completa; se
+   implementa en el paso 26 (`focusId` / `zoomTo`) como un override por defecto de `focusBounds` para `ES`
+   (`[[-18.5, 27.5], [4.5, 44]]`, el ejemplo de `dd.md §11.1.5`), documentado y sustituible por el consumidor.
+   Otros países con territorios lejanos (Francia, EE. UU., Portugal) siguen usando el cuerpo principal.

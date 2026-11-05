@@ -1,7 +1,42 @@
 export { toFeatureCollection, unwrapGeography } from "./geography";
 export type { GeographyData, GeographyInput, ToFeatureCollectionOptions } from "./geography";
-export { getAnchorPoint, getFocusGeometry } from "./bounds";
-export type { GetFocusGeometryParams } from "./bounds";
+export {
+  boundsToTransform,
+  DEFAULT_PADDING,
+  getAnchorPoint,
+  getFocusGeometry,
+  normalizePadding,
+} from "./bounds";
+export type { BoundsToTransformParams, GetFocusGeometryParams, Padding } from "./bounds";
+export {
+  applyTransform,
+  constrainAxis,
+  constrainTransform,
+  DEFAULT_FLIGHT_CURVATURE,
+  FIT_TRANSFORM,
+  flightDuration,
+  inertiaOffset,
+  INERTIA_TAU_MS,
+  invertTransform,
+  MAX_FLIGHT_MS,
+  MIN_FLIGHT_MS,
+  preserveView,
+  toViewState,
+  transformToZoomView,
+} from "./camera";
+export type {
+  CameraTransform,
+  ConstrainAxisParams,
+  ConstrainTransformParams,
+  Extent,
+  FlightDurationParams,
+  InertiaOffsetParams,
+  PreserveViewParams,
+  Size,
+  ToViewStateParams,
+  ViewLevel,
+  ViewState,
+} from "./camera";
 export { en, es, resolveLabels } from "./labels";
 export type { ChoroplethLabels } from "./labels";
 export { joinData } from "./join";

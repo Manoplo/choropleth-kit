@@ -1,6 +1,7 @@
 import type { Feature, Geometry, Polygon, Position } from "geojson";
 import type { GeoPath } from "d3-geo";
 import polylabel from "polylabel";
+import type { CameraTransform, Extent, Size } from "./camera";
 import type { Point } from "./variants";
 
 export type GetFocusGeometryParams = {
@@ -122,4 +123,52 @@ export const getAnchorPoint = ({
     precision,
   );
   return Number.isFinite(x) && Number.isFinite(y) ? [x, y] : null;
+};
+
+export type Padding = { top: number; right: number; bottom: number; left: number };
+
+/** Margen por defecto al encajar y al volar a una región, en px (dd.md §11.1.1). */
+export const DEFAULT_PADDING = 24;
+
+/** `number` = el mismo margen en los cuatro lados. */
+export const normalizePadding = (padding: number | Padding = DEFAULT_PADDING): Padding =>
+  typeof padding === "number"
+    ? { top: padding, right: padding, bottom: padding, left: padding }
+    : padding;
+
+export type BoundsToTransformParams = {
+  /** Lo que hay que encajar, en píxeles del lienzo: [[x0, y0], [x1, y1]]. */
+  bounds: Extent;
+  /** La vista (el contenedor). */
+  size: Size;
+  padding?: number | Padding;
+  /** [mínimo, máximo] de `k`. Por defecto sin límites. */
+  scaleExtent?: readonly [number, number];
+};
+
+/**
+ * Cámara que encaja unos límites en la vista, con margen en píxeles (dd.md §11.1.5). Es el destino
+ * de «zoom a un país» y del encuadre inicial. Respeta `scaleExtent`: si el país es tan pequeño que
+ * haría falta más zoom del permitido, se queda en el máximo (y el país queda centrado).
+ *
+ * Límites degenerados (un punto): `k` sube hasta el máximo en vez de dar `Infinity`. Si el margen
+ * se come toda la vista, `k` baja al mínimo.
+ */
+export const boundsToTransform = ({
+  bounds,
+  size,
+  padding = DEFAULT_PADDING,
+  scaleExtent = [0, Infinity],
+}: BoundsToTransformParams): CameraTransform => {
+  const [[x0, y0], [x1, y1]] = bounds;
+  const { top, right, bottom, left } = normalizePadding(padding);
+  const innerW = size.width - left - right;
+  const innerH = size.height - top - bottom;
+  const raw = Math.min(innerW / (x1 - x0), innerH / (y1 - y0));
+  const k = Math.min(scaleExtent[1], Math.max(scaleExtent[0], Number.isNaN(raw) ? 1 : raw));
+  return {
+    k,
+    x: left + innerW / 2 - k * ((x0 + x1) / 2),
+    y: top + innerH / 2 - k * ((y0 + y1) / 2),
+  };
 };
