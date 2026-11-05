@@ -38,7 +38,7 @@
 
 | Paso | Título                                                                                            | Estado       |
 | ---- | ------------------------------------------------------------------------------------------------- | ------------ |
-| 14   | Limpieza: borrar `placeholder`; `@types/geojson` y `topojson-specification` a `dependencies`      | ⏳ Pendiente |
+| 14   | Limpieza: borrar `placeholder`; `@types/geojson` y `topojson-specification` a `dependencies`      | ✅ Hecho     |
 | 15   | `map-store`: hover, foco, puntero y estado fuera de `Root`                                        | ⏳ Pendiente |
 | 16   | `MapItem` unificado (regiones + puntos) y Pointer Events                                          | ⏳ Pendiente |
 | 17   | Selección controlada / no controlada y `dimOthers`                                                | ⏳ Pendiente |
@@ -1442,3 +1442,27 @@ El trabajo es **sólido y por encima de lo habitual** para una v0.1: comprobado 
    (`dd.md §11.2`).
 
 **Siguiente paso: 14 (limpieza).** Después, los pasos de la fase A en orden.
+
+---
+
+# Paso 14: limpieza (`placeholder` fuera, tipos a `dependencies`)
+
+Primer paso de la fase A. Corrige los problemas #4 y #11 de la revisión (R.2).
+
+## 14.1 Qué se hizo
+
+| Cambio                                                                                                                                                                | Por qué                                                                                                                                                                                          |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Borrados `core/placeholder.ts`, `react/placeholder.tsx`, sus 2 tests y `stories/placeholder.stories.tsx`; quitados sus `export` de `core/index.ts` y `react/index.ts` | Era andamiaje del paso 1 para probar la cadena tipos → tests → build → Storybook. Ya hay código real que la prueba, y `describeLibrary`/`Placeholder` estaban **en la API pública** sin ser API. |
+| `@types/geojson` y `@types/topojson-specification` pasan de `devDependencies` a `dependencies`                                                                        | La API pública expone `Feature`, `FeatureCollection` y `Topology`. Los `.d.ts` de `dist/` los importan: si el consumidor no los tiene instalados, TypeScript los ve como `any` o falla.          |
+
+## 14.2 Comprobación
+
+`pnpm typecheck`, `pnpm lint`, `pnpm build` limpios; `pnpm test`: **200 tests** en verde (los 202 de la revisión menos los 2 del
+placeholder). Sin efecto visual: no aplica la verificación en navegador (R.4 #1), salvo que la barra lateral de Storybook ya no
+muestra «Setup → Placeholder».
+
+## 14.3 Antes de pasar al paso 15: ¿lo tienes claro?
+
+- ¿Por qué un tipo de `geojson` que aparece en un `.d.ts` exige `dependencies` y no `devDependencies`?
+- ¿Qué ve un consumidor con TypeScript si no está `@types/geojson` instalado?

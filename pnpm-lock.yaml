@@ -191,6 +191,12 @@ importers:
 
   .:
     dependencies:
+      '@types/geojson':
+        specifier: ^7946.0.16
+        version: 7946.0.16
+      '@types/topojson-specification':
+        specifier: ^1.0.5
+        version: 1.0.5
       d3-geo:
         specifier: ^3.1.2
         version: 3.1.2
@@ -225,9 +231,6 @@ importers:
       '@types/d3-scale-chromatic':
         specifier: ^3.1.0
         version: 3.1.0
-      '@types/geojson':
-        specifier: ^7946.0.16
-        version: 7946.0.16
       '@types/node':
         specifier: ^26.6.6
         version: 26.6.6
@@ -240,9 +243,6 @@ importers:
       '@types/topojson-client':
         specifier: ^3.1.5
         version: 3.1.5
-      '@types/topojson-specification':
-        specifier: ^1.0.5
-        version: 1.0.5
       '@vitejs/plugin-react':
         specifier: ^6.2.1
         version: 6.2.1(vite@8.3.5(@types/node@26.6.6)(esbuild@0.27.7))

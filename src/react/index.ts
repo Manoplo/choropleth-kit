@@ -1,4 +1,3 @@
-export { Placeholder } from "./placeholder";
 export { useChoropleth } from "./use-choropleth";
 export type {
   JoinReport,
