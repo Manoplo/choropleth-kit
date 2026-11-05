@@ -39,7 +39,7 @@
 | Paso | Título                                                                                            | Estado       |
 | ---- | ------------------------------------------------------------------------------------------------- | ------------ |
 | 14   | Limpieza: borrar `placeholder`; `@types/geojson` y `topojson-specification` a `dependencies`      | ✅ Hecho     |
-| 15   | `map-store`: hover, foco, puntero y estado fuera de `Root`                                        | ⏳ Pendiente |
+| 15   | `map-store`: hover, foco, puntero y estado fuera de `Root`                                        | ✅ Hecho*    |
 | 16   | `MapItem` unificado (regiones + puntos) y Pointer Events                                          | ⏳ Pendiente |
 | 17   | Selección controlada / no controlada y `dimOthers`                                                | ⏳ Pendiente |
 | 18   | `labels` (i18n): fuera los textos en español fijos                                                | ⏳ Pendiente |
@@ -1466,3 +1466,73 @@ muestra «Setup → Placeholder».
 
 - ¿Por qué un tipo de `geojson` que aparece en un `.d.ts` exige `dependencies` y no `devDependencies`?
 - ¿Qué ve un consumidor con TypeScript si no está `@types/geojson` instalado?
+
+---
+
+# Paso 15: `map-store` (el hover sale de `Root`)
+
+Archivos: `src/react/map-store.ts` (+ test), reemplaza a `pointer-store.ts`. Toca `use-choropleth.ts`,
+`choropleth-context.ts` y los componentes `Root`, `Regions`, `Selection` y `Tooltip`.
+Corrige el problema n.º 1 de la revisión (R.2), el de severidad alta.
+
+## 15.1 El problema
+
+`hoveredId` era un `useState` dentro de `useChoropleth`. Cada vez que el cursor pasaba a otra región,
+`Root` se re-renderizaba y recalculaba **join, escala, leyenda y burbujas**, aunque nada de eso
+hubiera cambiado. Con 177 países no se nota; con miles de regiones, o con zoom, produce tirones.
+
+## 15.2 La solución
+
+```
+ useChoropleth ── crea ──► store (hoveredId, pointer) ◄── lee con useMapStore(store, selector)
+      │                                                       ▲                ▲
+      └─ getRegionProps / Root escriben ─────────────────────┘                │
+                                                        Selection (hoveredId)  Tooltip (pointer + hoveredId)
+```
+
+- **`createMapStore()`**: un objeto con `subscribe`, `getState` y `setState(parche)`. Es JS puro, sin
+  React. `setState` **no notifica si el valor no cambia** (`Object.is`).
+- **`useMapStore(store, selector)`**: `useSyncExternalStore` con un selector. Un componente solo se
+  re-renderiza si **lo que su selector devuelve** cambia. `Selection` pide `hoveredId`; mover el cursor
+  dentro de la misma región no lo toca. El `Tooltip` pide también `pointer`.
+- **`Regions` lee el hover sin suscribirse** (`store.getState()` dentro del manejador). Necesita saber
+  la región actual para no repetir `onRegionHover`, pero no pinta nada que dependa de ella.
+- **Dueño del store: `useChoropleth`**, no `Root`. Así el nivel 3 (headless) también lo tiene: el
+  resultado del hook trae `store` en lugar de `hoveredId`, y quien quiera el hover hace
+  `useMapStore(store, s => s.hoveredId)` (ver `stories/headless.stories.tsx`).
+- **El selector debe devolver algo estable** (primitivo o la misma referencia). Si crea un objeto
+  nuevo en cada llamada, React entra en bucle. Está documentado en el código.
+
+## 15.3 Decisiones y desviaciones respecto a `dd.md §21`
+
+| Decisión                                                                                        | Motivo                                                                                                                                                                         |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| El store tiene solo `hoveredId` y `pointer`; **no** `focus`, `interacting`, cámara ni `status`. | Todavía no hay nada que los escriba (teclado: paso 16-17; cámara: fase B). Añadir un campo es una línea en `MapState`; declararlos ahora sería código muerto sin tests reales. |
+| Los eventos siguen siendo `mouse*`.                                                             | Pasar a Pointer Events y `MapItem` es el paso 16; mezclarlo aquí haría el cambio difícil de revisar.                                                                           |
+| `hoveredId` desaparece del resultado de `useChoropleth` sin alias.                              | Rotura permitida antes de 1.0 (R.4 #4). Tests y story actualizados.                                                                                                            |
+| `createMapStore` y `useMapStore` se exportan.                                                   | El nivel 3 los necesita para leer el hover.                                                                                                                                    |
+
+## 15.4 Tests
+
+205 en verde (200 + 5 nuevos), `typecheck` y `lint` limpios, cobertura de `src/core` sin cambios.
+
+- `map-store.test.tsx`: parches, no notificar si no cambia, desuscripción y **`useMapStore` no
+  re-renderiza si cambia otro campo**.
+- `choropleth.test.tsx`, «rendimiento»: el criterio de aceptación de `dd.md §21`. Para contar renders
+  de `Root` sin tocar producción se cuenta cuántas veces se llama a `getId` (el join lo llama una vez
+  por fila en cada render de `useChoropleth`). Tras hover entre dos regiones, mover el cursor y salir,
+  el contador **no cambia**. Un test de control comprueba que sí sube cuando el consumidor
+  re-renderiza, para que el primero no pase por casualidad.
+
+## 15.5 Verificación visual (pendiente de ti) \*
+
+No he podido abrir Storybook en un navegador. Por la regla R.4 #1, **revisa antes de seguir**:
+`pnpm storybook` y, en `ChoroplethMap` y en la story headless, comprueba que (1) el borde del hover
+sigue a la región, (2) el tooltip sigue al cursor y se voltea en las esquinas, (3) al salir del mapa
+ambos desaparecen.
+
+## 15.6 Antes de pasar al paso 16: ¿lo tienes claro?
+
+- ¿Por qué `useMapStore` necesita un selector y qué pasa si devuelve un objeto nuevo cada vez?
+- ¿Por qué `Regions` lee `store.getState()` en el manejador en lugar de suscribirse?
+- ¿Cómo demuestra el test que `Root` no se re-renderiza, y por qué hay un test de control?

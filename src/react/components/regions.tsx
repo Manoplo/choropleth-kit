@@ -18,8 +18,10 @@ const regionIdFrom = (event: SyntheticEvent): string | null =>
  * en vez de uno por `<path>`: con cientos de regiones es menos trabajo y no se recrean closures.
  */
 export const Regions = () => {
-  const { choropleth } = useChoroplethContext();
-  const { regions, borders, hoveredId, clickable, getRegionProps } = choropleth;
+  const { choropleth, store } = useChoroplethContext();
+  const { regions, borders, clickable, getRegionProps } = choropleth;
+  // El hover se lee del store SIN suscribirse: `Regions` no debe re-renderizarse al cambiar de región.
+  const hoveredId = () => store.getState().hoveredId;
 
   const byId = new Map(regions.map((region) => [region.id, region]));
 
@@ -39,15 +41,15 @@ export const Regions = () => {
         const id = regionIdFrom(event);
         const region = id === null ? undefined : byId.get(id);
         if (region !== undefined) {
-          if (region.id !== hoveredId) getRegionProps(region).onMouseEnter(event);
-        } else if (hoveredId !== null) {
+          if (region.id !== hoveredId()) getRegionProps(region).onMouseEnter(event);
+        } else if (hoveredId() !== null) {
           // Cursor sobre el océano (dentro del <g> pero fuera de toda región).
-          const previous = byId.get(hoveredId);
+          const previous = byId.get(hoveredId() ?? "");
           if (previous !== undefined) getRegionProps(previous).onMouseLeave(event);
         }
       }}
       onMouseLeave={(event) => {
-        const previous = hoveredId === null ? undefined : byId.get(hoveredId);
+        const previous = byId.get(hoveredId() ?? "");
         if (previous !== undefined) getRegionProps(previous).onMouseLeave(event);
       }}
     >

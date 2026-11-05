@@ -1,6 +1,7 @@
-import { useSyncExternalStore, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import type { RegionEvent } from "../use-choropleth";
 import { useChoroplethContext } from "../choropleth-context";
+import { useMapStore } from "../map-store";
 
 export type TooltipContext<TDatum> = RegionEvent<TDatum> & {
   /** Número, categoría (`categorical`) o `null` si no hay dato. */
@@ -32,15 +33,16 @@ const DefaultContent = <TDatum,>({ feature, id, formattedValue }: TooltipContext
 /**
  * Tooltip HTML junto al cursor. La librería decide QUÉ (contexto tipado) y DÓNDE; tú, el aspecto.
  *
- * Se suscribe a la posición del cursor él solo (`useSyncExternalStore`): moverlo no re-renderiza
+ * Se suscribe él solo al hover y al cursor (`useMapStore`): moverlo no re-renderiza `Root` ni
  * las regiones. Sin medir su tamaño, se voltea hacia el otro lado del cursor en la mitad derecha
  * / inferior del mapa para no salirse del contenedor.
  */
 export const Tooltip = <TDatum,>({ className, children }: TooltipProps<TDatum>) => {
-  const { choropleth, pointer } = useChoroplethContext<TDatum>();
-  const point = useSyncExternalStore(pointer.subscribe, pointer.getSnapshot, () => null);
+  const { choropleth, store } = useChoroplethContext<TDatum>();
+  const point = useMapStore(store, (s) => s.pointer);
+  const hoveredId = useMapStore(store, (s) => s.hoveredId);
 
-  const region = choropleth.regions.find((r) => r.id === choropleth.hoveredId);
+  const region = choropleth.regions.find((r) => r.id === hoveredId);
   if (region === undefined || point === null) return null;
 
   const context: TooltipContext<TDatum> = {

@@ -1,4 +1,5 @@
 import { useChoroplethContext } from "../choropleth-context";
+import { useMapStore } from "../map-store";
 
 /**
  * Resalta la región con hover y la seleccionada, ENCIMA de las fronteras: si se pintara su borde
@@ -6,8 +7,9 @@ import { useChoroplethContext } from "../choropleth-context";
  * que esta capa no robe el ratón a las regiones de debajo.
  */
 export const Selection = () => {
-  const { choropleth } = useChoroplethContext();
-  const { regions, hoveredId, selectedId } = choropleth;
+  const { choropleth, store } = useChoroplethContext();
+  const { regions, selectedId } = choropleth;
+  const hoveredId = useMapStore(store, (s) => s.hoveredId);
 
   const layers = [
     { id: hoveredId, name: "hover" },

@@ -229,6 +229,36 @@ describe("Choropleth (compound)", () => {
     });
   });
 
+  describe("rendimiento: la interacción no re-renderiza Root", () => {
+    // `getId` se llama una vez por fila en CADA render de `useChoropleth` (join): contarlas es un
+    // contador de renders de `Root` sin tocar el código de producción.
+    it("hover entre regiones y movimiento del cursor no recalculan el mapa", () => {
+      const getId = vi.fn<(r: Row) => string>((r) => r.code);
+      const { path } = renderMap({ getId });
+      const before = getId.mock.calls.length;
+
+      fireEvent.mouseOver(path("A"));
+      fireEvent.mouseMove(path("A"), { clientX: 10, clientY: 10 });
+      fireEvent.mouseOver(path("B"));
+      fireEvent.mouseMove(path("B"), { clientX: 120, clientY: 40 });
+      fireEvent.mouseLeave(path("B").parentElement as Element);
+
+      expect(getId.mock.calls.length).toBe(before);
+    });
+
+    it("sí se re-renderiza cuando cambia algo del consumidor (control del test)", () => {
+      const getId = vi.fn<(r: Row) => string>((r) => r.code);
+      const { rerender } = renderMap({ getId });
+      const before = getId.mock.calls.length;
+      rerender(
+        <Choropleth.Root {...({ ...baseProps, getId, width: 300 } as RootProps<Row>)}>
+          <Choropleth.Svg />
+        </Choropleth.Root>,
+      );
+      expect(getId.mock.calls.length).toBeGreaterThan(before);
+    });
+  });
+
   describe("Tooltip", () => {
     const hover = (path: Element, x: number, y: number) => {
       fireEvent.mouseOver(path);

@@ -1,6 +1,5 @@
-import { useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
+import type { CSSProperties, MouseEvent, ReactNode } from "react";
 import { ChoroplethContext } from "../choropleth-context";
-import { createPointerStore } from "../pointer-store";
 import {
   useChoropleth,
   type UseChoroplethOptions,
@@ -27,17 +26,16 @@ export const Root = <TDatum,>({
   ...options
 }: RootProps<TDatum>) => {
   const choropleth = useChoropleth<TDatum>(options as UseChoroplethOptions<TDatum>);
-  const { containerRef } = choropleth;
-  const [pointer] = useState(createPointerStore);
+  const { containerRef, store } = choropleth;
 
   const handleMove = (event: MouseEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
-    pointer.set({ x: event.clientX - rect.left, y: event.clientY - rect.top });
+    store.setState({ pointer: { x: event.clientX - rect.left, y: event.clientY - rect.top } });
   };
 
   return (
     <ChoroplethContext.Provider
-      value={{ choropleth: choropleth as UseChoroplethResult<unknown>, pointer }}
+      value={{ choropleth: choropleth as UseChoroplethResult<unknown>, store }}
     >
       <div
         ref={containerRef}
@@ -46,7 +44,7 @@ export const Root = <TDatum,>({
         data-unstyled={unstyled ? "" : undefined}
         style={{ position: "relative", ...style }}
         onMouseMove={handleMove}
-        onMouseLeave={() => pointer.set(null)}
+        onMouseLeave={() => store.setState({ pointer: null })}
       >
         {children}
       </div>

@@ -7,6 +7,8 @@ export type {
   UseChoroplethOptions,
   UseChoroplethResult,
 } from "./use-choropleth";
+export { createMapStore, useMapStore } from "./map-store";
+export type { MapState, MapStore, PointerPosition } from "./map-store";
 export { useContainerSize } from "./use-container-size";
 export type { ContainerSize, UseContainerSizeOptions } from "./use-container-size";
 export { Choropleth } from "./choropleth";

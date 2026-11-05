@@ -1,10 +1,10 @@
 import { createContext, useContext } from "react";
-import type { PointerStore } from "./pointer-store";
+import type { MapStore } from "./map-store";
 import type { UseChoroplethResult } from "./use-choropleth";
 
 export type ChoroplethContextValue = {
   choropleth: UseChoroplethResult<unknown>;
-  pointer: PointerStore;
+  store: MapStore;
 };
 
 export const ChoroplethContext = createContext<ChoroplethContextValue | null>(null);
@@ -15,7 +15,7 @@ export const ChoroplethContext = createContext<ChoroplethContextValue | null>(nu
  */
 export const useChoroplethContext = <TDatum = unknown>(): {
   choropleth: UseChoroplethResult<TDatum>;
-  pointer: PointerStore;
+  store: MapStore;
 } => {
   const value = useContext(ChoroplethContext);
   if (value === null) {
@@ -23,5 +23,5 @@ export const useChoroplethContext = <TDatum = unknown>(): {
       "Los componentes de Choropleth (Svg, Regions, Legend…) deben ir dentro de <Choropleth.Root>.",
     );
   }
-  return value as unknown as { choropleth: UseChoroplethResult<TDatum>; pointer: PointerStore };
+  return value as unknown as { choropleth: UseChoroplethResult<TDatum>; store: MapStore };
 };

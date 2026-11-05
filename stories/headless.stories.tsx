@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { Topology } from "topojson-specification";
 import countries110m from "world-atlas/countries-110m.json";
 import { toFeatureCollection, type Classification, type ProjectionName } from "../src/core";
-import { useChoropleth } from "../src/react";
+import { useChoropleth, useMapStore } from "../src/react";
 
 type Row = { id: string; value: number | null };
 
@@ -36,7 +36,7 @@ const HeadlessMap = ({ variant, projection, method, selectable }: MapProps) => {
   const classification: Classification =
     method === "threshold" ? { method, thresholds: [-10, 0, 10] } : { method };
 
-  const { containerRef, width, height, regions, borders, legend, hoveredId, getRegionProps } =
+  const { containerRef, width, height, regions, borders, legend, store, getRegionProps } =
     useChoropleth<Row>({
       geography: world,
       objectName: "countries",
@@ -52,6 +52,8 @@ const HeadlessMap = ({ variant, projection, method, selectable }: MapProps) => {
         ? ({ id }) => setSelectedId((cur) => (cur === id ? null : id))
         : undefined,
     });
+  // El hover vive fuera del hook: este componente solo se re-renderiza porque lo lee aquí.
+  const hoveredId = useMapStore(store, (s) => s.hoveredId);
 
   return (
     <div ref={containerRef} style={{ width: "100%", maxWidth: 1100 }}>

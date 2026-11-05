@@ -20,6 +20,7 @@ import {
   type SizeLegendItem,
   type VariantConfig,
 } from "../core";
+import { createMapStore, type MapStore } from "./map-store";
 import { useContainerSize } from "./use-container-size";
 
 export type RegionEvent<TDatum> = {
@@ -99,7 +100,11 @@ export type UseChoroplethResult<TDatum> = {
   formatValue: (value: number) => string;
   /** `true` si hay `onRegionClick`: los componentes ponen cursor `pointer`. */
   clickable: boolean;
-  hoveredId: string | null;
+  /**
+   * Estado de interacción (hover, puntero) fuera de React. Léelo con `useMapStore(store, s => s.hoveredId)`:
+   * así cambiar de región no re-renderiza el componente que llama a `useChoropleth`.
+   */
+  store: MapStore;
   selectedId: string | null;
   getRegionProps: (region: Region<TDatum>) => RegionProps;
 };
@@ -232,7 +237,7 @@ export const useChoropleth = <TDatum>(
   }, [reportKey]);
 
   // ── interacción ───────────────────────────────────────────────────────────────────────────────
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [store] = useState(createMapStore);
   const { selectedId = null, onRegionClick, onRegionHover } = options;
 
   const getRegionProps = (region: Region<TDatum>): RegionProps => {
@@ -246,11 +251,11 @@ export const useChoropleth = <TDatum>(
       "data-selected": region.id === selectedId ? true : undefined,
       onClick: () => onRegionClick?.(event),
       onMouseEnter: () => {
-        setHoveredId(region.id);
+        store.setState({ hoveredId: region.id });
         onRegionHover?.(event);
       },
       onMouseLeave: () => {
-        setHoveredId(null);
+        store.setState({ hoveredId: null });
         onRegionHover?.(null);
       },
     };
@@ -269,7 +274,7 @@ export const useChoropleth = <TDatum>(
     joinReport,
     formatValue,
     clickable: onRegionClick !== undefined,
-    hoveredId,
+    store,
     selectedId,
     getRegionProps,
   };

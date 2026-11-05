@@ -150,11 +150,11 @@ describe("useChoropleth", () => {
     expect(onRegionClick).toHaveBeenCalledWith({ id: "A", feature: a.feature, datum: a.datum });
 
     act(() => result.current.getRegionProps(a).onMouseEnter({} as never));
-    expect(result.current.hoveredId).toBe("A");
+    expect(result.current.store.getState().hoveredId).toBe("A");
     expect(onRegionHover).toHaveBeenLastCalledWith(expect.objectContaining({ id: "A" }));
 
     act(() => result.current.getRegionProps(a).onMouseLeave({} as never));
-    expect(result.current.hoveredId).toBeNull();
+    expect(result.current.store.getState().hoveredId).toBeNull();
     expect(onRegionHover).toHaveBeenLastCalledWith(null);
   });
 
@@ -167,7 +167,7 @@ describe("useChoropleth", () => {
       result.current.getRegionProps(a).onClick({} as never);
       result.current.getRegionProps(a).onMouseEnter({} as never);
     });
-    expect(result.current.hoveredId).toBe("A");
+    expect(result.current.store.getState().hoveredId).toBe("A");
   });
 
   it("omite regiones sin id", () => {
