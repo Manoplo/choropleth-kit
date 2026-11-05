@@ -4,6 +4,7 @@
   "description": "React library for choropleth (thematic) maps.",
   "license": "MIT",
   "type": "module",
+  "packageManager": "pnpm@12.6.0",
   "sideEffects": [
     "**/*.css"
   ],
@@ -23,9 +24,14 @@
     }
   },
   "scripts": {
+    "preinstall": "node -e \"const ua=process.env.npm_config_user_agent||''; if(!ua.includes('pnpm')){console.error('Usa pnpm. Este proyecto no admite npm ni yarn.');process.exit(1)}\"",
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint --fix .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "storybook": "storybook dev -p 6006",
@@ -40,18 +46,33 @@
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",
+    "@types/d3-geo": "^3.1.1",
+    "@types/d3-scale": "^4.0.9",
+    "@types/d3-scale-chromatic": "^3.1.0",
+    "@types/geojson": "^7946.0.16",
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/topojson-client": "^3.1.5",
+    "@types/topojson-specification": "^1.0.5",
     "@vitejs/plugin-react": "^6.2.1",
     "@vitest/coverage-v8": "^5.1.0",
     "jsdom": "^27.0.1",
+    "oxlint": "^1.91.0",
+    "prettier": "^3.9.10",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "storybook": "^10.6.5",
     "tsup": "^8.5.1",
     "typescript": "~5.9.3",
     "vite": "^8.3.5",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "world-atlas": "^2.0.2"
+  },
+  "dependencies": {
+    "d3-geo": "^3.1.2",
+    "d3-scale": "^4.0.3",
+    "d3-scale-chromatic": "^3.1.1",
+    "topojson-client": "^3.1.0"
   }
 }
