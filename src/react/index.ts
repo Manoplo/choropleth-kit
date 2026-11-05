@@ -19,7 +19,7 @@ export type {
   RegionItem,
 } from "./map-item";
 export { createMapStore, useMapStore } from "./map-store";
-export type { MapState, MapStore, PointerPosition } from "./map-store";
+export type { MapState, MapStore, PointerPosition, ZoomApi } from "./map-store";
 export { clearGeographyCache, useGeography } from "./use-geography";
 export type { GeographyStatus, UseGeographyResult } from "./use-geography";
 export { useZoom } from "./use-zoom";
@@ -38,7 +38,10 @@ export type { RootProps } from "./components/root";
 export { Selection } from "./components/selection";
 export { Svg } from "./components/svg";
 export type { SvgProps } from "./components/svg";
+export { GestureHint } from "./components/gesture-hint";
 export { Viewport } from "./components/viewport";
+export { ZoomControls } from "./components/zoom-controls";
+export type { ZoomControlsProps } from "./components/zoom-controls";
 export { Tooltip } from "./components/tooltip";
 export type { TooltipContext, TooltipProps } from "./components/tooltip";
 export { ChoroplethMap } from "./choropleth-map";

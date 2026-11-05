@@ -1,9 +1,21 @@
 import type { ViewState } from "./camera";
 
+export type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
+
+export type ZoomControlsOptions = {
+  /** Esquina del mapa. Por defecto `"bottom-right"` (la leyenda va por defecto abajo a la izquierda). */
+  position?: Corner;
+  /** Mostrar el botón «restablecer vista». Por defecto `true`. */
+  reset?: boolean;
+};
+
+/** Resultado de un movimiento de cámara animado: `completed` es `false` si algo lo interrumpió. */
+export type TransitionResult = { completed: boolean };
+
 /**
- * Opciones de zoom y pan (dd.md §11.1.1). Aquí solo van las que ya hacen algo; `controls`,
- * `keyboard`, `inertia`, `padding` e `initialView` se añaden en los pasos 25-27 con su
- * comportamiento (declararlas antes sería prometer lo que no existe).
+ * Opciones de zoom y pan (dd.md §11.1.1). Aquí solo van las que ya hacen algo; `inertia`, `padding`
+ * e `initialView` se añaden en los pasos 26-27 con su comportamiento (declararlas antes sería
+ * prometer lo que no existe).
  */
 export type ZoomOptions = {
   /** Escala mínima relativa al encaje del nivel (1 = no se puede alejar más que el encaje). Default 1. */
@@ -31,6 +43,13 @@ export type ZoomOptions = {
   doubleClick?: boolean | "auto";
   /** `"contain"` (default): el contenido no se pierde y se centra si cabe. `"free"`: sin límites. */
   constrain?: "contain" | "free";
+  /** Atajos de teclado con el mapa enfocado: `+`, `−` y `0`. Default `true`. */
+  keyboard?: boolean;
+  /**
+   * Botones `+` / `−` / `⟲`. **Opt-in** (default `false`): `true` o `{ position, reset }`. Los dibuja el
+   * preset; con el compound, pon `<Choropleth.ZoomControls>` donde quieras.
+   */
+  controls?: boolean | ZoomControlsOptions;
   /** Al TERMINAR cada gesto (nunca por frame). Con vuelos programáticos, al terminar el vuelo. */
   onViewChange?: (view: ViewState) => void;
 };
@@ -44,6 +63,7 @@ export type ResolvedZoom = {
   /** Ya resuelto: `"auto"` pasa a `true`/`false` según si el clic tiene otro significado. */
   doubleClick: boolean;
   constrain: "contain" | "free";
+  keyboard: boolean;
 };
 
 export const DEFAULT_ZOOM_MIN = 1;
@@ -74,7 +94,48 @@ export const resolveZoomOptions = (
     pan: options.pan ?? true,
     doubleClick: doubleClick === "auto" ? !clickIsBusy : doubleClick,
     constrain: options.constrain ?? "contain",
+    keyboard: options.keyboard ?? true,
   };
+};
+
+/** `zoom.controls` → qué dibujar, o `null` si no hay controles (el default). */
+export const resolveControls = (
+  zoom: boolean | ZoomOptions | undefined,
+): Required<ZoomControlsOptions> | null => {
+  if (typeof zoom !== "object" || zoom.controls === undefined || zoom.controls === false) {
+    return null;
+  }
+  const options = zoom.controls === true ? {} : zoom.controls;
+  return { position: options.position ?? "bottom-right", reset: options.reset ?? true };
+};
+
+export type ZoomKeyAction = "in" | "out" | "reset";
+
+/**
+ * Qué hace una tecla sobre el mapa enfocado: `+` acerca, `−` aleja, `0` vuelve al encaje.
+ *
+ * Con Ctrl, ⌘ o Alt NO se interpreta: Ctrl/⌘ + `+`, `−`, `0` es el zoom de la página del navegador, y
+ * quitárselo al usuario sería un fallo de accesibilidad.
+ */
+export const zoomKeyAction = (event: {
+  key: string;
+  ctrlKey?: boolean;
+  metaKey?: boolean;
+  altKey?: boolean;
+}): ZoomKeyAction | null => {
+  if (event.ctrlKey === true || event.metaKey === true || event.altKey === true) return null;
+  switch (event.key) {
+    case "+":
+    case "=": // la misma tecla que `+` en un teclado US, sin Shift
+      return "in";
+    case "-":
+    case "_":
+      return "out";
+    case "0":
+      return "reset";
+    default:
+      return null;
+  }
 };
 
 /** Lo mínimo que el filtro necesita de un evento del DOM (así se prueba sin DOM). */

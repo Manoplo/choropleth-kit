@@ -1,6 +1,18 @@
 import { useSyncExternalStore } from "react";
-import { FIT_TRANSFORM, type CameraTransform } from "../core";
+import { FIT_TRANSFORM, type CameraTransform, type TransitionResult } from "../core";
 import type { ItemRef } from "./map-item";
+
+/**
+ * Lo que los botones, el teclado y (paso 26) el handle imperativo pueden pedirle al zoom. Lo
+ * registra `use-zoom` al instalar `d3-zoom`; cada movimiento devuelve una `Promise` que resuelve al
+ * terminar (`completed: false` si un gesto del usuario lo interrumpió).
+ */
+export type ZoomApi = {
+  /** Multiplica el zoom actual (×2 acerca, ×0,5 aleja) centrado en la vista. */
+  zoomBy: (factor: number, options?: { duration?: number }) => Promise<TransitionResult>;
+  /** Vuelo al encaje del nivel. */
+  resetView: (options?: { duration?: number }) => Promise<TransitionResult>;
+};
 
 export type PointerPosition = { x: number; y: number };
 
@@ -30,6 +42,10 @@ export type MapStore = {
   showGestureHint: (kind: "wheel" | "touch") => void;
   /** Cancela el temporizador del aviso (al desmontar). */
   dispose: () => void;
+  /** `use-zoom` registra aquí su API al instalarse y `null` al desinstalarse. */
+  registerZoom: (api: ZoomApi | null) => void;
+  /** La API de zoom, o `null` si el zoom está desactivado o aún no se ha instalado. */
+  getZoom: () => ZoomApi | null;
 };
 
 /** Cuánto dura el aviso «Usa Ctrl + rueda para hacer zoom» (dd.md §11.1.2). */
@@ -54,6 +70,7 @@ const INITIAL_STATE: MapState = {
 export const createMapStore = (): MapStore => {
   let state = INITIAL_STATE;
   let hintTimer: ReturnType<typeof setTimeout> | undefined;
+  let zoomApi: ZoomApi | null = null;
   const listeners = new Set<() => void>();
   const store: MapStore = {
     subscribe: (listener) => {
@@ -75,6 +92,10 @@ export const createMapStore = (): MapStore => {
       hintTimer = setTimeout(() => store.setState({ gestureHint: null }), GESTURE_HINT_MS);
     },
     dispose: () => clearTimeout(hintTimer),
+    registerZoom: (api) => {
+      zoomApi = api;
+    },
+    getZoom: () => zoomApi,
   };
   return store;
 };

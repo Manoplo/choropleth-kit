@@ -1,4 +1,10 @@
-import { createZoomFilter, resolveZoomOptions, type ZoomFilterParams } from "./zoom";
+import {
+  createZoomFilter,
+  resolveControls,
+  resolveZoomOptions,
+  zoomKeyAction,
+  type ZoomFilterParams,
+} from "./zoom";
 
 describe("resolveZoomOptions", () => {
   const idle = { clickIsBusy: false };
@@ -12,6 +18,7 @@ describe("resolveZoomOptions", () => {
       pan: true,
       doubleClick: true,
       constrain: "contain",
+      keyboard: true,
     });
     expect(resolveZoomOptions(true, idle)).toEqual(resolveZoomOptions(undefined, idle));
   });
@@ -139,5 +146,61 @@ describe("createZoomFilter", () => {
       expect(filter({ doubleClick: true })({ type: "dblclick" })).toBe(true);
       expect(filter({ doubleClick: false })({ type: "dblclick" })).toBe(false);
     });
+  });
+});
+
+describe("resolveZoomOptions · keyboard", () => {
+  it("el teclado está activo por defecto y se puede desactivar", () => {
+    expect(resolveZoomOptions({}, { clickIsBusy: false })?.keyboard).toBe(true);
+    expect(resolveZoomOptions({ keyboard: false }, { clickIsBusy: false })?.keyboard).toBe(false);
+  });
+});
+
+describe("resolveControls (opt-in)", () => {
+  it("sin controles por defecto: sin zoom, con zoom booleano o con un objeto sin `controls`", () => {
+    expect(resolveControls(undefined)).toBeNull();
+    expect(resolveControls(true)).toBeNull();
+    expect(resolveControls(false)).toBeNull();
+    expect(resolveControls({})).toBeNull();
+    expect(resolveControls({ controls: false })).toBeNull();
+  });
+
+  it("`controls: true` da la esquina y el reset por defecto", () => {
+    expect(resolveControls({ controls: true })).toEqual({ position: "bottom-right", reset: true });
+  });
+
+  it("un objeto parcial se completa", () => {
+    expect(resolveControls({ controls: { position: "top-left" } })).toEqual({
+      position: "top-left",
+      reset: true,
+    });
+    expect(resolveControls({ controls: { reset: false } })).toEqual({
+      position: "bottom-right",
+      reset: false,
+    });
+  });
+});
+
+describe("zoomKeyAction", () => {
+  it.each([
+    ["+", "in"],
+    ["=", "in"],
+    ["-", "out"],
+    ["_", "out"],
+    ["0", "reset"],
+  ] as const)("«%s» → %s", (key, action) => {
+    expect(zoomKeyAction({ key })).toBe(action);
+  });
+
+  it("otras teclas no hacen nada", () => {
+    for (const key of ["a", "Enter", "ArrowUp", "1", " ", "Escape"]) {
+      expect(zoomKeyAction({ key })).toBeNull();
+    }
+  });
+
+  it("con Ctrl, ⌘ o Alt NO se intercepta: es el zoom de la página del navegador", () => {
+    expect(zoomKeyAction({ key: "+", ctrlKey: true })).toBeNull();
+    expect(zoomKeyAction({ key: "-", metaKey: true })).toBeNull();
+    expect(zoomKeyAction({ key: "0", altKey: true })).toBeNull();
   });
 });

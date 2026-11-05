@@ -12,12 +12,14 @@ export {
   applyTransform,
   constrainAxis,
   constrainTransform,
+  createZoomInterpolator,
   DEFAULT_FLIGHT_CURVATURE,
   FIT_TRANSFORM,
   flightDuration,
   inertiaOffset,
   INERTIA_TAU_MS,
   invertTransform,
+  isFitTransform,
   MAX_FLIGHT_MS,
   MIN_FLIGHT_MS,
   preserveView,
@@ -81,5 +83,21 @@ export type {
   VariantName,
   VariantResult,
 } from "./variants";
-export { createZoomFilter, DEFAULT_ZOOM_MAX, DEFAULT_ZOOM_MIN, resolveZoomOptions } from "./zoom";
-export type { ResolvedZoom, ZoomEventLike, ZoomFilterParams, ZoomOptions } from "./zoom";
+export {
+  createZoomFilter,
+  DEFAULT_ZOOM_MAX,
+  DEFAULT_ZOOM_MIN,
+  resolveControls,
+  resolveZoomOptions,
+  zoomKeyAction,
+} from "./zoom";
+export type {
+  Corner,
+  ResolvedZoom,
+  TransitionResult,
+  ZoomControlsOptions,
+  ZoomEventLike,
+  ZoomFilterParams,
+  ZoomKeyAction,
+  ZoomOptions,
+} from "./zoom";

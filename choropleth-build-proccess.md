@@ -54,7 +54,7 @@
 | ---- | -------------------------------------------------------------------------------------------------------- | ------------ |
 | 23   | `core/camera.ts` y `boundsToTransform`: la matemática de la cámara, solo con tests                       | ✅ Hecho     |
 | 24   | `use-zoom.ts` + `Viewport`: `d3-zoom` escribe el transform en el DOM; rueda cooperativa, clic ≠ arrastre | ✅ Hecho\*   |
-| 25   | `ZoomControls`, `GestureHint` y teclado de zoom                                                          | ⏳ Pendiente |
+| 25   | `ZoomControls`, `GestureHint` y teclado de zoom                                                          | ✅ Hecho\*   |
 | 26   | Vuelos: `focusId`, handle `zoomTo` / `zoomBy` / `resetView` con `Promise`, reduced-motion                | ⏳ Pendiente |
 | 27   | Contraescalado de burbujas, inercia y resize sin salto                                                   | ⏳ Pendiente |
 
@@ -2070,3 +2070,113 @@ Abre `pnpm storybook` → **Zoom / Basic** y comprueba:
 
 Con `wheel: "always"` por defecto y el mapa dentro de una página con scroll, el mapa se come la rueda. ¿Quieres
 que el preset (`<ChoroplethMap>`) lo avise en desarrollo, o basta con la documentación de la prop?
+
+---
+
+# Paso 25: `ZoomControls`, `GestureHint` y teclado de zoom
+
+Archivos nuevos: `src/react/components/zoom-controls.tsx`, `gesture-hint.tsx`, `src/react/platform.ts`,
+`src/react/zoom-controls.test.tsx`. Tocan: `core/zoom.ts`, `core/camera.ts`, `core/labels.ts`,
+`map-store.ts`, `use-zoom.ts`, `Svg`, el preset, `styles.css` y `stories/zoom.stories.tsx`. Tarea 12 de
+`dd.md §21`.
+
+## 25.1 Qué se hizo
+
+| Pieza                           | Qué es                                                                                                                                                                                                             |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **`<Choropleth.ZoomControls>`** | Botones `+` / `−` / `⟲`: `<button type="button">` reales con `aria-label` desde `labels`. **Opt-in**: `zoom={{ controls: true }}` o `{ position, reset }`. Esquina por defecto: abajo a la derecha.                |
+| **`<Choropleth.GestureHint>`**  | El aviso «Usa Ctrl + rueda…» (⌘ en macOS e iOS) o «Usa dos dedos…». Solo sale con `wheel: "cooperative"`. 1,5 s, `aria-hidden`. El preset lo incluye.                                                              |
+| **Teclado**                     | Con el `<svg>` enfocado (`tabIndex = 0`): `+` / `=` acercan, `-` / `_` alejan, `0` vuelve al encaje. Anillo de foco `--cm-focus-ring`, solo con teclado (`:focus-visible`). `zoom={{ keyboard: false }}` lo quita. |
+| **`ZoomApi`** (store)           | `zoomBy(factor)` y `resetView()`: **animados y con `Promise<{ completed }>`**. Los usan los botones y el teclado, y el paso 26 los amplía a `zoomTo` y `focusId`.                                                  |
+
+## 25.2 Cómo funciona por dentro
+
+**Los botones, el teclado y la rueda hablan con el MISMO `d3-zoom`** (`dd.md §11.1.3`, punto 4). `use-zoom`
+registra en el store una `ZoomApi` al instalarse (y `null` al desinstalarse). Un `zoomBy` es
+`selection.transition().duration(300).ease(easeCubicOut)` sobre `behavior.scaleBy`; un `resetView` es
+`behavior.transform(transition, identidad)` con una duración de `flightDuration` (350–1200 ms) y el
+interpolador de curvatura 1,25 del paso 23. Como todo pasa por `d3-zoom`, **un gesto del usuario interrumpe
+el vuelo de forma natural** (d3 llama a `interrupt` al empezar un gesto).
+
+**`Promise` con `completed`.** `transition.end()` de d3 **rechaza** si algo interrumpe la transición. Aquí no
+es un error: se convierte en `{ completed: false }`. Así `await api.zoomBy(2)` nunca lanza, y un guion de
+varios vuelos (`await a; await b`) puede comprobar si el usuario lo cortó.
+
+**Los botones se deshabilitan según la cámara confirmada** (`useMapStore(store, s => s.camera)`): `−` en
+`min`, `+` en `max`, `⟲` si ya estás en el encaje (`isFitTransform`, en `core`). Se actualizan **al terminar**
+el movimiento (no por frame), y como solo ellos se suscriben, **pulsar un botón no re-renderiza `Root`**
+(hay test con el contador de `getId`).
+
+**El aviso siempre está en el DOM** y se muestra con `data-visible` + CSS: así hay un fundido de salida, y el
+texto no cambia mientras se apaga (se conserva el último tipo de aviso). Su temporizador vive en el store
+(`showGestureHint` / `dispose`).
+
+**⌘ o Ctrl.** `useIsApplePlatform` usa `useSyncExternalStore` con `false` en el servidor: el render del
+servidor y el de la hidratación coinciden y el cliente se corrige después, sin avisos de hidratación.
+
+## 25.3 Decisiones y desviaciones respecto a `dd.md`
+
+| Decisión                                                                                                                | Motivo                                                                                                                                                                         |
+| ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Los controles son opt-in** (decisión del humano); el preset los dibuja solo con `zoom={{ controls: … }}`.             | Menos ruido visual por defecto. En el compound se colocan a mano.                                                                                                              |
+| **El aviso solo sale en `cooperative`** (decisión del humano). El preset incluye el componente siempre, pero invisible. | Con `"always"` (el default) no hay nada que enseñar.                                                                                                                           |
+| **Ctrl, ⌘ y Alt + `+`/`−`/`0` NO se interceptan.**                                                                      | Es el zoom de la página del navegador: quitárselo al usuario sería un fallo de accesibilidad. (`dd.md` no lo dice; es lo correcto.)                                            |
+| `=` cuenta como `+` y `_` como `-`.                                                                                     | Es la misma tecla física sin Shift en un teclado US; si no, `+` exigiría Shift.                                                                                                |
+| **Solo `+`, `−` y `0`**; flechas, Enter, Escape, Home/End **no** están.                                                 | Son de `dd.md §13` (accesibilidad): las flechas mueven el **foco entre regiones** (navegación espacial) y `Shift` + flechas el pan. Es otro bloque de trabajo, no la tarea 12. |
+| **«Reducir movimiento» = salto inmediato** por ahora (sin transición).                                                  | `dd.md §11.1.5` pide un **fundido** (opacidad a 0 en 100 ms, salto, a 1 en 150 ms); llega con los vuelos del paso 26. Hasta entonces es lo más conservador: cero movimiento.   |
+| Duración de `+`/`−`: 300 ms con `easeCubicOut`; de `⟲`: la de `flightDuration`.                                         | Lo que pide `dd.md §11.1.2` y §11.1.5.                                                                                                                                         |
+| Dependencias nuevas: **`d3-transition`** y **`d3-ease`** (`dependencies`) + `@types` (dev).                             | Permitidas por `dd.md §21`. `d3-transition` se importa por efecto secundario (parchea `selection.transition()`).                                                               |
+| `labels` gana `zoomIn`, `zoomOut`, `resetView`, `gestureHintWheel`, `gestureHintWheelMac` y `gestureHintTouch` (en/es). | Sin texto fijo en ningún idioma. Un test comprueba que `en` y `es` tienen exactamente las mismas claves y ninguna vacía.                                                       |
+
+⚠️ **Tab stop sobre `role="img"`.** El `<svg>` sigue con `role="img"` (R.2 #9, pendiente de `dd.md §13`) y ahora además
+es enfocable cuando hay teclado. Es incoherente a ojos de un lector de pantalla; se decide con la prueba real de
+VoiceOver/NVDA que pide `dd.md §13` antes de v0.5. Hasta entonces, `keyboard: false` lo deshace.
+
+## 25.4 Tests
+
+425 en verde (372 + 53 nuevos), `typecheck`, `lint`, `format:check`, `build` y `build-storybook` limpios; cobertura de
+`core` 100 % líneas / 97 % ramas.
+
+- **`core`:** `resolveControls` (opt-in), `zoomKeyAction` (todas las teclas, y **Ctrl/⌘/Alt no se interceptan**),
+  `isFitTransform`, `createZoomInterpolator`, y que `en` y `es` tienen las mismas claves.
+- **Botones:** no existen por defecto; las tres etiquetas (en/es); `reset: false`; la esquina; el estado
+  deshabilitado en el encaje, en `max` y tras `⟲`; `+` acerca ×2 **centrado** (el centro sigue en el centro);
+  la rueda también actualiza los botones; `onViewChange` al terminar; «reducir movimiento» = inmediato.
+- **`ZoomApi`:** `completed: true` al terminar; **`completed: false` (no rechaza) cuando otro movimiento, una rueda o
+  el desmontaje lo interrumpen**; se des-registra al desmontar.
+- **Teclado:** tab stop, `+ = - 0`, `preventDefault` solo cuando se actúa, Ctrl/⌘ intactos, `Tab` intacto,
+  `keyboard: false` y `zoom={false}`.
+- **Aviso:** aparece y se apaga a los 1,5 s conservando el texto; ⌘ en macOS; «dos dedos» en táctil; `labels`; no
+  aparece con `always` ni con Ctrl + rueda.
+- **Rendimiento:** ni los botones ni el teclado re-renderizan `Root`.
+- **Mutaciones hechas a mano (y revertidas)** para comprobar que los tests sirven. Cada una rompe tests: quitar el guard
+  de Ctrl/⌘; `−` nunca deshabilitado; `⟲` nunca deshabilitado; no interrumpir al desmontar; tratar una interrupción
+  como `completed: true`.
+
+## 25.5 Verificación visual: pendiente de ti \*
+
+`pnpm storybook` → **Zoom / Basic**:
+
+| Story                            | Qué comprobar                                                                                                                                                                                                                                                                                                          |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WithControlsAndKeyboard`        | Botones abajo a la derecha, **con aspecto cuidado** y sin tapar la leyenda. `−` y `⟲` apagados en el encaje; `+` acerca ×2 **con suavidad (300 ms)**; `⟲` vuela al encaje. Con teclado: tabula hasta el mapa (**anillo de foco azul**) y prueba `+`, `−`, `0`; el anillo **no** debe verse al hacer clic con el ratón. |
+| `WithControlsAndKeyboard`        | `Ctrl`/`⌘` + `+` hace zoom de la **página** (no del mapa).                                                                                                                                                                                                                                                             |
+| `CooperativeInAScrollablePage`   | Rueda sobre el mapa sin tecla: **la página hace scroll y aparece 1,5 s el aviso** centrado, que se desvanece. Con Ctrl/⌘ + rueda: zoom, sin aviso. En Mac el texto dice **⌘**.                                                                                                                                         |
+| Móvil / DevTools táctil          | Un dedo en `cooperative`: aparece «Usa dos dedos para mover el mapa» y la página hace scroll.                                                                                                                                                                                                                          |
+| Sistema con «reducir movimiento» | Los botones saltan sin animación.                                                                                                                                                                                                                                                                                      |
+| Tema oscuro / `--cm-controls-*`  | Los botones usan variables CSS (`--cm-controls-bg`, `-color`, `-border`, `--cm-focus-ring`, `--cm-hint-*`): se pueden retematizar.                                                                                                                                                                                     |
+
+## 25.6 Antes de pasar al paso 26: ¿lo tienes claro?
+
+- ¿Por qué los botones, el teclado y la rueda deben pasar por el **mismo** `d3-zoom`?
+- ¿Por qué una transición interrumpida resuelve `completed: false` en lugar de rechazar la `Promise`?
+- ¿Por qué `Ctrl/⌘ + +` no se intercepta?
+- ¿Por qué el aviso de gesto está siempre en el DOM y se muestra con un atributo?
+- ¿Cómo se evita un aviso de hidratación al decidir entre «Ctrl» y «⌘»?
+
+## 25.7 Decisión del humano: la accesibilidad, al final
+
+Las flechas del teclado (mover el foco entre regiones, `Shift` + flechas para el pan) y todo lo demás de
+`dd.md §13` (tabla alternativa, navegación espacial, `aria-live`, el `role="img"` del `<svg>`) **se hacen al final**,
+en un bloque propio, no repartido entre las fases. Hasta entonces los atajos de teclado de zoom (`+`, `−`, `0`) son lo
+único de teclado que hay.

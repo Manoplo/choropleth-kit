@@ -17,6 +17,12 @@
   --cm-hover-stroke-width: 1.5px;
   --cm-selected-stroke: #0b5fff;
   --cm-selected-stroke-width: 2px;
+  --cm-focus-ring: #0b5fff;
+  --cm-controls-bg: #ffffff;
+  --cm-controls-color: #111111;
+  --cm-controls-border: #cccccc;
+  --cm-hint-bg: rgb(17 24 39 / 0.85);
+  --cm-hint-color: #ffffff;
   --cm-dim-opacity: 0.45;
   --cm-skeleton-color: #e5e5e5;
   --cm-bubble-fill: #2563eb;
@@ -122,6 +128,74 @@
 }
 .cm-root:not([data-unstyled])[data-interacting] .cm-tooltip {
   display: none;
+}
+
+/* Foco de teclado: siempre visible con teclado, nunca solo un cambio de relleno (dd.md §13). */
+.cm-root:not([data-unstyled]) .cm-svg:focus-visible {
+  outline: 2px solid var(--cm-focus-ring);
+  outline-offset: -2px;
+}
+
+/* ── controles y aviso de gesto ───────────────────────────────────────────────────────────── */
+
+.cm-root:not([data-unstyled]) .cm-zoom-controls {
+  display: flex;
+  flex-direction: column;
+  background: var(--cm-controls-bg);
+  border: 1px solid var(--cm-controls-border);
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.15);
+}
+.cm-root:not([data-unstyled]) .cm-zoom-button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--cm-controls-color);
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.cm-root:not([data-unstyled]) .cm-zoom-button + .cm-zoom-button {
+  border-top: 1px solid var(--cm-controls-border);
+}
+.cm-root:not([data-unstyled]) .cm-zoom-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--cm-controls-bg), #000000 8%);
+}
+.cm-root:not([data-unstyled]) .cm-zoom-button:focus-visible {
+  outline: 2px solid var(--cm-focus-ring);
+  outline-offset: -2px;
+}
+.cm-root:not([data-unstyled]) .cm-zoom-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Centrado sobre el mapa; no captura el ratón. Aparece y se va con un fundido. */
+.cm-root:not([data-unstyled]) .cm-gesture-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 8px 14px;
+  border-radius: 6px;
+  background: var(--cm-hint-bg);
+  color: var(--cm-hint-color);
+  pointer-events: none;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 200ms;
+}
+.cm-root:not([data-unstyled]) .cm-gesture-hint[data-visible] {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cm-root:not([data-unstyled]) .cm-gesture-hint {
+    transition: none;
+  }
 }
 
 /* ── atenuar el resto (dimOthers) ─────────────────────────────────────────────────────────── */

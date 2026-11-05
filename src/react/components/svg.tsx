@@ -1,10 +1,11 @@
-import { useRef, type ReactNode } from "react";
+import { useRef, type KeyboardEvent, type ReactNode } from "react";
 import { useChoroplethContext } from "../choropleth-context";
 import { Borders } from "./borders";
 import { Bubbles } from "./bubbles";
 import { FallbackPoints } from "./fallback-points";
 import { Regions } from "./regions";
 import { Selection } from "./selection";
+import { zoomKeyAction } from "../../core";
 import { useZoom } from "../use-zoom";
 import { Viewport } from "./viewport";
 
@@ -58,9 +59,22 @@ export const Svg = ({ children, className, ariaLabel }: SvgProps) => {
     );
   }
 
+  // Atajos de teclado con el mapa enfocado. `tabIndex` solo si hay atajos: no se añade un tab stop vacío.
+  const keyboard = zoom !== null && zoom.keyboard;
+  const handleKeyDown = (event: KeyboardEvent<SVGSVGElement>) => {
+    const action = zoomKeyAction(event);
+    if (action === null) return;
+    event.preventDefault();
+    const api = store.getZoom();
+    if (action === "reset") void api?.resetView();
+    else void api?.zoomBy(action === "in" ? 2 : 0.5);
+  };
+
   return (
     <svg
       ref={svgRef}
+      tabIndex={keyboard ? 0 : undefined}
+      onKeyDown={keyboard ? handleKeyDown : undefined}
       className={className === undefined ? "cm-svg" : `cm-svg ${className}`}
       viewBox={`0 0 ${width} ${height}`}
       role="img"

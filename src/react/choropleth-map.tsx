@@ -1,8 +1,10 @@
 import type { CSSProperties, ReactNode } from "react";
-import { resolveLabels } from "../core";
+import { resolveControls, resolveLabels } from "../core";
+import { GestureHint } from "./components/gesture-hint";
 import { Legend } from "./components/legend";
 import { Root } from "./components/root";
 import { Svg } from "./components/svg";
+import { ZoomControls } from "./components/zoom-controls";
 import { Tooltip, type TooltipContext } from "./components/tooltip";
 import type { UseChoroplethOptions } from "./use-choropleth";
 
@@ -48,6 +50,8 @@ export const ChoroplethMap = <TDatum,>({
   ...options
 }: ChoroplethMapProps<TDatum>) => {
   const legendOptions = legend === false ? null : (legend ?? {});
+  // Los botones de zoom son opt-in: `zoom={{ controls: true }}`.
+  const controls = resolveControls(options.zoom);
 
   return (
     <Root<TDatum>
@@ -64,6 +68,8 @@ export const ChoroplethMap = <TDatum,>({
           <Legend title={legendOptions.title} showCount={legendOptions.showCount} />
         </div>
       )}
+      {controls !== null && <ZoomControls position={controls.position} reset={controls.reset} />}
+      <GestureHint />
       <Tooltip<TDatum>>{renderTooltip}</Tooltip>
     </Root>
   );

@@ -1,16 +1,24 @@
 import { useEffect, useRef, type RefObject } from "react";
-import { zoom, zoomIdentity, type ZoomTransform } from "d3-zoom";
+import { easeCubicOut } from "d3-ease";
 import { select } from "d3-selection";
+// Importar d3-transition parchea `selection.transition()`; hace falta para los zooms animados.
+import "d3-transition";
+import { zoom, zoomIdentity, zoomTransform, type ZoomTransform } from "d3-zoom";
 import {
   constrainTransform,
   createZoomFilter,
+  createZoomInterpolator,
+  DEFAULT_FLIGHT_CURVATURE,
+  flightDuration,
+  FIT_TRANSFORM,
   toViewState,
   type Point,
   type ResolvedZoom,
+  type TransitionResult,
   type ViewState,
 } from "../core";
 import { ROOT_LEVEL } from "./map-item";
-import type { MapStore } from "./map-store";
+import type { MapStore, ZoomApi } from "./map-store";
 
 export type UseZoomParams = {
   svgRef: RefObject<SVGSVGElement | null>;
@@ -30,6 +38,19 @@ export type UseZoomParams = {
   /** Cuando pasa de «cargando» a «listo» aparece el `<svg>`: hay que volver a engancharse. */
   ready: boolean;
 };
+
+/** Duración de los botones `+` / `−` (dd.md §11.1.2). */
+const BUTTON_ZOOM_MS = 300;
+
+/**
+ * «Reducir movimiento» del sistema. Aquí no hay movimiento: se salta directo a la cámara final. (El
+ * fundido que pide dd.md §11.1.5 llega con los vuelos, en el paso 26.) Sin `matchMedia` (SSR, jsdom)
+ * se asume que no.
+ */
+const prefersReducedMotion = (): boolean =>
+  typeof window !== "undefined" &&
+  typeof window.matchMedia === "function" &&
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /** Por encima de esta `k` se considera que el mapa está «ampliado» (y por tanto arrastrable). */
 const ZOOMED_EPSILON = 1.001;
@@ -134,6 +155,9 @@ export const useZoom = ({
       });
     }
 
+    // Los vuelos programáticos (botones, `resetView`) usan la misma curvatura que dd.md §11.1.5.
+    behavior.interpolate(createZoomInterpolator(DEFAULT_FLIGHT_CURVATURE));
+
     const selection = select(svg).call(behavior);
     // d3-zoom pone `touch-action: none`, que bloquea el scroll táctil de la página. En modo
     // cooperativo se devuelve, para que un dedo siga haciendo scroll.
@@ -145,7 +169,41 @@ export const useZoom = ({
     behavior.transform(selection, zoomIdentity.translate(x, y).scale(k));
     restoring = false;
 
+    // Movimientos programáticos por el MISMO `behavior`: así d3-zoom siempre conoce la cámara real y
+    // un gesto del usuario interrumpe el vuelo de forma natural (dd.md §11.1.3, punto 4).
+    const animate = (
+      duration: number,
+      apply: (target: typeof selection | ReturnType<typeof selection.transition>) => void,
+    ): Promise<TransitionResult> => {
+      if (duration <= 0 || prefersReducedMotion()) {
+        apply(selection);
+        return Promise.resolve({ completed: true });
+      }
+      const transition = selection.transition().duration(duration).ease(easeCubicOut);
+      apply(transition);
+      // `end()` rechaza si la transición se interrumpe: no es un error, es `completed: false`.
+      return transition.end().then(
+        () => ({ completed: true }),
+        () => ({ completed: false }),
+      );
+    };
+
+    const api: ZoomApi = {
+      zoomBy: (factor, { duration = BUTTON_ZOOM_MS } = {}) =>
+        animate(duration, (target) => behavior.scaleBy(target as typeof selection, factor)),
+      resetView: ({ duration } = {}) => {
+        const { k, x, y } = zoomTransform(svg);
+        const length = duration ?? flightDuration({ from: { k, x, y }, to: FIT_TRANSFORM, size });
+        return animate(length, (target) =>
+          behavior.transform(target as typeof selection, zoomIdentity),
+        );
+      },
+    };
+    store.registerZoom(api);
+
     return () => {
+      store.registerZoom(null);
+      selection.interrupt();
       selection.on(".zoom", null);
       svg.style.removeProperty("touch-action");
       root.toggleAttribute("data-zoomed", false);
@@ -182,4 +240,5 @@ const NO_ZOOM: ResolvedZoom = {
   pan: false,
   doubleClick: false,
   constrain: "contain",
+  keyboard: false,
 };

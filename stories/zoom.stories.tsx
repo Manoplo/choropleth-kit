@@ -20,9 +20,22 @@ type Args = {
   pinch: boolean;
   doubleClick: "auto" | "on" | "off";
   clickSelects: boolean;
+  controls: boolean;
+  controlsPosition: "top-left" | "top-right" | "bottom-left" | "bottom-right";
+  keyboard: boolean;
 };
 
-const ZoomDemo = ({ wheel, max, pan, pinch, doubleClick, clickSelects }: Args) => {
+const ZoomDemo = ({
+  wheel,
+  max,
+  pan,
+  pinch,
+  doubleClick,
+  clickSelects,
+  controls,
+  controlsPosition,
+  keyboard,
+}: Args) => {
   const [view, setView] = useState<ViewState | null>(null);
   const [clicks, setClicks] = useState(0);
 
@@ -45,6 +58,9 @@ const ZoomDemo = ({ wheel, max, pan, pinch, doubleClick, clickSelects }: Args) =
           pan,
           pinch,
           doubleClick: doubleClick === "auto" ? "auto" : doubleClick === "on",
+          keyboard,
+          // Opt-in: sin `controls` no hay botones.
+          controls: controls ? { position: controlsPosition } : false,
           onViewChange: setView,
         }}
       />
@@ -70,11 +86,18 @@ const meta = {
     pinch: true,
     doubleClick: "auto",
     clickSelects: false,
+    controls: false,
+    controlsPosition: "bottom-right",
+    keyboard: true,
   },
   argTypes: {
     wheel: { control: "inline-radio", options: ["always", "cooperative", "never"] },
     doubleClick: { control: "inline-radio", options: ["auto", "on", "off"] },
     max: { control: { type: "range", min: 2, max: 30, step: 1 } },
+    controlsPosition: {
+      control: "select",
+      options: ["top-left", "top-right", "bottom-left", "bottom-right"],
+    },
   },
 } satisfies Meta<typeof ZoomDemo>;
 export default meta;
@@ -84,11 +107,17 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {};
 
 /**
+ * Botones `+` / `−` / `⟲` (opt-in: `zoom={{ controls: true }}`) y teclado: haz clic en el mapa (o
+ * tabula hasta él: anillo de foco) y usa `+`, `−`, `0`. `−` y `⟲` están deshabilitados en el encaje.
+ */
+export const WithControlsAndKeyboard: Story = { args: { controls: true } };
+
+/**
  * `wheel: "cooperative"`: la rueda sin Ctrl/⌘ NO hace zoom y la página sigue haciendo scroll (hay
- * contenido debajo para comprobarlo). Con Ctrl/⌘ + rueda, sí. (El aviso visual llega en el paso 25.)
+ * contenido debajo para comprobarlo). Con Ctrl/⌘ + rueda, sí. Al intentarlo sin tecla aparece 1,5 s el aviso «Usa Ctrl + rueda…» (⌘ en macOS).
  */
 export const CooperativeInAScrollablePage: Story = {
-  args: { wheel: "cooperative" },
+  args: { wheel: "cooperative", controls: true },
   render: (args) => (
     <div>
       <p style={{ font: "13px sans-serif" }}>

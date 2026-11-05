@@ -4,11 +4,13 @@ import {
   applyTransform,
   constrainAxis,
   constrainTransform,
+  createZoomInterpolator,
   FIT_TRANSFORM,
   flightDuration,
   inertiaOffset,
   INERTIA_TAU_MS,
   invertTransform,
+  isFitTransform,
   MAX_FLIGHT_MS,
   MIN_FLIGHT_MS,
   preserveView,
@@ -475,5 +477,26 @@ describe("toViewState", () => {
       [-180, -90],
       [180, 90],
     ]);
+  });
+});
+
+describe("isFitTransform", () => {
+  it("el encaje y lo que está a un suspiro de él cuentan; lo demás no", () => {
+    expect(isFitTransform(FIT_TRANSFORM)).toBe(true);
+    expect(isFitTransform({ k: 1.0001, x: 0.0001, y: -0.0001 })).toBe(true);
+    expect(isFitTransform({ k: 2, x: 0, y: 0 })).toBe(false);
+    expect(isFitTransform({ k: 1, x: 5, y: 0 })).toBe(false);
+    expect(isFitTransform({ k: 1, x: 0, y: 5 })).toBe(false);
+  });
+});
+
+describe("createZoomInterpolator", () => {
+  it("devuelve un interpolateZoom con esa curvatura (d3 la expone en la función)", () => {
+    const view = [0, 0, 960] as [number, number, number];
+    const target = [100, 50, 120] as [number, number, number];
+
+    expect(createZoomInterpolator(0.5)(view, target).duration).not.toBe(
+      createZoomInterpolator(2)(view, target).duration,
+    );
   });
 });

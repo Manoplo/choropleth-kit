@@ -14,6 +14,10 @@ export type CameraTransform = { k: number; x: number; y: number };
 /** La cámara en el encaje del nivel. */
 export const FIT_TRANSFORM: CameraTransform = { k: 1, x: 0, y: 0 };
 
+/** ¿La cámara está (casi) en el encaje? Sirve para deshabilitar «restablecer vista». */
+export const isFitTransform = (t: CameraTransform, epsilon = 1e-3): boolean =>
+  Math.abs(t.k - 1) < epsilon && Math.abs(t.x) < epsilon && Math.abs(t.y) < epsilon;
+
 export type Size = { width: number; height: number };
 
 /** Rectángulo [[x0, y0], [x1, y1]]. */
@@ -166,7 +170,7 @@ export const transformToZoomView = (
 // OJO: en runtime `rho` es un método de la FUNCIÓN `interpolateZoom` (devuelve otra función con esa
 // curvatura), pero `@types/d3-interpolate` lo declara en el interpolador ya creado, y ahí no existe
 // (es `undefined`). Se tipa lo que hace de verdad; hay un test que lo comprueba.
-const withCurvature = (rho: number): typeof interpolateZoom =>
+export const createZoomInterpolator = (rho: number): typeof interpolateZoom =>
   (interpolateZoom as unknown as { rho: (rho: number) => typeof interpolateZoom }).rho(rho);
 
 export type FlightDurationParams = {
@@ -190,7 +194,7 @@ export const flightDuration = ({
   speed = 1,
   curvature = DEFAULT_FLIGHT_CURVATURE,
 }: FlightDurationParams): number => {
-  const natural = withCurvature(curvature)(
+  const natural = createZoomInterpolator(curvature)(
     transformToZoomView(from, size),
     transformToZoomView(to, size),
   ).duration;
