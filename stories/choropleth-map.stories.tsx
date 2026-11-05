@@ -1,20 +1,21 @@
 // Nivel 1 (preset): el caso del 90 %. Fíjate en lo corto que es frente a las stories headless/compound.
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import type { Topology } from "topojson-specification";
-import countries110m from "world-atlas/countries-110m.json";
 import { toFeatureCollection } from "../src/core";
+import { world110m } from "../src/geo";
+import { seed } from "./seed";
 import { ChoroplethMap } from "../src/react";
 
 type Row = { id: string; value: number | null };
 
-const world = countries110m as unknown as Topology;
+// Geodatos propios de la librería: ids ISO alpha-2 ("ES") y Kosovo incluido.
+const world = world110m;
 const ids = toFeatureCollection({ geography: world, objectName: "countries" }).features.flatMap(
   (f) => (f.id === undefined ? [] : [String(f.id)]),
 );
 // Datos SINTÉTICOS deterministas (ver la story headless).
 const data: Row[] = ids.map((id) => {
-  const n = Number(id);
+  const n = seed(id);
   if (n % 7 === 0) return { id, value: null };
   if (n % 11 === 0) return { id, value: 0 };
   return { id, value: Math.round((((n * 9301 + 49297) % 233280) / 233280) * 40 - 20) };

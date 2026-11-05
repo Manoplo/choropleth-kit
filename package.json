@@ -22,6 +22,10 @@
     "./core": {
       "types": "./dist/core.d.ts",
       "import": "./dist/core.js"
+    },
+    "./geo": {
+      "types": "./dist/geo.d.ts",
+      "import": "./dist/geo.js"
     }
   },
   "scripts": {
@@ -51,11 +55,13 @@
     "@types/d3-scale": "^4.0.9",
     "@types/d3-scale-chromatic": "^3.1.0",
     "@types/node": "^26.6.6",
+    "@types/polylabel": "^2.0.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/topojson-client": "^3.1.5",
     "@vitejs/plugin-react": "^6.2.1",
     "@vitest/coverage-v8": "^5.1.0",
+    "i18n-iso-countries": "^7.14.0",
     "jsdom": "^27.0.1",
     "oxlint": "^1.91.0",
     "prettier": "^3.9.10",
@@ -74,6 +80,7 @@
     "d3-geo": "^3.1.2",
     "d3-scale": "^4.0.3",
     "d3-scale-chromatic": "^3.1.1",
+    "polylabel": "^2.1.0",
     "topojson-client": "^3.1.0"
   }
 }

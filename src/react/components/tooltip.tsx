@@ -14,11 +14,15 @@ export type TooltipProps<TDatum> = {
 
 const OFFSET = 12;
 
-const DefaultContent = <TDatum,>({ label, formattedValue }: TooltipContext<TDatum>) => {
+const DefaultContent = <TDatum,>({
+  label,
+  formattedValue,
+  noData,
+}: TooltipContext<TDatum> & { noData: string }) => {
   return (
     <>
       <strong>{label}</strong>
-      <div>{formattedValue === "" ? "Sin dato" : formattedValue}</div>
+      <div>{formattedValue === "" ? noData : formattedValue}</div>
     </>
   );
 };
@@ -60,7 +64,11 @@ export const Tooltip = <TDatum,>({ className, children }: TooltipProps<TDatum>) 
         pointerEvents: "none",
       }}
     >
-      {children === undefined ? <DefaultContent {...context} /> : children(context)}
+      {children === undefined ? (
+        <DefaultContent {...context} noData={choropleth.labels.noData} />
+      ) : (
+        children(context)
+      )}
     </div>
   );
 };

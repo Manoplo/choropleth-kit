@@ -2,15 +2,16 @@
 // compound y el preset, esta story seguirá siendo el ejemplo de "quiero pintar yo todo".
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import type { Topology } from "topojson-specification";
-import countries110m from "world-atlas/countries-110m.json";
 import { toFeatureCollection, type Classification, type ProjectionName } from "../src/core";
+import { world110m } from "../src/geo";
+import { seed } from "./seed";
 import { useChoropleth, useMapStore } from "../src/react";
 
 type Row = { id: string; value: number | null };
 
 // Referencia estable: el hook memoiza la geometría por identidad de `geography`.
-const world = countries110m as unknown as Topology;
+// Geodatos propios de la librería: ids ISO alpha-2 ("ES") y Kosovo incluido.
+const world = world110m;
 const ids = toFeatureCollection({ geography: world, objectName: "countries" }).features.flatMap(
   (f) => (f.id === undefined ? [] : [String(f.id)]),
 );
@@ -18,7 +19,7 @@ const ids = toFeatureCollection({ geography: world, objectName: "countries" }).f
 // Datos SINTÉTICOS deterministas. Cada 7.º país sin dato (null) y cada 11.º con 0 exacto: así se
 // ve en el mapa que "sin dato" y "cero" no se pintan igual.
 const syntheticData: Row[] = ids.map((id) => {
-  const n = Number(id);
+  const n = seed(id);
   if (n % 7 === 0) return { id, value: null };
   if (n % 11 === 0) return { id, value: 0 };
   return { id, value: Math.round((((n * 9301 + 49297) % 233280) / 233280) * 40 - 20) };

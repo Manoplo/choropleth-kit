@@ -36,17 +36,17 @@
 
 **Fase A, cimientos (v0.2)**: lo que el zoom y el drill-down necesitan que esté bien.
 
-| Paso | Título                                                                                            | Estado       |
-| ---- | ------------------------------------------------------------------------------------------------- | ------------ |
-| 14   | Limpieza: borrar `placeholder`; `@types/geojson` y `topojson-specification` a `dependencies`      | ✅ Hecho     |
-| 15   | `map-store`: hover, foco, puntero y estado fuera de `Root`                                        | ✅ Hecho*    |
-| 16   | `MapItem` unificado (regiones + puntos) y Pointer Events                                          | ✅ Hecho*    |
-| 17   | Selección controlada / no controlada y `dimOthers`                                                | ⏳ Pendiente |
-| 18   | `labels` (i18n): fuera los textos en español fijos                                                | ⏳ Pendiente |
-| 19   | Geometría robusta: regiones sin id, `filterFeatures`, trazos no escalables, `aspectRatio: "auto"` | ⏳ Pendiente |
-| 20   | `getFocusGeometry` + anclas `polylabel`                                                           | ⏳ Pendiente |
-| 21   | `geography` asíncrona con caché + `data: undefined` = cargando                                    | ⏳ Pendiente |
-| 22   | `src/geo`: `world-110m` alpha-2, tabla ISO, `fallbackPoints`                                      | ⏳ Pendiente |
+| Paso | Título                                                                                            | Estado     |
+| ---- | ------------------------------------------------------------------------------------------------- | ---------- |
+| 14   | Limpieza: borrar `placeholder`; `@types/geojson` y `topojson-specification` a `dependencies`      | ✅ Hecho   |
+| 15   | `map-store`: hover, foco, puntero y estado fuera de `Root`                                        | ✅ Hecho   |
+| 16   | `MapItem` unificado (regiones + puntos) y Pointer Events                                          | ✅ Hecho   |
+| 17   | Selección controlada / no controlada y `dimOthers`                                                | ✅ Hecho\* |
+| 18   | `labels` (i18n): fuera los textos en español fijos                                                | ✅ Hecho\* |
+| 19   | Geometría robusta: regiones sin id, `filterFeatures`, trazos no escalables, `aspectRatio: "auto"` | ✅ Hecho\* |
+| 20   | `getFocusGeometry` + anclas `polylabel`                                                           | ✅ Hecho\* |
+| 21   | `geography` asíncrona con caché + `data: undefined` = cargando                                    | ✅ Hecho\* |
+| 22   | `src/geo`: `world-110m` alpha-2, tabla ISO, `fallbackPoints`                                      | ✅ Hecho\* |
 
 **Fase B, cámara (v0.3)** · **Fase C, drill-down (v0.4)** · **Fase D, pulido visual (v0.5)**:
 pasos 23-37, en el orden exacto de las tareas 10-24 de `dd.md §21`. Cada uno se añade a esta tabla al
@@ -1627,3 +1627,182 @@ No he abierto Storybook. Revisa con `pnpm storybook`:
 - ¿Por qué las burbujas de centroide no capturan eventos pero las de tienda sí?
 - ¿Qué problema habría en táctil si se tratara `pointerleave` igual que con ratón?
 - ¿Por qué `hoverItem` comprueba que el item haya cambiado antes de llamar a `onItemHover`?
+
+---
+
+# Pasos 17-22: cierre de la fase A
+
+Se hicieron seguidos, por petición de iterar rápido hacia la cámara (fase B). Cada paso mantiene su
+entrada, pero con el «orden interno» condensado. Estado al terminar: **274 tests** en verde (212 + 62
+nuevos), `typecheck`, `lint`, `format:check`, `build` y `build-storybook` limpios, cobertura de
+`src/core` 100 % líneas / 96,6 % ramas. Verificación visual: ver **§F.1**.
+
+## Paso 17: selección controlada / no controlada y `dimOthers`
+
+**Qué.** Tres props nuevas (`selectedId`, `defaultSelectedId`, `onSelectedIdChange`) y `dimOthers`.
+
+| Modo          | Cómo se activa                               | Quién manda                                         |
+| ------------- | -------------------------------------------- | --------------------------------------------------- |
+| Sin selección | ninguna de las tres props                    | Un clic **no** selecciona ni cambia el cursor       |
+| No controlada | `defaultSelectedId` y/o `onSelectedIdChange` | La librería; clic en la seleccionada la quita       |
+| Controlada    | `selectedId` (incluido `null`)               | Tú: la librería solo avisa con `onSelectedIdChange` |
+
+- **Solo se seleccionan regiones.** Los puntos no: su id puede coincidir con el de una región.
+- **`dimOthers`** (`"never" | "selection" | "hover-and-selection"`, por defecto `"selection"`) no cambia
+  ninguna prop de las regiones. `Root` pone `data-dim` y `data-has-selection` en el contenedor y el CSS baja
+  la opacidad de `.cm-regions`; `Selection` pinta encima una copia **con el color de la región**, que queda a
+  opacidad completa. El hover usa `:has(path[data-selection="hover"])`, también sin renders.
+- **Desviación:** el default `"selection"` es el de `dd.md §12.1`, pero cambia lo que se ve en cuanto hay
+  una región seleccionada (el resto se atenúa). Pon `dimOthers="never"` para el comportamiento anterior.
+
+## Paso 18: `labels` (i18n)
+
+`core/labels.ts`: `ChoroplethLabels` (`noData`, `geographyError`), `en` por defecto, `es` exportado y
+`resolveLabels`. `Tooltip` y el preset (`emptyLabel`) leen de ahí; ya no queda español fijo en la UI. Cada
+fase añadirá sus claves (`drillHint`, `breadcrumbRoot`…). **Los mensajes de consola siguen en inglés** y no
+pasan por `labels`. (Los `throw new Error(...)` también están ya en inglés y con el prefijo `[choropleth]`: ver «Decisiones
+tras la revisión de la fase A».)
+
+## Paso 19: geometría robusta
+
+| Problema (R.2)   | Solución                                                                                                                                                                            |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| #2 agujeros      | Las regiones sin id se pintan en una **capa no interactiva** (`.cm-region--anonymous`, `emptyFill`, cursor normal). Pasar el cursor por ellas quita el hover de la región anterior. |
+| #7 trazos        | `vector-effect: non-scaling-stroke` también en `.cm-borders` y en el contorno de las regiones (GeoJSON).                                                                            |
+| #8 proporción    | `aspectRatio: number \| "auto"`. `"auto"` = `computeAspectRatio` (core): ajusta la proyección a un ancho de referencia y mide el rectángulo; limitado a [0,2 – 5].                  |
+| `filterFeatures` | Descarta regiones **y sus fronteras** (`createBorders` solo dibuja una frontera si se conservan los dos lados).                                                                     |
+
+Dos decisiones con consecuencias:
+
+- **`filterFeatures` se memoiza por su resultado, no por su identidad.** Se evalúa en cada render (O(regiones)),
+  pero la dependencia del `useMemo` es la lista de índices que sobreviven. Así
+  `filterFeatures={(f) => f.id !== "AQ"}` en línea (lo natural) **no recalcula las rutas**.
+- **`useContainerSize` guarda solo lo medido.** El alto derivado de la proporción se calcula al renderizar. Si
+  `aspectRatio` cambia (con `"auto"`, al terminar de cargar la geometría), el alto se corrige sin esperar a
+  otro evento de `ResizeObserver`.
+
+Bug encontrado por los tests: d3 devuelve `[NaN, NaN]`, no `null`, para una coordenada que no sabe proyectar.
+Se normaliza en un único sitio (la función `project` del hook).
+
+## Paso 20: `getFocusGeometry` + anclas `polylabel`
+
+`core/bounds.ts`, con tests antes que el componente:
+
+- `getFocusGeometry({ feature, path, near })`: el polígono de mayor **área proyectada** + los que están a
+  menos de `near × diagonal` de él. Francia sin Guayana; EE. UU. sin Alaska/Hawái; Noruega sin Svalbard.
+- `getAnchorPoint({ geometry, project })`: `polylabel` del polígono proyectado más grande. Siempre cae
+  **dentro** (el test usa una «U» cuyo centroide cae en el hueco).
+
+`useChoropleth` ancla las burbujas ahí (con el centroide de respaldo si no hay polígono). Nueva dependencia
+**`polylabel`** (en `dependencies`; `@types/polylabel` en `devDependencies`, sus tipos no aparecen en la API
+pública). Los `focusBounds` por nivel (Canarias) y el uso para encuadrar llegan con la cámara (fase B).
+
+⚠️ **Trampa de los tests:** los cuadrados de prueba deben ir en sentido **horario**; con el sentido contrario
+d3 interpreta «todo el globo menos el cuadrado» (el _winding order_ de `dd.md §2.9`).
+
+## Paso 21: `geography` asíncrona con caché + `data: undefined` = cargando
+
+- **`GeographyInput`** = dato | `Promise` | `() => import("…")` (vale el módulo entero con `default`).
+  Un dato síncrono se devuelve **en el mismo render** (sin efecto ni parpadeo).
+- **`useGeography`** (`use-geography.ts`): carga en un efecto real. Caché por `geographyKey` o, si no, por la
+  identidad de la función/promesa; un segundo mapa con la misma clave **no parpadea** (se lee de la caché
+  en el render). Un fallo no se cachea.
+- **Función en línea:** `geography={() => import(…)}` cambia de identidad en cada render. No entra en bucle
+  (el módulo devuelve el mismo objeto y React no re-renderiza), pero la caché solo sirve con una función
+  estable o con `geographyKey`. Hay test.
+- **Estados:** `status` = `loading` → `Svg` pinta un **esqueleto con la proporción** que tendrá el mapa (la
+  página no salta); `error` → `role="alert"` con `labels.geographyError` y `onGeographyError` (sin él,
+  `console.error` en inglés). `Root` expone `data-status`.
+- **`data: undefined`** = datos en camino: se **mantiene el último dato** (en una `ref`, no en estado: `data`
+  suele llegar con identidad nueva en cada render y guardarlo en estado provocaría un render por cada una),
+  `data-loading` en el contenedor hace «respirar» el mapa y **no hay avisos de consola**. `loading` fuerza el
+  estado. El diagnóstico de join no se ejecuta hasta que la geometría está lista.
+
+## Paso 22: `src/geo` (nuevo _entry point_ `choropleth-kit/geo`)
+
+| Export                | Qué es                                                                                                                              |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `world110m`           | `world-atlas` a 1:110m con **ids ISO alpha-2** (`"ES"`) y `properties.name`. Objeto `countries`. 177 regiones, **Kosovo = `"XK"`**. |
+| `isoNumericToAlpha2`  | Tabla de los 250 códigos ISO (`"724"` → `"ES"`), para quien use `world-atlas` directamente.                                         |
+| `worldFallbackPoints` | `[lon, lat]` de 42 microestados y territorios ausentes a 1:110m (Andorra, Mónaco, Singapur, Hong Kong…). No exhaustivo.             |
+
+- **Se genera, no se escribe a mano:** `scripts/build-geo/build-world-110m.mjs` (`world-atlas` +
+  `i18n-iso-countries`, ambas **devDependencies**) y la salida **se commitea**. Chipre del Norte y Somalilandia
+  no tienen código: quedan sin id y salen como capa anónima (paso 19).
+- **`fallbackPoints`** (prop, nuevo): un dato cuyo id no cruza con ninguna región pero está en la tabla se
+  pinta como **punto** (item `point`: hover, clic, tooltip) con el color de su dato; en `bubble`, como burbuja.
+  Entra en la leyenda y **deja de salir en el aviso de ids sin cruzar**. Nuevo componente
+  `<Choropleth.FallbackPoints>`, incluido en `Svg`.
+- **Peso:** ver «Decisiones tras la revisión de la fase A» (`geo.js` ≈ 128 KB / 42 KB gzip, y es opcional). El presupuesto de `dd.md §14.2` se mide con `size-limit`
+  cuando se añada.
+- ⚠️ **Fronteras disputadas:** son las de Natural Earth, tal cual (`dd.md §6.2`). Hay que validarlas con
+  Legal/Comunicación antes de mostrar un mapa en una herramienta de empresa. Está en el comentario del export.
+- Las stories pasan a `world110m` (ids alpha-2) con un `seed(id)` determinista (`stories/seed.ts`).
+
+## F.1 Verificación visual (parcialmente hecha; el resto, pendiente de ti) \*
+
+No hay navegador en esta sesión. Lo que sí se hizo: renderizar a SVG con `react-dom/server`, convertirlo a PNG
+y mirarlo (sin CSS, así que **no** cubre atenuado, esqueleto ni pulso). Visto y correcto:
+
+- Las burbujas de EE. UU. y Francia caen en el **territorio continental** y en Francia (no en Alaska ni en el
+  Golfo de Vizcaya).
+- Los microestados (Singapur, Maldivas, Bahréin, Mónaco, Malta…) aparecen como puntos con color.
+
+**Revisa en `pnpm storybook` → «Foundations (fase A)»** (todo lo que depende de CSS o de interacción):
+
+| Story                                             | Qué comprobar                                                                                                                                       |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SelectionAndDim`                                 | Clic selecciona/deselecciona; con `selection` el resto se atenúa y España mantiene su color; con `hover-and-selection`, también al pasar el cursor. |
+| `Labels`                                          | El tooltip de un país gris cambia entre «No data», «Sin dato» y «—».                                                                                |
+| `NoHoles`                                         | Kosovo con color; Chipre del Norte y Somalilandia en gris; sin huecos.                                                                              |
+| `AutoAspectRatio`                                 | Con Chile el contenedor es alto; con Noruega, ancho. Sin franjas en blanco.                                                                         |
+| `AnchorsBeforeAfter`, `BubblesOnProblemCountries` | Rojo (antes) frente a azul (ahora) en Francia, EE. UU., Rusia, Noruega, Países Bajos.                                                               |
+| `AsyncLoading`                                    | Esqueleto → mapa gris que «respira» → datos. Sin saltos de altura. Con reduced-motion, sin animación.                                               |
+| `GeographyError`                                  | Mensaje de error, no un mapa vacío.                                                                                                                 |
+| `Microstates`                                     | Puntos con hover, tooltip y clic (consola).                                                                                                         |
+| Todas las anteriores                              | Hover y tooltip siguen funcionando; el borde del hover **no engorda** con el zoom del navegador.                                                    |
+
+## F.2 Qué queda de la auditoría (R.2) y preguntas abiertas
+
+**Corregidos en la fase A:** #1, #2, #3, #4, #5, #6, #7, #8, #11. **Pendientes por diseño:** #9 (a11y:
+`role="img"` oculta los hijos; se decide en `dd.md §13.4`), #10 (colocación del tooltip: `placeTooltip`, fase D),
+#12 (FLIP de burbujas, fase D) y #13 (`rebaseProjection`, fase C).
+
+Preguntas abiertas (para ti):
+
+1. ¿`dimOthers` por defecto en `"selection"` (como dice `dd.md`) o preferimos `"never"` hasta que haya zoom?
+2. Los `throw new Error(...)` de `core` están en español; `dd.md §21` pide mensajes de consola en inglés. ¿Los unificamos?
+3. ¿Qué hacemos con Chipre del Norte y Somalilandia (hoy, capa gris sin id)? Es una decisión de Legal, no técnica.
+4. Peso de `choropleth-kit/geo` (196 KB): ¿aceptable, o generamos también una versión más simplificada?
+
+**Siguiente: paso 23 (fase B, cámara).** `core/camera.ts` y `core/bounds.ts` (`boundsToTransform`, etc.), solo tests.
+
+## Decisiones tras la revisión de la fase A
+
+Respuestas a las preguntas abiertas de §F.2:
+
+1. **`dimOthers`:** se queda en `"selection"` por defecto (como dice `dd.md §12.1`).
+2. **Errores en inglés:** los `throw new Error(...)` de `core` y de `react` pasan a inglés, con el prefijo
+   `[choropleth]`, como los avisos de consola (`dd.md §21`). Tests actualizados.
+3. **Chipre del Norte y Somalilandia:** se queda como está (capa gris sin id); decisión de Legal, no técnica.
+4. **Peso de `geo`:** ver abajo.
+
+**Qué es `dist/geo.js` y si entra en el bundle.** Es el _entry point_ opcional `choropleth-kit/geo`
+(`world110m`, `isoNumericToAlpha2`, `worldFallbackPoints`). **No entra en el bundle principal**: `index.js`
+y `core.js` no lo importan (comprobado con `grep` sobre `dist/`); solo lo paga quien escriba
+`import … from "choropleth-kit/geo"`. Quien traiga su propia geometría no lo carga. Dentro de `geo.js`, el
+mundo es casi todo el peso, y los otros dos exports son tree-shakeables si no se usan.
+
+**Corrección de un error mío:** al medirlo salió **196 KB**, el doble de lo esperado. `prettier --write src`
+había reformateado `world-110m.json` (que se genera compacto) con sangrías. Está en `.prettierignore`,
+regenerado, y el tamaño real es:
+
+| Archivo                             | Sin comprimir | gzip    | brotli  |
+| ----------------------------------- | ------------- | ------- | ------- |
+| `dist/geo.js`                       | 128 KB        | 42 KB   | 35 KB   |
+| `dist/index.js` + chunk compartido  | 55 KB         | ≈ 16 KB | ≈ 14 KB |
+| `world-atlas` original (referencia) | 105 KB        | 38 KB   | —       |
+
+Es esencialmente la geometría (`world-atlas` con los ids cambiados), ya al mínimo razonable a 1:110m. Para
+bajarlo hay que simplificar (mapshaper, `dd.md §2.6`) o cargarlo bajo demanda con
+`geography={() => import("choropleth-kit/geo")…}`, que el paso 21 ya permite.

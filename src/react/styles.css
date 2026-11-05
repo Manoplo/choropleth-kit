@@ -17,6 +17,8 @@
   --cm-hover-stroke-width: 1.5px;
   --cm-selected-stroke: #0b5fff;
   --cm-selected-stroke-width: 2px;
+  --cm-dim-opacity: 0.45;
+  --cm-skeleton-color: #e5e5e5;
   --cm-bubble-fill: #2563eb;
   --cm-bubble-stroke: #ffffff;
   --cm-bubble-opacity: 0.75;
@@ -51,12 +53,15 @@
 .cm-root:not([data-unstyled]) .cm-regions[data-outlined] .cm-region {
   stroke: var(--cm-border-color);
   stroke-width: var(--cm-border-width);
+  /* El trazo no engorda al hacer zoom (dd.md §11.1.6). */
+  vector-effect: non-scaling-stroke;
 }
 
 .cm-root:not([data-unstyled]) .cm-borders {
   fill: none;
   stroke: var(--cm-border-color);
   stroke-width: var(--cm-border-width);
+  vector-effect: non-scaling-stroke;
 }
 
 .cm-root:not([data-unstyled]) .cm-selection :is(path, circle) {
@@ -81,6 +86,75 @@
   transition:
     r var(--cm-transition-duration),
     fill var(--cm-transition-duration);
+}
+
+/* Puntos de respaldo (microestados): un punto con el color de su dato. */
+.cm-root:not([data-unstyled]) .cm-fallback-point {
+  stroke: var(--cm-bubble-stroke);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
+/* ── atenuar el resto (dimOthers) ─────────────────────────────────────────────────────────── */
+
+/*
+ * Todo con atributos en contenedores: seleccionar o pasar el cursor NO cambia las props de las
+ * regiones. `Selection` pinta encima una copia a color completo de la resaltada.
+ */
+.cm-root:not([data-unstyled])[data-dim="selection"][data-has-selection] .cm-regions,
+.cm-root:not([data-unstyled])[data-dim="hover-and-selection"][data-has-selection] .cm-regions,
+.cm-root:not([data-unstyled])[data-dim="hover-and-selection"]
+  .cm-svg:has(path[data-selection="hover"])
+  .cm-regions {
+  opacity: var(--cm-dim-opacity);
+}
+.cm-root:not([data-unstyled]) .cm-regions {
+  transition: opacity var(--cm-transition-duration);
+}
+
+/* ── carga ────────────────────────────────────────────────────────────────────────────────── */
+
+/* Esqueleto mientras llega la geometría: ocupa el mismo espacio que tendrá el mapa. */
+.cm-root:not([data-unstyled]) .cm-skeleton {
+  width: 100%;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--cm-skeleton-color) 25%,
+    color-mix(in srgb, var(--cm-skeleton-color), #ffffff 55%) 50%,
+    var(--cm-skeleton-color) 75%
+  );
+  background-size: 200% 100%;
+  animation: cm-shimmer 1.5s linear infinite;
+}
+.cm-root:not([data-unstyled]) .cm-error {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  background: var(--cm-skeleton-color);
+  border-radius: 6px;
+}
+
+/* Datos en camino: el mapa «respira» sin vaciarse (se mantiene el último dato). */
+.cm-root:not([data-unstyled])[data-loading] .cm-regions {
+  animation: cm-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes cm-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes cm-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cm-root:not([data-unstyled]) .cm-skeleton,
+  .cm-root:not([data-unstyled])[data-loading] .cm-regions {
+    animation: none;
+  }
 }
 
 /* ── leyenda ──────────────────────────────────────────────────────────────────────────────── */

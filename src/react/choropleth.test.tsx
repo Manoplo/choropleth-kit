@@ -281,10 +281,10 @@ describe("Choropleth (compound)", () => {
       expect(tip.style.top).toBe("32px");
     });
 
-    it("región sin dato: «Sin dato»; sin name en properties usa el id", () => {
+    it("región sin dato: «No data»; sin name en properties usa el id", () => {
       const { path } = renderMap({ data: [{ code: "B", v: null }] });
       hover(path("A"), 10, 10);
-      expect(screen.getByRole("tooltip").textContent).toContain("Sin dato");
+      expect(screen.getByRole("tooltip").textContent).toContain("No data");
     });
 
     it("sin properties.name cae al id de la región", () => {
@@ -404,7 +404,7 @@ describe("Choropleth (compound)", () => {
 
   it("una pieza fuera de Root lanza un error claro", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-    expect(() => render(<Choropleth.Regions />)).toThrow(/dentro de <Choropleth.Root>/);
+    expect(() => render(<Choropleth.Regions />)).toThrow(/inside <Choropleth.Root>/);
     spy.mockRestore();
   });
 });

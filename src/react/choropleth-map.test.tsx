@@ -19,13 +19,13 @@ const common = {
 } as const;
 
 describe("ChoroplethMap (preset)", () => {
-  it("con las props mínimas pinta mapa, leyenda con «Sin dato» y tooltip", () => {
+  it("con las props mínimas pinta mapa, leyenda con «No data» (inglés por defecto) y tooltip", () => {
     const { container } = render(
       <ChoroplethMap {...common} data={[{ code: "A", v: 1 }]} variant="sequential" />,
     );
 
     expect(container.querySelectorAll("[data-region-id]")).toHaveLength(2);
-    expect(screen.getByText("Sin dato")).toBeTruthy();
+    expect(screen.getByText("No data")).toBeTruthy();
 
     fireEvent.pointerOver(container.querySelector('[data-region-id="A"]') as Element);
     fireEvent.pointerMove(container.querySelector("svg") as Element, { clientX: 5, clientY: 5 });
@@ -68,11 +68,11 @@ describe("ChoroplethMap (preset)", () => {
     expect(box.style.left).toBe("12px");
   });
 
-  it("un emptyLabel propio sustituye a «Sin dato»", () => {
+  it("un emptyLabel propio sustituye a «No data»", () => {
     render(<ChoroplethMap {...common} data={[]} variant="sequential" emptyLabel="Sin cobertura" />);
 
     expect(screen.getByText("Sin cobertura")).toBeTruthy();
-    expect(screen.queryByText("Sin dato")).toBeNull();
+    expect(screen.queryByText("No data")).toBeNull();
   });
 
   it("renderTooltip recibe el datum tipado; onItemClick y selectedId funcionan", () => {

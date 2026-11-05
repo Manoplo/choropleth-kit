@@ -206,6 +206,9 @@ importers:
       d3-scale-chromatic:
         specifier: ^3.1.1
         version: 3.1.1
+      polylabel:
+        specifier: ^2.1.0
+        version: 2.1.0
       topojson-client:
         specifier: ^3.1.0
         version: 3.1.0
@@ -234,6 +237,9 @@ importers:
       '@types/node':
         specifier: ^26.6.6
         version: 26.6.6
+      '@types/polylabel':
+        specifier: ^2.0.0
+        version: 2.0.0
       '@types/react':
         specifier: ^19.3.0
         version: 19.3.0
@@ -249,6 +255,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^5.1.0
         version: 5.1.0(vitest@5.1.0)
+      i18n-iso-countries:
+        specifier: ^7.14.0
+        version: 7.14.0
       jsdom:
         specifier: ^27.0.1
         version: 27.4.0
@@ -1542,6 +1551,9 @@ packages:
   '@types/node@26.6.6':
     resolution: {integrity: sha512-MzQj+8Kx3XI40OmUAE6Qoh58ZMNstNNMwn2nfd3qWsfe7nDNSqJNzes4njhz6AHwrSHOffSLwXU6yb474Q4aog==}
 
+  '@types/polylabel@2.0.0':
+    resolution: {integrity: sha512-di+2+kta2AQu9/SPkDuPZi23sWucX9QpchPIv9ZgTU215piNWODbFeuFF7k6NtUlYVtz+d6QB9pMHohASuD9Mg==}
+
   '@types/react-dom@19.3.0':
     resolution: {integrity: sha512-ZI7bU42mZXXKHn/qNLEw2IrbiINU7X5+vfgdixBHkCNpYWXjKgfQ/P+uyGb5CjOLB9UcnTeg3rylQtV2hym44Q==}
     peerDependencies:
@@ -1820,6 +1832,9 @@ packages:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
 
+  diacritics@1.3.0:
+    resolution: {integrity: sha512-wlwEkqcsaxvPJML+rDh/2iS824jbREk6DUMUKkEaSlxdYHeS43cClJtsWglvw2RfeXGm6ohKDqsXteJ5sP5enA==}
+
   doctrine@3.0.0:
     resolution: {integrity: sha512-yS+Q5i3hBf7GBkd4KG8a7eBNNWNGLTaEwwYWUijIYM7zrlYDM0BFXHjjPWlWZ1Rg7UaddZeIDmi9jF3HmqiQ2w==}
     engines: {node: '>=6.0.0'}
@@ -1924,6 +1939,10 @@ packages:
   https-proxy-agent@7.0.6:
     resolution: {integrity: sha512-vK9P5/iUfdl95AI+JVyUuIcVtd4ofvtrOr3HNtM2yxC9bnMbEdp3x01OhQNnjb8IJYi38VlTE3mBXwcfvywuSw==}
     engines: {node: '>= 14'}
+
+  i18n-iso-countries@7.14.0:
+    resolution: {integrity: sha512-nXHJZYtNrfsi1UQbyRqm3Gou431elgLjKl//CYlnBGt5aTWdRPH1PiS2T/p/n8Q8LnqYqzQJik3Q7mkwvLokeg==}
+    engines: {node: '>= 12'}
 
   indent-string@4.0.0:
     resolution: {integrity: sha512-EdDDZu4A2OyIK7Lr/2zG+w5jmbuk1DVBnEwREQvBzspBJkCEbRa8GxU1lghYcaGJCnRWibjDXlq779X1/y5xwg==}
@@ -2193,6 +2212,9 @@ packages:
   pkg-types@1.3.1:
     resolution: {integrity: sha512-/Jm5M4RvtBFVkKWRu2BLUTNP8/M2a+UwuAX+ae4770q1qVGtfjG+WTCupoZixokjmHiry8uI+dlY8KXYV5HVVQ==}
 
+  polylabel@2.1.0:
+    resolution: {integrity: sha512-ZCL9pc/BpnyBB1Es5Eh6baziBhZFS0fTlEXGarLMqbMYbAyawqGAjyo2+MfignMggSubmllMgRGcR0L0liOugg==}
+
   postcss-load-config@6.0.1:
     resolution: {integrity: sha512-oPtTM4oerL+UXmx+93ytZVN82RrlY/wPUV8IeDxFrzIjXOLF1pN+EmKPLbubvKHT2HC20xXsCAH2Z+CKV6Oz/g==}
     engines: {node: '>= 18'}
@@ -2382,6 +2404,9 @@ packages:
   tinyglobby@0.2.17:
     resolution: {integrity: sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g==}
     engines: {node: '>=12.0.0'}
+
+  tinyqueue@3.0.0:
+    resolution: {integrity: sha512-gRa9gwYU3ECmQYv3lslts5hxuIa90veaEcxDYuu3QGOIAEM2mOZkVHp48ANJuu1CURtRdHKUBY5Lm1tHV+sD4g==}
 
   tinyrainbow@2.0.0:
     resolution: {integrity: sha512-op4nsTR47R6p0vMUUoYl/a+ljLFVtlfaXkLQmqfLR1qHma1h/ysYk4hEXZ880bf2CYgTskvTa/e196Vd5dDQXw==}
@@ -3479,6 +3504,8 @@ snapshots:
     dependencies:
       undici-types: 8.9.0
 
+  '@types/polylabel@2.0.0': {}
+
   '@types/react-dom@19.3.0(@types/react@19.3.0)':
     dependencies:
       '@types/react': 19.3.0
@@ -3723,6 +3750,8 @@ snapshots:
 
   detect-libc@2.1.2: {}
 
+  diacritics@1.3.0: {}
+
   doctrine@3.0.0:
     dependencies:
       esutils: 2.0.3
@@ -3859,6 +3888,10 @@ snapshots:
       debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
+
+  i18n-iso-countries@7.14.0:
+    dependencies:
+      diacritics: 1.3.0
 
   indent-string@4.0.0: {}
 
@@ -4137,6 +4170,10 @@ snapshots:
       mlly: 1.8.2
       pathe: 2.0.3
 
+  polylabel@2.1.0:
+    dependencies:
+      tinyqueue: 3.0.0
+
   postcss-load-config@6.0.1(postcss@8.5.32):
     dependencies:
       lilconfig: 3.1.4
@@ -4356,6 +4393,8 @@ snapshots:
     dependencies:
       fdir: 6.5.0(picomatch@4.0.7)
       picomatch: 4.0.7
+
+  tinyqueue@3.0.0: {}
 
   tinyrainbow@2.0.0: {}
 

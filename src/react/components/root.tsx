@@ -23,10 +23,14 @@ export const Root = <TDatum,>({
   className,
   style,
   unstyled,
+  dimOthers = "selection",
   ...options
 }: RootProps<TDatum>) => {
-  const choropleth = useChoropleth<TDatum>(options as UseChoroplethOptions<TDatum>);
-  const { containerRef, store } = choropleth;
+  const choropleth = useChoropleth<TDatum>({
+    ...options,
+    dimOthers,
+  } as UseChoroplethOptions<TDatum>);
+  const { containerRef, store, status, dataLoading, selectedId } = choropleth;
 
   const handlePointer = (event: PointerEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -42,6 +46,11 @@ export const Root = <TDatum,>({
         className={className === undefined ? "cm-root" : `cm-root ${className}`}
         // `relative`: el tooltip y la leyenda se posicionan respecto a este contenedor.
         data-unstyled={unstyled ? "" : undefined}
+        // Atributos en el contenedor + CSS: atenuar, mostrar carga… sin tocar las regiones.
+        data-status={status}
+        data-loading={dataLoading ? "" : undefined}
+        data-dim={dimOthers}
+        data-has-selection={selectedId === null ? undefined : ""}
         style={{ position: "relative", ...style }}
         // `pointerdown` además de `move`: un toque no mueve el puntero, y el tooltip necesita posición.
         onPointerMove={handlePointer}

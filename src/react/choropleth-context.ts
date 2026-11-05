@@ -20,7 +20,7 @@ export const useChoroplethContext = <TDatum = unknown>(): {
   const value = useContext(ChoroplethContext);
   if (value === null) {
     throw new Error(
-      "Los componentes de Choropleth (Svg, Regions, Legend…) deben ir dentro de <Choropleth.Root>.",
+      "[choropleth] Choropleth components (Svg, Regions, Legend…) must be rendered inside <Choropleth.Root>.",
     );
   }
   return value as unknown as { choropleth: UseChoroplethResult<TDatum>; store: MapStore };

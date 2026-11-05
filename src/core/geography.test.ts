@@ -1,6 +1,6 @@
 import type { FeatureCollection } from "geojson";
 import type { Topology } from "topojson-specification";
-import { toFeatureCollection } from "./geography";
+import { toFeatureCollection, unwrapGeography } from "./geography";
 
 // TopoJSON mínimo escrito a mano: dos cuadrados 1×1 pegados por un lado.
 //
@@ -142,14 +142,14 @@ describe("toFeatureCollection", () => {
 
     it("lanza un error que lista los objetos disponibles si objectName no existe", () => {
       expect(() => toFeatureCollection({ geography: twoSquares, objectName: "nope" })).toThrow(
-        /"nope" no existe.*squares, outline/,
+        /"nope" does not exist.*squares, outline/,
       );
     });
 
     it("lanza un error si la topología no tiene objetos", () => {
       const empty: Topology = { type: "Topology", objects: {}, arcs: [] };
       expect(() => toFeatureCollection({ geography: empty })).toThrow(
-        /Objetos disponibles: \(ninguno\)/,
+        /Available objects: \(none\)/,
       );
     });
   });
@@ -183,8 +183,17 @@ describe("toFeatureCollection", () => {
       ["null", null],
     ])("lanza un error claro con %s", (_label, input) => {
       expect(() => toFeatureCollection({ geography: input as never })).toThrow(
-        /formato no reconocido/,
+        /unrecognized format/,
       );
     });
+  });
+});
+
+describe("unwrapGeography", () => {
+  const fc: FeatureCollection = { type: "FeatureCollection", features: [] };
+
+  it("devuelve el dato tal cual, y saca `default` de un módulo ES", () => {
+    expect(unwrapGeography(fc)).toBe(fc);
+    expect(unwrapGeography({ default: fc })).toBe(fc);
   });
 });

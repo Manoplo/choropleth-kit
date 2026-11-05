@@ -84,15 +84,15 @@ describe("computeThresholds", () => {
         classification: { method: "threshold", thresholds },
         domain,
       }),
-    ).toThrow(/ascendente/);
+    ).toThrow(/ascending/);
   });
 
   it.each([0, -1, 2.5, NaN])("lanza error con classes = %s", (classes) => {
     expect(() =>
       computeThresholds({ values: [1], classification: { method: "quantize", classes }, domain }),
-    ).toThrow(/entero/);
+    ).toThrow(/integer/);
     expect(() =>
       computeThresholds({ values: [1], classification: { method: "quantile", classes }, domain }),
-    ).toThrow(/entero/);
+    ).toThrow(/integer/);
   });
 });

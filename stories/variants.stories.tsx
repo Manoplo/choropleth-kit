@@ -1,13 +1,14 @@
 // Presets por variant (dd.md §10): el mismo <ChoroplethMap>, distinto `variant`.
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import type { Topology } from "topojson-specification";
-import countries110m from "world-atlas/countries-110m.json";
 import { toFeatureCollection } from "../src/core";
+import { world110m } from "../src/geo";
+import { seed } from "./seed";
 import { ChoroplethMap } from "../src/react";
 
 type Row = { id: string; value: number | null; growth: number };
 
-const world = countries110m as unknown as Topology;
+// Geodatos propios de la librería: ids ISO alpha-2 ("ES") y Kosovo incluido.
+const world = world110m;
 const ids = toFeatureCollection({ geography: world, objectName: "countries" }).features.flatMap(
   (f) => (f.id === undefined ? [] : [String(f.id)]),
 );
@@ -16,13 +17,12 @@ const ids = toFeatureCollection({ geography: world, objectName: "countries" }).f
 const pseudo = (n: number, salt: number) => ((n * 9301 + 49297 + salt) % 233280) / 233280;
 const rows: Row[] = ids.map((id) => ({
   id,
-  value:
-    Number(id) % 7 === 0 ? null : Math.round(pseudo(Number(id), 1) * pseudo(Number(id), 2) * 1000),
-  growth: Math.round(pseudo(Number(id), 3) * 40 - 20),
+  value: seed(id) % 7 === 0 ? null : Math.round(pseudo(seed(id), 1) * pseudo(seed(id), 2) * 1000),
+  growth: Math.round(pseudo(seed(id), 3) * 40 - 20),
 }));
 
 const REGIONS = ["Norte", "Sur", "Este", "Oeste"] as const;
-const regionOf = (id: string) => REGIONS[Number(id) % 4] ?? "Norte";
+const regionOf = (id: string) => REGIONS[seed(id) % 4] ?? "Norte";
 
 // Tiendas SINTÉTICAS en ciudades (lon, lat): la posición es real, las ventas son inventadas.
 type Shop = { id: string; sales: number; growth: number; at: [number, number] };

@@ -1,11 +1,16 @@
-import type { FeatureCollection, MultiLineString } from "geojson";
+import type { Feature, FeatureCollection, MultiLineString } from "geojson";
 import type { Topology } from "topojson-specification";
-import { mesh } from "topojson-client";
+import { feature as toFeature, mesh } from "topojson-client";
 
 export type CreateBordersOptions = {
   geography: Topology | FeatureCollection;
   /** Mismo `objectName` que se pasó a `toFeatureCollection`, para que ambas lean el mismo objeto. */
   objectName?: string;
+  /**
+   * El mismo filtro que se aplicó a las regiones: una frontera solo se dibuja si AMBOS lados se
+   * conservan (si no, quedaría la línea de un país que ya no está).
+   */
+  filterFeatures?: (feature: Feature) => boolean;
 };
 
 /**
@@ -21,6 +26,7 @@ export type CreateBordersOptions = {
 export const createBorders = ({
   geography,
   objectName,
+  filterFeatures,
 }: CreateBordersOptions): MultiLineString | null => {
   if ((geography as { type?: unknown }).type !== "Topology") return null;
 
@@ -29,5 +35,24 @@ export const createBorders = ({
   const object = name === undefined ? undefined : topology.objects[name];
   if (object === undefined) return null;
 
-  return mesh(topology, object as Parameters<typeof mesh>[1], (a, b) => a !== b);
+  if (filterFeatures === undefined) {
+    return mesh(topology, object as Parameters<typeof mesh>[1], (a, b) => a !== b);
+  }
+
+  // `mesh` pregunta por cada arco con las geometrías de sus dos lados; se convierten a Feature una
+  // sola vez (caché) porque el filtro del usuario trabaja con Features.
+  const kept = new Map<unknown, boolean>();
+  const keep = (geometry: unknown): boolean => {
+    let result = kept.get(geometry);
+    if (result === undefined) {
+      result = filterFeatures(toFeature(topology, geometry as never) as unknown as Feature);
+      kept.set(geometry, result);
+    }
+    return result;
+  };
+  return mesh(
+    topology,
+    object as Parameters<typeof mesh>[1],
+    (a, b) => a !== b && keep(a) && keep(b),
+  );
 };

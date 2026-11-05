@@ -1,5 +1,9 @@
-export { toFeatureCollection } from "./geography";
-export type { ToFeatureCollectionOptions } from "./geography";
+export { toFeatureCollection, unwrapGeography } from "./geography";
+export type { GeographyData, GeographyInput, ToFeatureCollectionOptions } from "./geography";
+export { getAnchorPoint, getFocusGeometry } from "./bounds";
+export type { GetFocusGeometryParams } from "./bounds";
+export { en, es, resolveLabels } from "./labels";
+export type { ChoroplethLabels } from "./labels";
 export { joinData } from "./join";
 export type { JoinDataOptions, JoinResult } from "./join";
 export { computeThresholds, finiteValues, DEFAULT_CLASSES } from "./classify";
@@ -8,7 +12,12 @@ export { createColorScale, DEFAULT_EMPTY_FILL } from "./scales";
 export type { ColorScale, ColorScaleOptions } from "./scales";
 export { DIVERGING_PALETTES, SEQUENTIAL_PALETTES } from "./palettes";
 export type { DivergingPaletteName, SequentialPaletteName } from "./palettes";
-export { createProjection, DEFAULT_PROJECTION } from "./projection";
+export {
+  computeAspectRatio,
+  createProjection,
+  DEFAULT_ASPECT_RATIO,
+  DEFAULT_PROJECTION,
+} from "./projection";
 export type { CreateProjectionOptions, ProjectionName } from "./projection";
 export { buildLegend, defaultFormatValue } from "./legend";
 export type { BuildLegendOptions, LegendItem } from "./legend";

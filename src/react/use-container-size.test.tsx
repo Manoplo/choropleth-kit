@@ -34,6 +34,25 @@ const resize = (width: number, height: number) =>
   );
 
 describe("useContainerSize", () => {
+  it("antes de medir, el alto sale de la proporción (también con `auto`)", () => {
+    expect(render({ aspectRatio: 3 }).result.current).toMatchObject({ width: 960, height: 320 });
+  });
+
+  it("si cambia la proporción, el alto se corrige sin otra medida", () => {
+    let aspectRatio = 2;
+    const { result, rerender } = renderHook(() => {
+      const value = useContainerSize({ aspectRatio });
+      value.ref.current ??= document.createElement("div");
+      return value;
+    });
+    resize(400, 0);
+    expect(result.current.height).toBe(200);
+
+    aspectRatio = 0.5;
+    rerender();
+    expect(result.current).toMatchObject({ width: 400, height: 800 });
+  });
+
   it("tamaño inicial razonable antes de medir", () => {
     expect(render().result.current).toMatchObject({ width: 960, height: 500 });
     expect(render({ initial: { width: 300, height: 100 } }).result.current.width).toBe(300);

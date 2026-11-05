@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+import { resolveLabels } from "../core";
 import { Legend } from "./components/legend";
 import { Root } from "./components/root";
 import { Svg } from "./components/svg";
@@ -52,7 +53,7 @@ export const ChoroplethMap = <TDatum,>({
     <Root<TDatum>
       {...(options as UseChoroplethOptions<TDatum>)}
       // La leyenda cuenta también las regiones sin dato, salvo que el consumidor ya haya decidido el texto.
-      emptyLabel={options.emptyLabel ?? "Sin dato"}
+      emptyLabel={options.emptyLabel ?? resolveLabels(options.labels).noData}
       className={className}
       style={style}
       unstyled={unstyled}

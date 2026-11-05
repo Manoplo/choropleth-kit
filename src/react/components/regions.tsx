@@ -10,6 +10,11 @@ const RegionPath = memo(({ id, d, fill }: RegionPathProps) => (
   <path className="cm-region" data-region-id={id} d={d} style={{ fill }} />
 ));
 
+// Regiones sin id (Kosovo en world-atlas): se ven, pero no se pueden cruzar ni seleccionar.
+const AnonymousPath = memo(({ d, fill }: { d: string; fill: string }) => (
+  <path className="cm-region cm-region--anonymous" d={d} style={{ fill, cursor: "default" }} />
+));
+
 const regionIdFrom = (event: SyntheticEvent): string | null =>
   (event.target as Element).closest?.("[data-region-id]")?.getAttribute("data-region-id") ?? null;
 
@@ -20,7 +25,8 @@ const regionIdFrom = (event: SyntheticEvent): string | null =>
  */
 export const Regions = () => {
   const { choropleth, store } = useChoroplethContext();
-  const { regions, borders, clickable, hoverItem, clickItem } = choropleth;
+  const { regions, anonymousPaths, emptyFill, borders, clickable, hoverItem, clickItem } =
+    choropleth;
 
   const known = new Set(regions.map((region) => region.id));
   const regionRef = (event: SyntheticEvent) => {
@@ -56,6 +62,9 @@ export const Regions = () => {
         if (store.getState().hovered?.kind === "region") hoverItem(null);
       }}
     >
+      {anonymousPaths.map((d, index) => (
+        <AnonymousPath key={`anonymous-${index}`} d={d} fill={emptyFill} />
+      ))}
       {regions.map((region) => (
         <RegionPath key={region.id} id={region.id} d={region.path} fill={region.fill} />
       ))}
