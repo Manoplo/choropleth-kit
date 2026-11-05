@@ -1,0 +1,18 @@
+choropleth-build-proccess.md
+  h_b43887c3a179aa 7-13,35-53,277,328,1363-1444
+coropleth-library.md
+  h_b43887c3a179aa 1-2536
+pnpm-lock.yaml
+  h_b43887c3a179aa 9-11,95-99,149-165
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "8182d3d1e6a45b364d36f5ee0b98cfa5c82b4177",
+  "prompts": {},
+  "humans": {
+    "h_b43887c3a179aa": {
+      "author": "Manuel Martín Pérez <manuellmp@ext.inditex.com>"
+    }
+  }
+}
