@@ -7,6 +7,7 @@ import { Root } from "./components/root";
 import { Selection } from "./components/selection";
 import { Svg } from "./components/svg";
 import { Tooltip } from "./components/tooltip";
+import { Viewport } from "./components/viewport";
 
 /** Nivel 2 (compound): `<Choropleth.Root>` + las piezas que quieras, en el orden que quieras. */
 export const Choropleth = {
@@ -17,6 +18,7 @@ export const Choropleth = {
   Bubbles,
   FallbackPoints,
   Selection,
+  Viewport,
   Legend,
   Tooltip,
 };

@@ -81,3 +81,5 @@ export type {
   VariantName,
   VariantResult,
 } from "./variants";
+export { createZoomFilter, DEFAULT_ZOOM_MAX, DEFAULT_ZOOM_MIN, resolveZoomOptions } from "./zoom";
+export type { ResolvedZoom, ZoomEventLike, ZoomFilterParams, ZoomOptions } from "./zoom";

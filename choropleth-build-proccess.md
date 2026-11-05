@@ -53,7 +53,7 @@
 | Paso | Título                                                                                                   | Estado       |
 | ---- | -------------------------------------------------------------------------------------------------------- | ------------ |
 | 23   | `core/camera.ts` y `boundsToTransform`: la matemática de la cámara, solo con tests                       | ✅ Hecho     |
-| 24   | `use-zoom.ts` + `Viewport`: `d3-zoom` escribe el transform en el DOM; rueda cooperativa, clic ≠ arrastre | ⏳ Pendiente |
+| 24   | `use-zoom.ts` + `Viewport`: `d3-zoom` escribe el transform en el DOM; rueda cooperativa, clic ≠ arrastre | ✅ Hecho\*   |
 | 25   | `ZoomControls`, `GestureHint` y teclado de zoom                                                          | ⏳ Pendiente |
 | 26   | Vuelos: `focusId`, handle `zoomTo` / `zoomBy` / `resetView` con `Promise`, reduced-motion                | ⏳ Pendiente |
 | 27   | Contraescalado de burbujas, inercia y resize sin salto                                                   | ⏳ Pendiente |
@@ -1933,3 +1933,140 @@ No aplica: no hay UI en este paso. Lo primero que se verá es el paso 24.
    implementa en el paso 26 (`focusId` / `zoomTo`) como un override por defecto de `focusBounds` para `ES`
    (`[[-18.5, 27.5], [4.5, 44]]`, el ejemplo de `dd.md §11.1.5`), documentado y sustituible por el consumidor.
    Otros países con territorios lejanos (Francia, EE. UU., Portugal) siguen usando el cuerpo principal.
+
+---
+
+# Paso 24: `use-zoom.ts` + `Viewport` (el primer zoom visible)
+
+Archivos nuevos: `src/core/zoom.ts` (+ test), `src/react/use-zoom.ts`, `src/react/components/viewport.tsx`,
+`src/react/zoom.test.tsx`, `stories/zoom.stories.tsx`. Tocan: `map-store.ts`, `use-choropleth.ts`, `Root`,
+`Svg`, `choropleth-context.ts` y `styles.css`. Tarea 11 de `dd.md §21`: «§11.1.3 al pie de la letra».
+
+## 24.1 El problema que resuelve este paso
+
+`d3-zoom` y React no se llevan bien por defecto: `d3-zoom` quiere escribir en el DOM en cada frame, y React
+quiere ser el único dueño del DOM. La regla de `dd.md §11.1.3` es: **React nunca escribe el `transform`
+del viewport; `d3-zoom` sí, y React solo se entera al terminar el gesto**. Todo el diseño sale de ahí.
+
+| Qué cambia                                          | Quién lo escribe           | Cuándo                     | ¿Render de React? |
+| --------------------------------------------------- | -------------------------- | -------------------------- | ----------------- |
+| Atributo `transform` de `.cm-viewport`              | `d3-zoom` (`setAttribute`) | **cada frame**             | **Nunca**         |
+| `--cm-k` y `data-zoomed` en `.cm-root`              | `d3-zoom` (DOM directo)    | cada frame                 | Nunca             |
+| `data-interacting` en `.cm-root`                    | suscripción al store (DOM) | empieza / termina el gesto | Nunca             |
+| `interacting`, `camera` (confirmada) en `map-store` | `use-zoom`                 | empieza / termina el gesto | Solo suscriptores |
+| `onViewChange` del consumidor                       | `use-zoom`                 | **al terminar** el gesto   | Lo que él haga    |
+
+## 24.2 Qué se hizo
+
+**`core/zoom.ts` (puro, con tests).**
+
+- `ZoomOptions` / `resolveZoomOptions`: `zoom` (`boolean | objeto`) → opciones completas o `null`. Valida
+  `min > 0`, `max` finito y `≥ min`. `doubleClick: "auto"` se resuelve a `false` si el clic ya tiene otro
+  significado (`onItemClick` o selección), para no hacer las dos cosas a la vez.
+- `createZoomFilter`: sustituye al filtro por defecto de d3 (`(!ctrlKey || wheel) && !button`). Recibe
+  eventos «de mentira» (`{ type, ctrlKey, touches… }`), así que se prueba sin DOM. Devolver `false` **no
+  llama a `preventDefault`**: en `cooperative` la página sigue haciendo scroll.
+
+**`react/use-zoom.ts`.** El único sitio con `d3-selection`. En un `useEffect` (es un efecto real: eventos del
+DOM con limpieza) crea el `zoom()`, lo engancha al `<svg>` y:
+
+1. `extent` y `scaleExtent([min, max])`.
+2. **`clickDistance(4)`**: el valor por defecto de d3 es 0, y cualquier micro-temblor del ratón se come el clic.
+3. El filtro de gestos, con el aviso (`store.showGestureHint`) cuando la rueda no hace zoom.
+4. `start` → `interacting = true` (solo si el gesto es del usuario, no un vuelo programático);
+   `zoom` → 3 escrituras en el DOM; `end` → cámara confirmada al store, `interacting = false` y `onViewChange`.
+5. `constrain` propio (el de `core/camera.ts`): centra si cabe, no deja salir los bordes. `"free"` lo desactiva.
+6. En `cooperative`, `touch-action: pan-x pan-y` (d3 pone `none`, que **bloquea el scroll táctil** de la página).
+7. Restaura la cámara confirmada al (re)instalar, **sin avisar** (`restoring`: no es un gesto).
+
+**`<Choropleth.Viewport>`**: el `<g class="cm-viewport">` al que se aplica el transform. No tiene ninguna prop
+que toque `transform`. `Svg` lo incluye por defecto (y llama a `useZoom`); si pasas tus propias capas, envuélvelas
+en `<Choropleth.Viewport>`.
+
+**CSS** (todo por atributos, sin renders): cursor `grab` solo si `data-zoomed` (en el encaje no hay nada que
+arrastrar) y `grabbing` si `data-interacting`; durante el gesto, regiones/burbujas con `pointer-events: none`, sin
+transiciones de color y tooltip oculto (arrastrar sobre 200 países dispararía 200 hovers).
+
+## 24.3 Por qué el orden interno es ese
+
+| #   | Paso                                    | Por qué va aquí                                                                                            | Qué pasaría si se invierte                                                                   |
+| --- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| 1   | `scaleExtent`, `clickDistance`, filtro  | Se configuran **antes** de `.call(behavior)`: d3 lee la configuración al enganchar los listeners.          | Cambiar `clickDistance` después no afectaría a los gestos ya enganchados con otro valor.     |
+| 2   | `.constrain(...)`                       | Antes de `.call`, y **antes** de restaurar la cámara: la restauración también pasa por `constrain`.        | Una cámara restaurada de otro tamaño podría quedar fuera de los límites.                     |
+| 3   | `select(svg).call(behavior)`            | Instala los listeners (`wheel`, `mousedown`, `touchstart`…).                                               | —                                                                                            |
+| 4   | `touch-action` **después** de `.call`   | d3 lo escribe dentro de `.call`; el nuestro tiene que ir detrás para ganar.                                | d3 lo pisaría con `none` y la página dejaría de poder hacer scroll con un dedo.              |
+| 5   | `behavior.transform(selection, camera)` | Restaura la cámara con los listeners ya activos, para que escriba el DOM por el mismo camino que un gesto. | Habría dos caminos de escritura (uno de restauración y otro de gesto) y se desincronizarían. |
+
+## 24.4 Decisiones y desviaciones respecto a `dd.md`
+
+| Decisión                                                                                                                                      | Motivo                                                                                                                                                                                                                            |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`wheel` por defecto = `"always"`**, no `"cooperative"` (§23.9, decisión del humano).                                                        | Con el ratón encima, la rueda hace zoom. `cooperative` es opt-in. El comentario de la prop avisa del _scroll-jacking_.                                                                                                            |
+| `ZoomOptions` solo tiene lo que hace algo: `min`, `max`, `wheel`, `pinch`, `pan`, `doubleClick`, `constrain`, `onViewChange`.                 | `controls`, `keyboard`, `inertia`, `padding`, `initialView` se añaden en los pasos 25-27 con su comportamiento. Declararlas antes sería prometer lo que no existe.                                                                |
+| El filtro refina `pan` y `pinch` en táctil: con `pan = false` un dedo no arrastra pero dos dedos sí pellizcan.                                | El filtro de `dd.md` los ignora. Sin esto, `pan: false` seguiría dejando arrastrar con el dedo.                                                                                                                                   |
+| `onViewChange` **no** forma parte de las opciones resueltas: se lee con una `ref` al usarlo.                                                  | Suele ser una función en línea: si fuera dependencia del efecto, se reinstalaría `d3-zoom` en cada render. Lo mismo para `invert`.                                                                                                |
+| `data-interacting` se escribe **en el DOM** mediante una suscripción al store, no como prop de `Root`.                                        | Como prop, empezar y terminar cada gesto re-renderizaría todo el mapa (join, escala, leyenda).                                                                                                                                    |
+| El store gana `interacting`, `camera`, `gestureHint`, `showGestureHint` y `dispose`; **no** `registerZoom`, `liveCamera` ni `setInteracting`. | `setState` ya cubre lo primero; `registerZoom` (para `zoomTo`) lo necesita el paso 25-26 y `liveCamera` los `Marker` (paso 37). Sin consumidor ahora, no se añaden.                                                               |
+| **`--cm-bubble-scale` y el resize sin salto NO están** (paso 27).                                                                             | Hoy **las burbujas crecen con el zoom** (son círculos dentro del viewport escalado). Al redimensionar con `k > 1`, la cámara se conserva en píxeles y la vista se desplaza; con `k = 1` no pasa nada. Ambos se arreglan en el 27. |
+| `Svg` es quien llama a `useZoom`.                                                                                                             | Es quien tiene el `<svg>`. Quien use `useChoropleth` (nivel 3) y pinte su propio `<svg>` debe llamar a `useZoom` él mismo (está exportado).                                                                                       |
+| Las capas que se pasan a `<Svg>` a mano deben ir dentro de `<Choropleth.Viewport>`.                                                           | Si no, no se mueven con el zoom. `dd.md §9.3` ya lo muestra así.                                                                                                                                                                  |
+
+## 24.5 Tests
+
+372 en verde (312 + 60 nuevos), `typecheck`, `lint`, `format:check`, `build` y `build-storybook` limpios; cobertura de
+`src/core` 100 % líneas / 97 % ramas.
+
+- **`core/zoom.test.ts` (24):** defaults, validación, `doubleClick: "auto"`, y el filtro caso a caso (rueda en los
+  tres modos, aviso, Ctrl y ⌘, táctil con uno y dos dedos, `pan`/`pinch`, botón secundario, doble clic).
+- **`react/zoom.test.tsx` (34), simulando gestos reales sobre `d3-zoom` en jsdom:**
+  - rueda: zoom **anclado al cursor** (el punto bajo el cursor no se mueve), límites `min`/`max`, `never`,
+    `cooperative` (**no se llama a `preventDefault`**, `touch-action`, Ctrl y ⌘);
+  - arrastre: con `k = 1` no hay nada que arrastrar, ampliado sí y con límites, `pan: false`, botón secundario;
+  - **clic ≠ arrastre:** 2 px de temblor sigue siendo clic; un arrastre real no produce clic;
+  - `data-interacting` durante el gesto y fuera al terminar; `onViewChange` **una sola vez**, al terminar, y **nunca
+    al montar**;
+  - **rendimiento:** diez eventos de rueda y un arrastre **no re-renderizan `Root`** (contador de `getId`, la misma
+    técnica del paso 15), y tampoco al terminar;
+  - **React no pisa la cámara:** un render con datos nuevos a mitad de un zoom no reinicia el transform; opciones
+    en línea con los mismos valores **no reinstalan** `d3-zoom`; al cambiar una opción se reinstala y se restaura la
+    cámara; cambiar el tamaño la conserva; `zoom` true → false quita los gestos;
+  - el zoom se engancha cuando el `<svg>` aparece tras la carga asíncrona.
+- **Comprobación de que los tests detectan lo que dicen** (mutaciones hechas a mano y revertidas): con
+  `clickDistance(0)` falla «2 px de temblor sigue siendo un clic»; quitando el guard `restoring` fallan los dos
+  tests de `onViewChange`.
+
+Dos trampas de jsdom, documentadas en el test: (1) `MouseEvent.view` no se puede pasar en el constructor, así que se
+fija con `defineProperty` (d3 engancha `mousemove`/`mouseup` a `event.view`); (2) `d3-zoom` quita su supresor de clic
+con un `setTimeout(…, 0)` que con temporizadores falsos no corre y se quedaba en la `window`, tragándose el clic del
+test siguiente. En un navegador real sí corre.
+
+## 24.6 Verificación visual: pendiente de ti \*
+
+No hay navegador en esta sesión, y este es el primer paso donde lo visual importa de verdad (jsdom no tiene layout).
+Abre `pnpm storybook` → **Zoom / Basic** y comprueba:
+
+| Story                          | Qué comprobar                                                                                                                                                                                                    |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Default`                      | La rueda hace zoom **anclado al cursor**; arrastrar desplaza; no se puede arrastrar fuera del mapa; con el mapa entero a la vista, **el cursor no cambia** (no es `grab`) y al ampliar pasa a `grab`/`grabbing`. |
+| `Default`                      | **Las fronteras y el contorno del hover NO engordan** al ampliar (`non-scaling-stroke`). El tooltip **no parpadea** ni sale mientras arrastras.                                                                  |
+| `Default`                      | Doble clic = ×2 (animado). La línea de `onViewChange` solo se actualiza **al terminar** el gesto.                                                                                                                |
+| `Default` (trackpad)           | El pellizco funciona (llega como Ctrl + rueda). **Safari** puede emitir eventos `gesture*` distintos: `dd.md §11.1.2` pide verificarlo.                                                                          |
+| `CooperativeInAScrollablePage` | Rueda sobre el mapa: **la página hace scroll**, el mapa no se mueve. Ctrl/⌘ + rueda: zoom. (Aún no hay aviso visual: es el paso 25.)                                                                             |
+| `ClickVersusDrag`              | Un clic con un pequeño temblor **selecciona** (sube el contador de clics); arrastrar no selecciona nada al soltar. El doble clic **no** hace zoom (hay `onItemClick`).                                           |
+| `PanOnly`                      | La rueda no hace nada; arrastrar sí.                                                                                                                                                                             |
+| Móvil / DevTools táctil        | `cooperative`: un dedo hace scroll de la página, dos dedos mueven el mapa. `dd.md` pide probar en **iOS Safari y Chrome Android** reales.                                                                        |
+| Cualquiera con burbujas        | Esperado y **pendiente del paso 27**: las burbujas **crecen** al hacer zoom.                                                                                                                                     |
+
+## 24.7 Antes de pasar al paso 25: ¿lo tienes claro?
+
+- ¿Por qué React no puede escribir el atributo `transform` del viewport? ¿Qué pasaría si lo hiciera?
+- ¿Qué cosas se escriben por frame y cuáles solo al empezar o terminar el gesto?
+- ¿Por qué `clickDistance(4)` y qué ocurre con el valor por defecto de d3?
+- ¿Por qué `touch-action` se escribe **después** de `.call(behavior)`?
+- ¿Por qué `onViewChange` y `invert` se leen desde una `ref` en lugar de ser dependencias del efecto?
+- ¿Cómo demuestra un test que el zoom no re-renderiza `Root`, y qué mutación demuestra que el test sirve?
+
+## 24.8 Pregunta abierta
+
+Con `wheel: "always"` por defecto y el mapa dentro de una página con scroll, el mapa se come la rueda. ¿Quieres
+que el preset (`<ChoroplethMap>`) lo avise en desarrollo, o basta con la documentación de la prop?

@@ -1,4 +1,4 @@
-import type { CSSProperties, PointerEvent, ReactNode } from "react";
+import { useEffect, useRef, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 import { ChoroplethContext } from "../choropleth-context";
 import {
   useChoropleth,
@@ -31,6 +31,18 @@ export const Root = <TDatum,>({
     dimOthers,
   } as UseChoroplethOptions<TDatum>);
   const { containerRef, store, status, dataLoading, selectedId } = choropleth;
+  const viewportRef = useRef<SVGGElement | null>(null);
+
+  // `data-interacting` se escribe en el DOM, NO como prop: si fuera estado de `Root`, empezar y
+  // terminar cada gesto re-renderizaría todo el mapa (join, escala, leyenda). Con el atributo el CSS
+  // quita transiciones y eventos de las regiones y oculta el tooltip sin un solo render.
+  useEffect(() => {
+    const sync = () => {
+      containerRef.current?.toggleAttribute("data-interacting", store.getState().interacting);
+    };
+    sync();
+    return store.subscribe(sync);
+  }, [store, containerRef]);
 
   const handlePointer = (event: PointerEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -39,7 +51,7 @@ export const Root = <TDatum,>({
 
   return (
     <ChoroplethContext.Provider
-      value={{ choropleth: choropleth as UseChoroplethResult<unknown>, store }}
+      value={{ choropleth: choropleth as UseChoroplethResult<unknown>, store, viewportRef }}
     >
       <div
         ref={containerRef}

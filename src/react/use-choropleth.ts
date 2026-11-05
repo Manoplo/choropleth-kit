@@ -20,6 +20,7 @@ import {
   joinData,
   resolveLabels,
   resolveVariant,
+  resolveZoomOptions,
   toFeatureCollection,
   type Bubble,
   type ChoroplethLabels,
@@ -29,8 +30,10 @@ import {
   type LegendItem,
   type Point,
   type ProjectionName,
+  type ResolvedZoom,
   type SizeLegendItem,
   type VariantConfig,
+  type ZoomOptions,
 } from "../core";
 import { isSameItem, ROOT_LEVEL, type ItemContext, type ItemRef, type MapItem } from "./map-item";
 import { createMapStore, type MapStore } from "./map-store";
@@ -111,6 +114,11 @@ type BaseOptions<TDatum> = {
   onItemHover?: (item: MapItem<TDatum> | null) => void;
   /** Se llama cada vez que cambia el resultado del cruce datos↔regiones (también en producción). */
   onJoinReport?: (report: JoinReport) => void;
+  /**
+   * Zoom y pan (dd.md §11.1). Activo por defecto; `false` = mapa estático. La rueda hace zoom con el
+   * ratón encima (`wheel: "always"`); para mapas dentro de una página larga usa `wheel: "cooperative"`.
+   */
+  zoom?: boolean | ZoomOptions;
   /** Se llama si falla la carga asíncrona de la geometría. Sin esto, se avisa por consola. */
   onGeographyError?: (error: Error) => void;
   /** Aviso en consola de ids sin cruzar. Solo fuera de producción. Por defecto `true`. */
@@ -170,6 +178,12 @@ export type UseChoroplethResult<TDatum> = {
   /** Microestados pintados como punto (vacío en `bubble`: ahí son burbujas). */
   fallbackPoints: FallbackPoint<TDatum>[];
   labels: ChoroplethLabels;
+  /** Opciones de zoom ya resueltas; `null` si `zoom={false}`. */
+  zoom: ResolvedZoom | null;
+  /** `onViewChange` del usuario (no forma parte de `zoom`: no debe reinstalar el comportamiento). */
+  onViewChange: ZoomOptions["onViewChange"];
+  /** Píxeles del lienzo → [lon, lat] (`projection.invert`); `null` si cae fuera del globo. */
+  invert: (point: Point) => Point | null;
   /** Fronteras interiores (`d` de un `<path>`). `null` con GeoJSON: usa `stroke` en cada región. */
   borders: string | null;
   /** Leyenda de color (swatches con conteos). Vacía en `bubble` sin `getColorValue`. */
@@ -279,7 +293,7 @@ export const useChoropleth = <TDatum>(
   const height = options.height ?? measured.height;
 
   // ── rutas (geometría + proyección + tamaño; nada de datos) ────────────────────────────────────
-  const { paths, bordersPath, anchors, project } = useMemo(() => {
+  const { paths, bordersPath, anchors, project, invert } = useMemo(() => {
     const geoProjection = createProjection({
       name: projection,
       width,
@@ -310,6 +324,13 @@ export const useChoropleth = <TDatum>(
           })
         : [],
       project: toPoint,
+      // Lo contrario: píxeles → [lon, lat]. Lo usa `toViewState` para el `ViewState` público.
+      invert: (point: Point): Point | null => {
+        const at = geoProjection.invert?.([point[0], point[1]]);
+        return at != null && Number.isFinite(at[0]) && Number.isFinite(at[1])
+          ? [at[0], at[1]]
+          : null;
+      },
     };
   }, [features, bordersGeometry, projection, width, height, isBubble]);
 
@@ -577,6 +598,11 @@ export const useChoropleth = <TDatum>(
     emptyFill,
     fallbackPoints: fallbackMarks,
     labels,
+    zoom: resolveZoomOptions(options.zoom, {
+      clickIsBusy: onItemClick !== undefined || selectable,
+    }),
+    onViewChange: typeof options.zoom === "object" ? options.zoom.onViewChange : undefined,
+    invert,
     borders: bordersPath,
     legend: variant.legend,
     sizeLegend: variant.sizeLegend,

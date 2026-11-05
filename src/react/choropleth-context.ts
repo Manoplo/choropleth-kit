@@ -1,10 +1,12 @@
-import { createContext, useContext } from "react";
+import { createContext, useContext, type RefObject } from "react";
 import type { MapStore } from "./map-store";
 import type { UseChoroplethResult } from "./use-choropleth";
 
 export type ChoroplethContextValue = {
   choropleth: UseChoroplethResult<unknown>;
   store: MapStore;
+  /** La cámara: `<Choropleth.Viewport>` la rellena y `useZoom` (en `Svg`) la lee. */
+  viewportRef: RefObject<SVGGElement | null>;
 };
 
 export const ChoroplethContext = createContext<ChoroplethContextValue | null>(null);
@@ -16,6 +18,7 @@ export const ChoroplethContext = createContext<ChoroplethContextValue | null>(nu
 export const useChoroplethContext = <TDatum = unknown>(): {
   choropleth: UseChoroplethResult<TDatum>;
   store: MapStore;
+  viewportRef: RefObject<SVGGElement | null>;
 } => {
   const value = useContext(ChoroplethContext);
   if (value === null) {
@@ -23,5 +26,9 @@ export const useChoroplethContext = <TDatum = unknown>(): {
       "[choropleth] Choropleth components (Svg, Regions, Legend…) must be rendered inside <Choropleth.Root>.",
     );
   }
-  return value as unknown as { choropleth: UseChoroplethResult<TDatum>; store: MapStore };
+  return value as unknown as {
+    choropleth: UseChoroplethResult<TDatum>;
+    store: MapStore;
+    viewportRef: RefObject<SVGGElement | null>;
+  };
 };

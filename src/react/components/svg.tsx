@@ -1,15 +1,18 @@
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { useChoroplethContext } from "../choropleth-context";
 import { Borders } from "./borders";
 import { Bubbles } from "./bubbles";
 import { FallbackPoints } from "./fallback-points";
 import { Regions } from "./regions";
 import { Selection } from "./selection";
+import { useZoom } from "../use-zoom";
+import { Viewport } from "./viewport";
 
 export type SvgProps = {
   /**
-   * Capas del mapa, de abajo arriba. Por defecto: `Regions`, `Borders`, `Bubbles`,
-   * `FallbackPoints` y `Selection`.
+   * Capas del mapa, de abajo arriba. Por defecto, dentro de un `Viewport` (la cámara): `Regions`,
+   * `Borders`, `Bubbles`, `FallbackPoints` y `Selection`. Si pasas tus capas, envuélvelas en
+   * `<Choropleth.Viewport>` para que se muevan con el zoom.
    */
   children?: ReactNode;
   className?: string;
@@ -25,8 +28,24 @@ export type SvgProps = {
  * el mapa: la página no salta cuando aparece.
  */
 export const Svg = ({ children, className, ariaLabel }: SvgProps) => {
-  const { choropleth } = useChoroplethContext();
-  const { width, height, status, labels } = choropleth;
+  const { choropleth, store, viewportRef } = useChoroplethContext();
+  const { width, height, status, labels, zoom, invert, onViewChange, containerRef } = choropleth;
+  const svgRef = useRef<SVGSVGElement | null>(null);
+
+  // Antes de los `return` tempranos (los hooks no pueden ser condicionales): mientras carga no hay
+  // `<svg>`, y `ready` reengancha el zoom cuando aparece.
+  useZoom({
+    svgRef,
+    viewportRef,
+    rootRef: containerRef,
+    store,
+    width,
+    height,
+    options: zoom,
+    invert,
+    onViewChange,
+    ready: status === "ready",
+  });
 
   if (status === "loading") {
     return <div className="cm-skeleton" style={{ aspectRatio: `${width} / ${height}` }} />;
@@ -41,6 +60,7 @@ export const Svg = ({ children, className, ariaLabel }: SvgProps) => {
 
   return (
     <svg
+      ref={svgRef}
       className={className === undefined ? "cm-svg" : `cm-svg ${className}`}
       viewBox={`0 0 ${width} ${height}`}
       role="img"
@@ -48,13 +68,13 @@ export const Svg = ({ children, className, ariaLabel }: SvgProps) => {
       style={{ display: "block", width: "100%", height: "auto" }}
     >
       {children ?? (
-        <>
+        <Viewport>
           <Regions />
           <Borders />
           <Bubbles />
           <FallbackPoints />
           <Selection />
-        </>
+        </Viewport>
       )}
     </svg>
   );

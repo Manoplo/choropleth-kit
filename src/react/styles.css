@@ -95,6 +95,35 @@
   vector-effect: non-scaling-stroke;
 }
 
+/* ── zoom y pan ───────────────────────────────────────────────────────────────────────────── */
+
+/*
+ * La cámara la mueve `d3-zoom` (atributo `transform` de `.cm-viewport`, `--cm-k` y estos `data-*`):
+ * React no participa durante el gesto, así que todo lo que cambia con el zoom se hace aquí.
+ */
+
+/* Solo hay algo que arrastrar si el mapa está ampliado: en el encaje el cursor no cambia. */
+.cm-root:not([data-unstyled])[data-zoomed] .cm-svg {
+  cursor: grab;
+}
+.cm-root:not([data-unstyled])[data-interacting] .cm-svg {
+  cursor: grabbing;
+}
+
+/*
+ * Durante un gesto no hay hover (dd.md §11.1.2): arrastrar sobre 200 países dispararía 200 hovers y
+ * el tooltip parpadearía detrás del cursor. Tampoco transiciones de color.
+ */
+.cm-root:not([data-unstyled])[data-interacting] :is(.cm-regions, .cm-bubbles, .cm-fallback-points) {
+  pointer-events: none;
+}
+.cm-root:not([data-unstyled])[data-interacting] .cm-region {
+  transition: none;
+}
+.cm-root:not([data-unstyled])[data-interacting] .cm-tooltip {
+  display: none;
+}
+
 /* ── atenuar el resto (dimOthers) ─────────────────────────────────────────────────────────── */
 
 /*
