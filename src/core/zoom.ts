@@ -1,5 +1,5 @@
 import { boundsToTransform, projectBounds, type LonLatBounds, type Padding } from "./bounds";
-import type { CameraTransform, Extent, Size, ViewState } from "./camera";
+import type { BubbleScaling, CameraTransform, Extent, Size, ViewState } from "./camera";
 import type { Point } from "./variants";
 
 export type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
@@ -79,6 +79,13 @@ export type ZoomOptions = {
    * esto. Útil para URLs compartibles: `initialView: { center: [-3.7, 40.4], zoom: 4 }`.
    */
   initialView?: ZoomTarget;
+  /**
+   * Burbujas al hacer zoom (dd.md §11.1.6): `"sqrt"` (default, crecen con √k), `"screen"` (tamaño
+   * constante en pantalla) o `"geo"` (crecen con el mapa).
+   */
+  bubbleScaling?: BubbleScaling;
+  /** Al soltar un arrastre rápido, el mapa sigue deslizándose y frena (dd.md §11.1.4). Default `true`. */
+  inertia?: boolean;
   /** `"contain"` (default): el contenido no se pierde y se centra si cabe. `"free"`: sin límites. */
   constrain?: "contain" | "free";
   /** Atajos de teclado con el mapa enfocado: `+`, `−` y `0`. Default `true`. */
@@ -101,6 +108,8 @@ export type ResolvedZoom = {
   /** Ya resuelto: `"auto"` pasa a `true`/`false` según si el clic tiene otro significado. */
   doubleClick: boolean;
   constrain: "contain" | "free";
+  bubbleScaling: BubbleScaling;
+  inertia: boolean;
   keyboard: boolean;
   padding: number | Padding;
   initialView: ZoomTarget | undefined;
@@ -134,6 +143,8 @@ export const resolveZoomOptions = (
     pan: options.pan ?? true,
     doubleClick: doubleClick === "auto" ? !clickIsBusy : doubleClick,
     constrain: options.constrain ?? "contain",
+    bubbleScaling: options.bubbleScaling ?? "sqrt",
+    inertia: options.inertia ?? true,
     keyboard: options.keyboard ?? true,
     padding: options.padding ?? 24,
     initialView: options.initialView,

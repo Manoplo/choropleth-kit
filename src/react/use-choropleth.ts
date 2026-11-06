@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -9,8 +10,10 @@ import {
 import type { Feature, FeatureCollection, MultiLineString } from "geojson";
 import { geoPath } from "d3-geo";
 import {
+  buildProjectionChain,
   computeAspectRatio,
   constrainTransform,
+  contextOf,
   createBorders,
   createProjection,
   DEFAULT_EMPTY_FILL,
@@ -21,6 +24,7 @@ import {
   getFocusExtent,
   getFocusGeometry,
   joinData,
+  resolveDrillData,
   resolveLabels,
   resolveVariant,
   resolveZoomOptions,
@@ -30,6 +34,8 @@ import {
   type ChoroplethLabels,
   type CameraTransform,
   type ColorScale,
+  type DrillContext,
+  type GeographyData,
   type GeographyInput,
   type JoinResult,
   type LegendItem,
@@ -43,10 +49,20 @@ import {
   type ZoomOptions,
   type ZoomTarget,
 } from "../core";
-import { isSameItem, ROOT_LEVEL, type ItemContext, type ItemRef, type MapItem } from "./map-item";
+import { isDrillable, type DrillEvent, type DrillLevel } from "./drill-levels";
+import {
+  isSameItem,
+  ROOT_LEVEL,
+  type DrillLevelInfo,
+  type ItemContext,
+  type ItemRef,
+  type MapItem,
+} from "./map-item";
 import { isProduction } from "./env";
 import { createMapStore, type MapStore } from "./map-store";
 import { useContainerSize } from "./use-container-size";
+import { useDrillEngine } from "./use-drill-engine";
+import type { DrillController } from "./use-drill-down";
 import { useGeography, type GeographyStatus } from "./use-geography";
 
 /** Una región lista para pintar. */
@@ -62,6 +78,8 @@ export type Region<TDatum> = {
   value: number | string | null;
   /** `value` listo para mostrar («1,5 %», «Europa»); cadena vacía si no hay valor. */
   formattedValue: string;
+  /** Hay un nivel por debajo y `canDrill` lo permite (siempre `false` sin `drill`). */
+  drillable: boolean;
 };
 
 export type JoinReport = Omit<JoinResult<unknown>, "joined">;
@@ -74,14 +92,28 @@ type BaseOptions<TDatum> = {
    * TopoJSON o GeoJSON, una promesa, o `() => import("…")`. Un dato ya cargado debe tener una
    * referencia estable (constante de módulo o `useMemo`).
    */
-  geography: GeographyInput;
+  geography?: GeographyInput;
   /** Clave de caché para una geometría asíncrona (si no, se usa la identidad de la función). */
   geographyKey?: string;
   objectName?: string;
   /** Descarta regiones antes de todo (p. ej. la Antártida: `(f) => f.id !== "010"`). */
   filterFeatures?: (feature: Feature) => boolean;
-  /** `undefined` = cargando (se mantiene lo anterior, sin avisos); `[]` = cargado y vacío. */
-  data: readonly TDatum[] | undefined;
+  /**
+   * `undefined` = cargando (se mantiene lo anterior, sin avisos); `[]` = cargado y vacío. Con `drill`
+   * puede ser un selector del nivel actual: `({ depth, parentId }) => rows.filter(…)`.
+   */
+  data: readonly TDatum[] | undefined | ((ctx: DrillContext) => readonly TDatum[] | undefined);
+  /**
+   * Drill-down (dd.md §11.2): la lista de niveles (no controlado) o un `useDrillDown` (controlado).
+   * Con `drill`, la geometría sale de los niveles y `geography` se ignora.
+   */
+  drill?: readonly DrillLevel<TDatum>[] | DrillController<TDatum>;
+  /** Al EMPEZAR un cambio de nivel (la ruta ya está actualizada). */
+  onDrill?: (event: DrillEvent<TDatum>) => void;
+  /** Al terminar de mostrar el nivel nuevo. */
+  onDrillEnd?: (event: DrillEvent<TDatum>) => void;
+  /** Si falla la geometría de un nivel (o tiene 0 regiones): se vuelve al nivel anterior. */
+  onDrillError?: (event: { error: unknown; ctx: DrillContext }) => void;
   /** Fuerza el estado de carga de los datos (pulso) aunque `data` esté definido. */
   loading?: boolean;
   getId: (datum: TDatum) => string;
@@ -261,22 +293,61 @@ export type UseChoroplethResult<TDatum> = {
  * consumidor estabilizara `getId`/`getValue`/`classification`, y casi nadie lo hace.
  */
 export const useChoropleth = <TDatum>(
-  options: UseChoroplethOptions<TDatum>,
+  rawOptions: UseChoroplethOptions<TDatum>,
 ): UseChoroplethResult<TDatum> => {
-  const { objectName, getId, getFeatureId, projection, filterFeatures, fallbackPoints } = options;
+  // ── drill-down: el nivel que se muestra manda sobre las opciones del mapa ──────────────────────
+  // Para el resto del hook, un mapa con `drill` es un mapa de UN nivel con otras opciones.
+  const engine = useDrillEngine<TDatum>({
+    drill: rawOptions.drill,
+    data: rawOptions.data,
+    filterFeatures: rawOptions.filterFeatures,
+    onDrill: rawOptions.onDrill,
+    onDrillEnd: rawOptions.onDrillEnd,
+    onDrillError: rawOptions.onDrillError,
+  });
+  const encoding = engine.level?.encoding;
+  const options = (
+    engine.active
+      ? {
+          ...rawOptions,
+          ...encoding,
+          getId: encoding?.getId ?? rawOptions.getId,
+          data: engine.data,
+          getFeatureId: engine.getFeatureId ?? rawOptions.getFeatureId,
+        }
+      : { ...rawOptions, data: resolveDrillData(rawOptions.data, contextOf([])) }
+  ) as UseChoroplethOptions<TDatum> & { data: readonly TDatum[] | undefined };
+
+  const { getId, getFeatureId, projection, fallbackPoints } = options;
   const isBubble = options.variant === "bubble";
   const labels = resolveLabels(options.labels);
 
   // ── geometría (depende solo de `geography`) ───────────────────────────────────────────────────
-  const { geography, status } = useGeography(
-    options.geography,
+  // Con `drill` la geometría la carga el motor (por nivel, con caché); aquí se le pasa una vacía.
+  const single = useGeography(
+    engine.active ? NO_GEOGRAPHY : (options.geography ?? NO_GEOGRAPHY),
     options.geographyKey,
     options.onGeographyError,
   );
+  if (!engine.active && options.geography === undefined) {
+    throw new Error(
+      "[choropleth] Missing `geography`: pass `geography` (TopoJSON/GeoJSON) or `drill` (a list of levels).",
+    );
+  }
+  const geography: GeographyData | undefined = engine.active ? engine.geography : single.geography;
+  const status: GeographyStatus = engine.active ? engine.status : single.status;
+  const objectName = engine.active ? engine.objectName : options.objectName;
+  const filterFeatures = engine.active ? engine.filterFeatures : options.filterFeatures;
   const allFeatures = useMemo(
     () =>
-      geography === undefined ? EMPTY_FEATURES : toFeatureCollection({ geography, objectName }),
-    [geography, objectName],
+      engine.active
+        ? (engine.features ?? EMPTY_FEATURES)
+        : geography === undefined
+          ? EMPTY_FEATURES
+          : toFeatureCollection({ geography, objectName }),
+    // `engine.features` ya viene filtrado y es estable (cachés del motor).
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+    [engine.active, engine.features, geography, objectName],
   );
 
   // El filtro se aplica a CADA render (es O(regiones)) pero se memoiza por su RESULTADO: un
@@ -314,9 +385,13 @@ export const useChoropleth = <TDatum>(
   const autoAspect = useMemo(
     () =>
       options.aspectRatio === "auto"
-        ? computeAspectRatio({ name: projection, featureCollection: features })
+        ? computeAspectRatio({
+            name: projection,
+            // Con drill la proporción es la de la raíz: no debe cambiar al bajar de nivel.
+            featureCollection: (engine.active ? engine.rootFeatures : undefined) ?? features,
+          })
         : undefined,
-    [options.aspectRatio, projection, features],
+    [options.aspectRatio, projection, features, engine.active, engine.rootFeatures],
   );
   const measured = useContainerSize({
     aspectRatio: options.aspectRatio === "auto" ? autoAspect : options.aspectRatio,
@@ -324,14 +399,51 @@ export const useChoropleth = <TDatum>(
   const width = options.width ?? measured.width;
   const height = options.height ?? measured.height;
 
+  // ── cadena de proyecciones del drill (rebase, dd.md §11.2.4) ───────────────────────────────────
+  // La raíz se ajusta al mundo y cada nivel es la del padre reajustada al cuerpo principal de la región
+  // elegida: así el hijo se pinta a k = 1 con precisión completa y el vuelo termina en el mismo píxel.
+  const rebasePadding = typeof options.zoom === "object" ? (options.zoom.padding ?? 24) : 24;
+  const drillFocusBounds = engine.levels.reduce<Record<string, LonLatBounds | null | undefined>>(
+    (all, level) => ({ ...all, ...level.focusBounds }),
+    { ...DEFAULT_FOCUS_BOUNDS, ...options.focusBounds },
+  );
+  const focusKey = JSON.stringify(drillFocusBounds);
+  const chain = useMemo(
+    () =>
+      engine.active && engine.chain.length > 0 && width > 0 && height > 0
+        ? buildProjectionChain({
+            levels: engine.chain,
+            path: engine.shownPath,
+            name: projection,
+            width,
+            height,
+            padding: rebasePadding,
+            focusBounds: drillFocusBounds,
+          })
+        : null,
+    // `chainSig` resume el contenido de `engine.chain`; `focusKey`, el de `drillFocusBounds`.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+    [engine.active, engine.chainSig, projection, width, height, rebasePadding, focusKey],
+  );
+  const chainMissing = chain?.missing ?? null;
+  useEffect(() => {
+    if (chainMissing !== null && !isProduction()) {
+      console.warn(
+        `[choropleth] drill: could not frame region "${chainMissing}" (it is not in its parent level, or it has no extent). The map keeps the parent's framing.`,
+      );
+    }
+  }, [chainMissing]);
+
   // ── rutas (geometría + proyección + tamaño; nada de datos) ────────────────────────────────────
   const { paths, bordersPath, anchors, project, invert, toPath } = useMemo(() => {
-    const geoProjection = createProjection({
-      name: projection,
-      width,
-      height,
-      featureCollection: features,
-    });
+    const geoProjection =
+      chain?.projections[chain.projections.length - 1] ??
+      createProjection({
+        name: projection,
+        width,
+        height,
+        featureCollection: features,
+      });
     const toPath = geoPath(geoProjection);
     // d3 devuelve [NaN, NaN] (no null) para lo que no sabe proyectar: se normaliza aquí, una vez.
     const toPoint = (coordinates: Point): Point | null => {
@@ -365,7 +477,7 @@ export const useChoropleth = <TDatum>(
           : null;
       },
     };
-  }, [features, bordersGeometry, projection, width, height, isBubble]);
+  }, [features, bordersGeometry, projection, width, height, isBubble, chain]);
 
   // ── datos → color ─────────────────────────────────────────────────────────────────────────────
   // `data: undefined` = cargando. Se conserva el último dato definido para no vaciar el mapa (ni
@@ -429,6 +541,9 @@ export const useChoropleth = <TDatum>(
     emptyLabel: options.emptyLabel,
   });
 
+  const levelInfo: DrillLevelInfo = engine.active
+    ? { id: engine.level?.id ?? ROOT_LEVEL.id, depth: engine.depth }
+    : ROOT_LEVEL;
   const regions: Region<TDatum>[] = [];
   const anonymousPaths: string[] = [];
   features.features.forEach((feature, index) => {
@@ -442,14 +557,25 @@ export const useChoropleth = <TDatum>(
       anonymousPaths.push(path);
       return;
     }
+    const datum = entry.datum;
     regions.push({
       id: entry.id,
       feature,
-      datum: entry.datum,
+      datum,
       path,
       value: variant.values[index] ?? null,
       formattedValue: variant.labels[index] ?? "",
       fill: variant.fills[index] ?? "",
+      drillable:
+        engine.active &&
+        isDrillable(engine.levels, engine.depth, {
+          kind: "region",
+          id: entry.id,
+          feature,
+          datum,
+          level: levelInfo,
+          drillable: true,
+        }),
     });
   });
 
@@ -514,6 +640,12 @@ export const useChoropleth = <TDatum>(
     options.defaultSelectedId ?? null,
   );
   const selectedId = controlled ? (options.selectedId ?? null) : internalSelectedId;
+  // Una selección es de UN nivel: al cambiar de nivel se limpia (ajuste de estado durante el render).
+  const [selectionLevel, setSelectionLevel] = useState(engine.shownKey);
+  if (selectionLevel !== engine.shownKey) {
+    setSelectionLevel(engine.shownKey);
+    if (!controlled && internalSelectedId !== null) setInternalSelectedId(null);
+  }
 
   const setSelectedId = (id: string | null) => {
     if (!controlled) setInternalSelectedId(id);
@@ -542,8 +674,8 @@ export const useChoropleth = <TDatum>(
         id: region.id,
         feature: region.feature,
         datum: region.datum,
-        level: ROOT_LEVEL,
-        drillable: false,
+        level: levelInfo,
+        drillable: region.drillable,
         value: region.value,
         formattedValue: region.formattedValue,
         color: region.fill,
@@ -563,7 +695,7 @@ export const useChoropleth = <TDatum>(
       coordinates,
       feature,
       datum: source.datum,
-      level: ROOT_LEVEL,
+      level: levelInfo,
       drillable: false,
       value,
       formattedValue:
@@ -583,9 +715,16 @@ export const useChoropleth = <TDatum>(
   const clickItem = (ref: ItemRef) => {
     const item = getItemContext(ref);
     if (item === undefined) return;
-    // Clic en la seleccionada la deselecciona. Los puntos no se seleccionan (su id puede coincidir
-    // con el de una región).
-    if (ref.kind === "region" && selectable) setSelectedId(ref.id === selectedId ? null : ref.id);
+    if (ref.kind === "region" && item.drillable && engine.controller !== null) {
+      // Con `drill`, un item navegable BAJA (no se selecciona); uno que no lo es, selecciona. La ruta
+      // se arma sobre lo que se está MOSTRANDO: si el nivel nuevo aún carga, un segundo clic redirige.
+      engine.noteItem(item);
+      engine.controller.drillTo([...engine.shownPath, ref.id]);
+    } else if (ref.kind === "region" && selectable) {
+      // Clic en la seleccionada la deselecciona. Los puntos no se seleccionan (su id puede coincidir
+      // con el de una región).
+      setSelectedId(ref.id === selectedId ? null : ref.id);
+    }
     onItemClick?.(item);
   };
 
@@ -619,6 +758,17 @@ export const useChoropleth = <TDatum>(
       onPointerLeave: leaveHandler(ref),
     };
   };
+
+  // Al cambiar de nivel la proyección es otra y la cámara vuelve al encaje (el rebase deja el hijo a
+  // k = 1). Antes de pintar (`useLayoutEffect`): con un efecto normal se vería un fotograma con la
+  // cámara vieja sobre la geometría nueva. Sin animar ni avisar a `onViewChange`.
+  const shownKey = engine.shownKey;
+  const previousLevel = useRef(shownKey);
+  useIsoLayoutEffect(() => {
+    if (!engine.active || previousLevel.current === shownKey) return;
+    previousLevel.current = shownKey;
+    void store.getZoom()?.resetView({ duration: 0, silent: true });
+  }, [engine.active, shownKey, store]);
 
   // ── cámara: ZoomTarget → transform ────────────────────────────────────────────────────────────
   const zoomOptions = resolveZoomOptions(options.zoom, {
@@ -696,6 +846,10 @@ export const useChoropleth = <TDatum>(
   };
 };
 
+// `useLayoutEffect` avisa en el servidor; allí no hay cámara que reiniciar.
+const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
+
+const NO_GEOGRAPHY: GeographyData = { type: "FeatureCollection", features: [] };
 const EMPTY_FEATURES: FeatureCollection = { type: "FeatureCollection", features: [] };
 const NO_DATA: readonly never[] = [];
 

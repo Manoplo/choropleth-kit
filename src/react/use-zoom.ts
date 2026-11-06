@@ -5,13 +5,19 @@ import { select } from "d3-selection";
 import "d3-transition";
 import { zoom, zoomIdentity, zoomTransform, type ZoomTransform } from "d3-zoom";
 import {
+  bubbleScale,
   constrainTransform,
   createZoomFilter,
   createZoomInterpolator,
   DEFAULT_FLIGHT_CURVATURE,
   flightDuration,
   FIT_TRANSFORM,
+  inertiaOffset,
+  INERTIA_TAU_MS,
+  preserveView,
+  releaseVelocity,
   toViewState,
+  type CameraSample,
   type CameraTransform,
   type Padding,
   type Point,
@@ -38,6 +44,8 @@ export type UseZoomParams = {
   options: ResolvedZoom | null;
   /** Para convertir la cámara en un `ViewState` geográfico. */
   invert: (point: Point) => Point | null;
+  /** [lon, lat] → píxeles del lienzo ACTUAL; con `invert` del lienzo anterior, conserva la vista al redimensionar. */
+  project: (coordinates: Point) => Point | null;
   /** Se llama al TERMINAR un gesto; nunca por frame. */
   onViewChange: ((view: ViewState) => void) | undefined;
   /** `ZoomTarget` → cámara (ya limitada por `constrain`), o `null` si no se puede resolver. */
@@ -79,19 +87,38 @@ export const useZoom = ({
   height,
   options,
   invert,
+  project,
   onViewChange,
   resolveCamera,
   focusId,
   ready,
 }: UseZoomParams): void => {
   // Lo que cambia en cada render pero no debe reinstalar el comportamiento: se lee al usarlo.
-  const latest = useRef({ invert, onViewChange, resolveCamera });
+  const latest = useRef({ invert, project, onViewChange, resolveCamera });
   useEffect(() => {
-    latest.current = { invert, onViewChange, resolveCamera };
+    latest.current = { invert, project, onViewChange, resolveCamera };
   });
+  // Tamaño y proyección del lienzo anterior, y la cámara REAL al desmontar el comportamiento: con
+  // ellos, un cambio de tamaño conserva el centro geográfico y la `k` (dd.md §11.1.3, punto 2).
+  const previous = useRef<{
+    size: { width: number; height: number };
+    invert: (point: Point) => Point | null;
+    camera: CameraTransform;
+  } | null>(null);
 
   const enabled = options !== null;
-  const { min, max, wheel, pinch, pan, doubleClick, constrain, initialView } = options ?? NO_ZOOM;
+  const {
+    min,
+    max,
+    wheel,
+    pinch,
+    pan,
+    doubleClick,
+    constrain,
+    initialView,
+    bubbleScaling,
+    inertia,
+  } = options ?? NO_ZOOM;
 
   // useEffect legítimo: suscripción a eventos del DOM con limpieza.
   useEffect(() => {
@@ -108,6 +135,31 @@ export const useZoom = ({
 
     // `true` mientras se restaura la cámara al (re)instalar: no es un gesto, no debe avisar.
     let restoring = false;
+
+    // Inercia (dd.md §11.1.4). `samples`: posiciones recientes del arrastre, para medir la velocidad
+    // de suelta. `glide`: la inercia en curso (la anima un rAF; no pasa por React ni por el store
+    // hasta que termina).
+    let samples: CameraSample[] = [];
+    let glide: { frame: number } | null = null;
+    const commit = (transform: ZoomTransform, notify: boolean) => {
+      const camera = { k: transform.k, x: transform.x, y: transform.y };
+      store.setState({ camera, interacting: false });
+      if (!notify) return;
+      latest.current.onViewChange?.(
+        toViewState({
+          transform: camera,
+          size,
+          invert: latest.current.invert,
+          level: ROOT_LEVEL,
+        }),
+      );
+    };
+    const stopGlide = () => {
+      if (glide === null) return;
+      cancelAnimationFrame(glide.frame);
+      glide = null;
+      commit(zoomTransform(svg), true);
+    };
 
     const behavior = zoom<SVGSVGElement, unknown>()
       .extent([
@@ -128,28 +180,53 @@ export const useZoom = ({
       )
       .on("start", (event: { sourceEvent: Event | null }) => {
         // Solo gestos del usuario; un vuelo programático (`sourceEvent === null`) no «interactúa».
-        if (event.sourceEvent !== null) store.setState({ interacting: true });
+        if (event.sourceEvent === null) return;
+        stopGlide(); // agarrar el mapa frena la inercia
+        samples = [];
+        store.setState({ interacting: true });
       })
-      .on("zoom", ({ transform }: { transform: ZoomTransform }) => {
-        // Por frame: tres escrituras en el DOM y ningún render de React.
-        viewport.setAttribute("transform", transform.toString());
-        root.style.setProperty("--cm-k", String(transform.k));
-        // Idempotente: si ya estaba en ese estado, el DOM no cambia.
-        root.toggleAttribute("data-zoomed", transform.k > ZOOMED_EPSILON);
-      })
-      .on("end", ({ transform }: { transform: ZoomTransform }) => {
-        const camera = { k: transform.k, x: transform.x, y: transform.y };
-        store.setState({ camera, interacting: false });
-        if (restoring) return;
-        latest.current.onViewChange?.(
-          toViewState({
-            transform: camera,
-            size,
-            invert: latest.current.invert,
-            level: ROOT_LEVEL,
-          }),
-        );
-      });
+      .on(
+        "zoom",
+        ({ transform, sourceEvent }: { transform: ZoomTransform; sourceEvent: Event | null }) => {
+          // Por frame: cuatro escrituras en el DOM y ningún render de React.
+          viewport.setAttribute("transform", transform.toString());
+          root.style.setProperty("--cm-k", String(transform.k));
+          root.style.setProperty(
+            "--cm-bubble-scale",
+            String(bubbleScale(transform.k, bubbleScaling)),
+          );
+          if (sourceEvent !== null) {
+            samples.push({
+              time: performance.now(),
+              k: transform.k,
+              x: transform.x,
+              y: transform.y,
+            });
+            if (samples.length > MAX_SAMPLES) samples.shift();
+          }
+          // Idempotente: si ya estaba en ese estado, el DOM no cambia.
+          root.toggleAttribute("data-zoomed", transform.k > ZOOMED_EPSILON);
+        },
+      )
+      .on(
+        "end",
+        ({ transform, sourceEvent }: { transform: ZoomTransform; sourceEvent: Event | null }) => {
+          // La inercia mueve la cámara con `behavior.transform` en cada frame: no es un fin de gesto.
+          if (glide !== null) return;
+          // Soltar un arrastre rápido: sigue deslizándose y frena (sin inercia con «reducir movimiento»).
+          const velocity =
+            inertia && sourceEvent !== null && !restoring && !prefersReducedMotion()
+              ? releaseVelocity({ samples, now: performance.now() })
+              : null;
+          samples = [];
+          if (velocity !== null) {
+            store.setState({ camera: { k: transform.k, x: transform.x, y: transform.y } });
+            startGlide(transform, velocity);
+            return;
+          }
+          commit(transform, !restoring);
+        },
+      );
 
     if (constrain === "contain") {
       // El de d3 deja un mapa más pequeño que la vista pegado a una esquina; el nuestro lo centra.
@@ -167,11 +244,65 @@ export const useZoom = ({
     // cooperativo se devuelve, para que un dedo siga haciendo scroll.
     if (wheel === "cooperative") svg.style.touchAction = "pan-x pan-y";
 
-    // Restaura la cámara confirmada (montaje, cambio de opciones o de tamaño) sin animación.
-    const { k, x, y } = store.getState().camera;
+    // Restaura la cámara (montaje, cambio de opciones o de tamaño) sin animación. Si cambió el tamaño,
+    // los píxeles ya no valen: se conserva el centro geográfico y la `k` (`preserveView`) y se vuelve
+    // a limitar, porque el encaje nuevo puede dejar esa cámara fuera de los bordes.
+    let restored: CameraTransform = store.getState().camera;
+    const before = previous.current;
+    if (before !== null && (before.size.width !== width || before.size.height !== height)) {
+      const moved = preserveView({
+        transform: before.camera,
+        oldSize: before.size,
+        newSize: size,
+        invertOld: before.invert,
+        projectNew: latest.current.project,
+      });
+      restored =
+        constrain === "contain"
+          ? constrainTransform({ transform: moved, content, view: content })
+          : moved;
+    }
     restoring = true;
-    behavior.transform(selection, zoomIdentity.translate(x, y).scale(k));
+    behavior.transform(selection, zoomIdentity.translate(restored.x, restored.y).scale(restored.k));
     restoring = false;
+    previous.current = null;
+
+    // La inercia: cada frame lleva la cámara a `origen + (vx, vy)·τ·(1 − e^(−t/τ))` por el MISMO
+    // `behavior` (así `constrain` la frena en los bordes). Termina al agotarse o al chocar con un límite.
+    const startGlide = (origin: ZoomTransform, [vx, vy]: Point) => {
+      const start = performance.now();
+      let last = origin;
+      store.setState({ interacting: true });
+      const step = () => {
+        const elapsed = performance.now() - start;
+        // `behavior.transform` NO aplica `constrain` (solo lo hace con gestos): se aplica a mano.
+        const wanted = {
+          k: origin.k,
+          x: origin.x + inertiaOffset({ velocity: vx, elapsed }),
+          y: origin.y + inertiaOffset({ velocity: vy, elapsed }),
+        };
+        const next =
+          constrain === "contain"
+            ? constrainTransform({ transform: wanted, content, view: content })
+            : wanted;
+        behavior.transform(selection, zoomIdentity.translate(next.x, next.y).scale(next.k));
+        const now = zoomTransform(svg);
+        const moved = Math.hypot(now.x - last.x, now.y - last.y);
+        last = now;
+        const remaining = Math.hypot(vx, vy) * INERTIA_TAU_MS * Math.exp(-elapsed / INERTIA_TAU_MS);
+        // Frena al agotarse (< 0,5 px por recorrer) o si un límite la detiene (no se mueve).
+        if (remaining < GLIDE_STOP_PX || (elapsed > 0 && moved < 0.01)) {
+          glide = null;
+          commit(now, true);
+          return;
+        }
+        glide = { frame: requestAnimationFrame(step) };
+      };
+      glide = { frame: requestAnimationFrame(step) };
+    };
+    // Cualquier toque o clic frena la inercia (d3-zoom también la frenará al empezar su gesto).
+    const onPointerDown = () => stopGlide();
+    svg.addEventListener("pointerdown", onPointerDown);
 
     // Movimientos programáticos por el MISMO `behavior`: así d3-zoom siempre conoce la cámara real y
     // un gesto del usuario interrumpe el vuelo de forma natural (dd.md §11.1.3, punto 4).
@@ -188,6 +319,7 @@ export const useZoom = ({
     ): Promise<TransitionResult> => {
       fade?.cancel(); // un movimiento nuevo sustituye al fundido que quedara a medias
       fade = null;
+      stopGlide(); // y a la inercia que siguiera deslizándose
 
       // `duration: 0` es explícito («colócala ya»): ni vuelo ni fundido.
       if (duration <= 0) {
@@ -240,9 +372,11 @@ export const useZoom = ({
         animate(duration, (t) => behavior.scaleBy(t as typeof selection, factor), {
           ease: easeCubicOut,
         }),
-      resetView: ({ duration } = {}) => {
+      resetView: ({ duration, silent } = {}) => {
         const length = duration ?? flightDuration({ from: current(), to: FIT_TRANSFORM, size });
-        return animate(length, (t) => behavior.transform(t as typeof selection, zoomIdentity));
+        return animate(length, (t) => behavior.transform(t as typeof selection, zoomIdentity), {
+          silent,
+        });
       },
       getView: () =>
         toViewState({
@@ -255,12 +389,23 @@ export const useZoom = ({
     store.registerZoom(api);
 
     return () => {
+      // La cámara REAL (también a mitad de un vuelo o de una inercia) y el lienzo en que estaba.
+      const live = zoomTransform(svg);
+      previous.current = {
+        size,
+        invert: latest.current.invert,
+        camera: { k: live.k, x: live.x, y: live.y },
+      };
+      svg.removeEventListener("pointerdown", onPointerDown);
+      if (glide !== null) cancelAnimationFrame(glide.frame);
+      glide = null;
       fade?.cancel();
       store.registerZoom(null);
       selection.interrupt();
       selection.on(".zoom", null);
       svg.style.removeProperty("touch-action");
       root.toggleAttribute("data-zoomed", false);
+      root.style.removeProperty("--cm-bubble-scale");
       store.setState({ interacting: false });
     };
   }, [
@@ -279,6 +424,8 @@ export const useZoom = ({
     pan,
     doubleClick,
     constrain,
+    bubbleScaling,
+    inertia,
   ]);
 
   // `focusId` (y `initialView`): el primer valor se COLOCA sin volar ni avisar; los cambios posteriores
@@ -310,6 +457,12 @@ export const useZoom = ({
   useEffect(() => () => store.dispose(), [store]);
 };
 
+/** Cuántas muestras de posición se guardan para medir la velocidad de suelta. */
+const MAX_SAMPLES = 12;
+
+/** La inercia se da por terminada cuando le quedan menos px que estos por recorrer. */
+const GLIDE_STOP_PX = 0.5;
+
 const UNSET = Symbol("unset");
 
 /** Valores neutros cuando el zoom está desactivado (los hooks no pueden ser condicionales). */
@@ -321,6 +474,8 @@ const NO_ZOOM: ResolvedZoom = {
   pan: false,
   doubleClick: false,
   constrain: "contain",
+  bubbleScaling: "sqrt",
+  inertia: false,
   keyboard: false,
   padding: 0,
   initialView: undefined,

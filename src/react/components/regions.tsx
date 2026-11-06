@@ -1,13 +1,19 @@
 import { memo, type SyntheticEvent } from "react";
 import { useChoroplethContext } from "../choropleth-context";
 
-type RegionPathProps = { id: string; d: string; fill: string };
+type RegionPathProps = { id: string; d: string; fill: string; drillable: boolean };
 
 // Solo se re-renderiza si cambia su color o su ruta: ni el hover ni la selección lo tocan
 // (eso lo pinta `Selection` encima). Todas las props son primitivos para que `memo` sirva.
 // `fill` va en `style` (no como atributo) porque puede ser `var(--cm-empty-fill, …)`.
-const RegionPath = memo(({ id, d, fill }: RegionPathProps) => (
-  <path className="cm-region" data-region-id={id} d={d} style={{ fill }} />
+const RegionPath = memo(({ id, d, fill, drillable }: RegionPathProps) => (
+  <path
+    className="cm-region"
+    data-region-id={id}
+    data-drillable={drillable ? "" : undefined}
+    d={d}
+    style={{ fill }}
+  />
 ));
 
 // Regiones sin id (Kosovo en world-atlas): se ven, pero no se pueden cruzar ni seleccionar.
@@ -66,7 +72,13 @@ export const Regions = () => {
         <AnonymousPath key={`anonymous-${index}`} d={d} fill={emptyFill} />
       ))}
       {regions.map((region) => (
-        <RegionPath key={region.id} id={region.id} d={region.path} fill={region.fill} />
+        <RegionPath
+          key={region.id}
+          id={region.id}
+          d={region.path}
+          fill={region.fill}
+          drillable={region.drillable}
+        />
       ))}
     </g>
   );

@@ -9,6 +9,18 @@ export type {
   UseChoroplethOptions,
   UseChoroplethResult,
 } from "./use-choropleth";
+export { buildDrillEvent, defineDrillLevels, isDrillable } from "./drill-levels";
+export type { DrillEvent, DrillLevel } from "./drill-levels";
+export { useDrillEngine } from "./use-drill-engine";
+export type { DrillEngine, DrillEngineParams } from "./use-drill-engine";
+export { createDrillBridge, DRILL_BRIDGE, isDrillController, useDrillDown } from "./use-drill-down";
+export type {
+  DrillBreadcrumb,
+  DrillBridge,
+  DrillController,
+  DrillStatus,
+  UseDrillDownOptions,
+} from "./use-drill-down";
 export { ROOT_LEVEL } from "./map-item";
 export type {
   DrillLevelInfo,
@@ -49,3 +61,4 @@ export type { TooltipContext, TooltipProps } from "./components/tooltip";
 export { ChoroplethMap } from "./choropleth-map";
 export type { ChoroplethMapProps, LegendOptions, LegendPosition } from "./choropleth-map";
 export type { CameraOptions, TransitionResult, ViewState, ZoomOptions, ZoomTarget } from "../core";
+export type { DrillContext } from "../core";

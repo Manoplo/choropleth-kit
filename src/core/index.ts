@@ -18,6 +18,7 @@ export type {
 } from "./bounds";
 export {
   applyTransform,
+  bubbleScale,
   constrainAxis,
   constrainTransform,
   createZoomInterpolator,
@@ -25,16 +26,21 @@ export {
   FIT_TRANSFORM,
   flightDuration,
   inertiaOffset,
+  INERTIA_MIN_VELOCITY,
   INERTIA_TAU_MS,
+  INERTIA_WINDOW_MS,
   invertTransform,
   isFitTransform,
   MAX_FLIGHT_MS,
   MIN_FLIGHT_MS,
   preserveView,
+  releaseVelocity,
   toViewState,
   transformToZoomView,
 } from "./camera";
 export type {
+  BubbleScaling,
+  CameraSample,
   CameraTransform,
   ConstrainAxisParams,
   ConstrainTransformParams,
@@ -42,6 +48,7 @@ export type {
   FlightDurationParams,
   InertiaOffsetParams,
   PreserveViewParams,
+  ReleaseVelocityParams,
   Size,
   ToViewStateParams,
   ViewLevel,
@@ -62,8 +69,16 @@ export {
   createProjection,
   DEFAULT_ASPECT_RATIO,
   DEFAULT_PROJECTION,
+  projectionFactory,
+  rebaseProjection,
+  relativeTransform,
 } from "./projection";
-export type { CreateProjectionOptions, ProjectionName } from "./projection";
+export type {
+  CreateProjectionOptions,
+  ProjectionName,
+  RebaseParams,
+  RebaseResult,
+} from "./projection";
 export { buildLegend, defaultFormatValue } from "./legend";
 export type { BuildLegendOptions, LegendItem } from "./legend";
 export { createBorders } from "./borders";
@@ -114,3 +129,26 @@ export type {
   ZoomOptions,
   ZoomTarget,
 } from "./zoom";
+export { classifyDrill, createDrillState, drillReducer, layerKey, savedCameraFor } from "./drill";
+export type {
+  DrillDirection,
+  DrillLayer,
+  DrillLayerRole,
+  DrillMachineEvent,
+  DrillMachineState,
+  DrillPhase,
+} from "./drill";
+export {
+  buildBreadcrumbs,
+  clampPath,
+  contextOf,
+  createLruCache,
+  DEFAULT_LEVEL_CACHE_SIZE,
+  drillDirectionBetween,
+  geographyKeyFor,
+  resolveDrillData,
+  validateLevels,
+} from "./drill-levels";
+export type { DrillContext, DrillCrumb, LevelShape, LruCache } from "./drill-levels";
+export { buildProjectionChain } from "./drill-chain";
+export type { BuildProjectionChainParams, ChainLevel, ProjectionChain } from "./drill-chain";

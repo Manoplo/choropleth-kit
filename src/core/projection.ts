@@ -6,8 +6,11 @@ import {
   geoMercator,
   geoNaturalEarth1,
   geoOrthographic,
+  type GeoPermissibleObjects,
   type GeoProjection,
 } from "d3-geo";
+import type { Padding } from "./bounds";
+import type { CameraTransform } from "./camera";
 
 // El registro guarda FUNCIONES que crean una proyección, no proyecciones ya creadas.
 // Por qué: una proyección d3 es un objeto MUTABLE (escala, centro, traslación) y `fitSize`
@@ -29,6 +32,11 @@ const PROJECTIONS = {
 } as const satisfies Record<string, () => GeoProjection>;
 
 export type ProjectionName = keyof typeof PROJECTIONS;
+
+/** La fábrica de una proyección por nombre (cada llamada, una instancia nueva). */
+export const projectionFactory = (
+  name: ProjectionName = DEFAULT_PROJECTION,
+): (() => GeoProjection) => PROJECTIONS[name];
 
 export const DEFAULT_PROJECTION: ProjectionName = "equalEarth";
 
@@ -104,4 +112,98 @@ export const computeAspectRatio = ({
   const ratio = (x1 - x0) / (y1 - y0);
   if (!Number.isFinite(ratio) || ratio <= 0) return DEFAULT_ASPECT_RATIO;
   return Math.min(MAX_ASPECT_RATIO, Math.max(MIN_ASPECT_RATIO, ratio));
+};
+
+// ── rebase (drill-down, dd.md §11.2.4) ─────────────────────────────────────────────────────────────
+
+/**
+ * La afín `R` tal que `to(p) === R(from(p))` para todo `p`, donde `R(q) = k·q + (x, y)`.
+ *
+ * Solo es cierta si `from` y `to` comparten TODO salvo `scale` y `translate` (misma proyección,
+ * rotación, centro…). Entonces cambiar de una a otra es una transformación afín de los píxeles, y por
+ * tanto se puede expresar como una cámara (`CameraTransform`): `R` es a la vez «lo que hay que mover
+ * la cámara del padre» y «lo que separa los píxeles del padre de los del hijo».
+ */
+export const relativeTransform = (from: GeoProjection, to: GeoProjection): CameraTransform => {
+  const k = to.scale() / from.scale();
+  const [fx, fy] = from.translate();
+  const [tx, ty] = to.translate();
+  return { k, x: tx - k * fx, y: ty - k * fy };
+};
+
+export type RebaseParams = {
+  /** La proyección del nivel padre (no se modifica). */
+  parent: GeoProjection;
+  /** Crea una proyección nueva del MISMO tipo que `parent` (las proyecciones d3 son mutables). */
+  factory: () => GeoProjection;
+  /** La geometría que debe llenar la vista: el cuerpo principal de la región (`getFocusGeometry`). */
+  focus: GeoPermissibleObjects;
+  width: number;
+  height: number;
+  padding: Padding;
+};
+
+export type RebaseResult = {
+  /** La proyección del hijo, ajustada a `focus`. A `k = 1` la precisión es completa. */
+  projection: GeoProjection;
+  /** `projection(p) === relative(parent(p))`: el destino exacto del vuelo y la capa de contexto. */
+  relative: CameraTransform;
+};
+
+/**
+ * Proyección del nivel hijo con continuidad perfecta (dd.md §11.2.4).
+ *
+ * Dos soluciones ingenuas fallan: una sola proyección con `k` enorme (a `k ≈ 300` los 3 decimales de
+ * `geoPath` dan dientes de sierra) y un `fitSize` nuevo por nivel (el hijo aparece a otra escala y
+ * posición: salto visible). Aquí el hijo es la proyección del padre con **la misma rotación, centro y
+ * demás parámetros** y solo `scale`/`translate` reajustados (`fitExtent`). Eso es una afín de la salida,
+ * así que si el vuelo termina exactamente en `relative`, pasar a la proyección hija con cámara
+ * identidad pinta los **mismos píxeles**.
+ */
+export const rebaseProjection = ({
+  parent,
+  factory,
+  focus,
+  width,
+  height,
+  padding,
+}: RebaseParams): RebaseResult => {
+  if (!(Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0)) {
+    throw new Error(
+      `[choropleth] rebaseProjection: width and height must be finite numbers > 0 (received: ${width} × ${height}).`,
+    );
+  }
+  const child = copyShape(factory(), parent);
+  child.fitExtent(
+    [
+      [padding.left, padding.top],
+      [width - padding.right, height - padding.bottom],
+    ],
+    focus,
+  );
+  // Un foco vacío o de un solo punto no tiene tamaño: `fitExtent` da escala 0, Infinity o NaN.
+  if (!(child.scale() > 0) || !Number.isFinite(child.scale())) {
+    throw new Error(
+      "[choropleth] rebaseProjection: the focus geometry has no extent (empty or a single point), so it cannot be fitted.",
+    );
+  }
+  return { projection: child, relative: relativeTransform(parent, child) };
+};
+
+/**
+ * Copia en `child` todo lo que no sea `scale`/`translate` (que lo fija `fitExtent`). Si faltara
+ * algo (p. ej. las paralelas de una cónica) el hijo ya no sería una afín del padre.
+ */
+const copyShape = (child: GeoProjection, parent: GeoProjection): GeoProjection => {
+  child.rotate(parent.rotate()).center(parent.center());
+  child.angle(parent.angle()).reflectX(parent.reflectX()).reflectY(parent.reflectY());
+  child.precision(parent.precision());
+  const clipAngle = parent.clipAngle();
+  if (clipAngle !== null) child.clipAngle(clipAngle);
+  const conic = parent as GeoProjection & { parallels?: () => [number, number] };
+  const target = child as GeoProjection & { parallels?: (p: [number, number]) => unknown };
+  if (conic.parallels !== undefined && target.parallels !== undefined) {
+    target.parallels(conic.parallels());
+  }
+  return child;
 };

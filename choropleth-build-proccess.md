@@ -18,20 +18,20 @@
 
 ## Estado actual y handoff (leer primero)
 
-> Actualizada tras el **paso 26**. Rama `feat/zoom-pan`. **489 tests** en verde; `typecheck`, `lint`,
+> Actualizada tras el **paso 31** (visual pendiente del humano; **sin commitear**; el 30 ya está commiteado). Rama `master`. **696 tests** en verde; `typecheck`, `lint`,
 > `format:check`, `build` y `build-storybook` limpios. Cobertura de `src/core` 100 % líneas.
 
 ### Dónde estamos
 
-| Fase                   | Pasos  | Estado                                                                                          |
-| ---------------------- | ------ | ----------------------------------------------------------------------------------------------- |
-| v0.1                   | 1-13   | ✅                                                                                              |
-| A · cimientos          | 14-22  | ✅ (revisión visual de «Foundations» pendiente del humano)                                      |
-| **B · cámara**         | 23-26  | ✅ código y tests. Revisión visual: el 24 la dio por buena el humano; **25 y 26 sin confirmar** |
-| B · cámara             | **27** | ⏳ **SIGUIENTE**: contraescalado de burbujas, inercia y resize sin salto                        |
-| C · drill-down (v0.4)  | 28-33  | ⏳ (tareas 15-20 de `dd.md §21`; la parte más grande)                                           |
-| D · pulido visual      | 34-37  | ⏳                                                                                              |
-| Accesibilidad completa | —      | ⏳ **al final, por decisión del humano** (`dd.md §13`)                                          |
+| Fase                   | Pasos  | Estado                                                                                                                                                                                                                                                                                                                                                              |
+| ---------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| v0.1                   | 1-13   | ✅                                                                                                                                                                                                                                                                                                                                                                  |
+| A · cimientos          | 14-22  | ✅ (revisión visual de «Foundations» pendiente del humano)                                                                                                                                                                                                                                                                                                          |
+| **B · cámara**         | 23-26  | ✅ código y tests. Revisión visual: el 24 la dio por buena el humano; **25 y 26 sin confirmar**                                                                                                                                                                                                                                                                     |
+| B · cámara             | **27** | ✅ (revisión visual confirmada por el humano)                                                                                                                                                                                                                                                                                                                       |
+| C · drill-down (v0.4)  | 28-34  | **28** ✅ reducer. **29** ✅ rebase. **30** ✅ estado (`useDrillDown`). **31** ✅ código y tests (`Hecho*`: visual pendiente) motor de niveles con cambio instantáneo. **32 ⏳ SIGUIENTE**: coreografía (reducer + vuelo a `R` + contexto gris + revelado + lateral). 33: breadcrumb + teclado + `aria-live`. 34: prefetch (`onDrillIntent`) + avisos de desarrollo |
+| D · pulido visual      | 35-38  | ⏳                                                                                                                                                                                                                                                                                                                                                                  |
+| Accesibilidad completa | —      | ⏳ **al final, por decisión del humano** (`dd.md §13`)                                                                                                                                                                                                                                                                                                              |
 
 ### Qué leer para el paso 27 (no más)
 
@@ -58,6 +58,7 @@ aplicado la vista se desplaza.
 - **Errores y avisos de consola en inglés**, con prefijo `[choropleth]`. Documentación y comentarios, en español.
 - **`dimOthers` por defecto `"selection"`**. Chipre del Norte y Somalilandia quedan en gris sin id (Legal).
 - Se puede **romper la API** antes de 1.0, sin alias de compatibilidad.
+- **Contexto del drill en gris** (sin color de dato del padre), por corrección cartográfica: lo confirmó el humano en el paso 31 (`dd.md §11.2.5`).
 
 ### Trampas aprendidas (cuestan tiempo si se repiten)
 
@@ -2405,3 +2406,379 @@ era correcto): los tests de encuadre usan dos bloques propios con el sentido hor
 anillo cruza el antimeridiano, ese anillo proyectado tiene un salto de borde a borde. Visualmente la burbuja de Rusia salió
 plausible en la comprobación del paso 22, pero **no está garantizado**. ¿Lo reviso con una prueba específica (ancla de Rusia
 dentro de su cuerpo principal) antes de seguir, o lo dejamos para el pulido?
+
+# Paso 27: contraescalado de burbujas, inercia y resize sin salto
+
+Archivos nuevos: `src/react/camera-feel.test.tsx`, `stories/zoom-feel.stories.tsx`. Tocan: `core/camera.ts`,
+`core/zoom.ts`, `use-zoom.ts`, `components/svg.tsx`, `styles.css`. Tarea 14 de `dd.md §21`. **Sin commitear.**
+
+## 27.1 Qué se hizo
+
+| Pieza                | Comportamiento                                                                                                                                                                                                            |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Contraescalado**   | `zoom.bubbleScaling: "sqrt" (default) \| "screen" \| "geo"`. `use-zoom` escribe UNA variable por frame, `--cm-bubble-scale` (`1/√k`, `1/k` o `1`); el CSS de `.cm-bubble` aplica `scale()` con `transform-box: fill-box`. |
+| **Inercia**          | Al soltar un arrastre: velocidad de las muestras de ≤ 100 ms; si ≥ 0,3 px/ms, `inertiaOffset` con τ = 325 ms hasta agotarse. `zoom.inertia` (default `true`).                                                             |
+| **Resize sin salto** | Al cambiar el tamaño se guarda la cámara real y el `invert` del lienzo viejo; al reinstalar, `preserveView` (centro geográfico + `k`) y `constrain`.                                                                      |
+
+`core` nuevo (puro, con tests): `bubbleScale`, `releaseVelocity`, constantes `INERTIA_MIN_VELOCITY` / `INERTIA_WINDOW_MS`.
+
+## 27.2 Decisiones
+
+- **La inercia anima con `requestAnimationFrame`, no con una transición de d3.** `interpolateZoom` entre dos vistas del
+  mismo ancho **hace un arco alejándose** (zoom-out): una inercia de pan no puede pasar por ahí. Cada frame llama a
+  `behavior.transform` con una cámara absoluta; `onViewChange` y el store se tocan **una vez**, al terminar.
+- **`behavior.transform` no aplica `constrain`** (solo gestos, `scaleBy`, `translateBy`): la inercia lo aplica a mano
+  (un test lo cazó: sin él la cámara llegaba a x = −3466). Se detiene al chocar con un límite.
+- **Se frena con** `pointerdown`, con el `start` de cualquier gesto del usuario y con cualquier movimiento programático
+  (`zoomTo`, botones). Al frenarla se confirma la cámara y se avisa a `onViewChange`.
+- **Sin inercia con «reducir movimiento»**, con zoom (la `k` cambia en la ventana), si la mano se paró antes de soltar o
+  si la velocidad no llega al umbral. Mientras desliza hay `data-interacting` (sin hover).
+- **Resize:** no avisa a `onViewChange` (como cualquier restauración). `bubbleScaling` e `inertia` son primitivas en las
+  dependencias del efecto (cambiarlas reinstala, y la variable se recalcula con la cámara actual).
+- **Desviación:** las burbujas llevan `vector-effect: non-scaling-stroke` para que el trazo de 0,5 px no se afine con el
+  contraescalado (no está en `dd.md`; reversible).
+- `bubbleScaling` e `inertia` viven en `ZoomOptions` (`dd.md` no fija dónde va el primero).
+
+## 27.3 Tests
+
+519 en verde (489 + 30 nuevos); `typecheck`, `lint`, `format:check`, `build` limpios; cobertura de `src/core` 100 % líneas.
+Mutaciones a mano revertidas (cada una rompe tests): sin `preserveView`; inercia sin `constrain`; `pointerdown` sin frenar;
+sin escribir `--cm-bubble-scale`; sin umbral/ventana de velocidad; sin frenar en `start`.
+
+## 27.4 Verificación visual: confirmada por el humano
+
+`pnpm storybook` → **Zoom / BubblesAndInertia** (`Sqrt`, `Screen`, `Geo`, `NoInertia`):
+
+| Qué comprobar                                                                                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Acercar con la rueda: `Sqrt` crece despacio, `Screen` no cambia de tamaño, `Geo` crece con el mapa. Sin parpadeos ni saltos al hacer zoom.  |
+| Con zoom, arrastra **rápido** y suelta: desliza y frena suave (~1 s). Agárralo a mitad: se para al instante. Arrastra despacio: no desliza. |
+| `NoInertia`: al soltar se para en seco.                                                                                                     |
+| **Resize:** con zoom aplicado, cambia el ancho de la ventana: la vista **no vuelve al encaje** ni se desplaza (mismo centro y zoom).        |
+| Las burbujas siguen sobre su país y el trazo blanco se mantiene fino.                                                                       |
+
+## 27.5 Antes de pasar al paso 28: ¿lo tienes claro?
+
+- ¿Por qué la inercia no usa una transición de d3-zoom?
+- ¿Por qué hay que aplicar `constrain` a mano en `behavior.transform`?
+- ¿Qué se conserva en un resize, y por qué hace falta el `invert` del lienzo **antiguo**?
+- ¿Por qué `1/√k` y no `1/k` por defecto?
+
+# Paso 28: la máquina de estados del drill-down (`core/drill.ts`)
+
+Archivos nuevos: `src/core/drill.ts`, `src/core/drill.test.ts`; `core/index.ts` exporta. Tarea 15 de `dd.md §21`. Sin React, sin DOM y
+**sin efecto visual** (nada que abrir en Storybook). **Sin commitear.**
+
+## 28.1 Qué se hizo
+
+`drillReducer(state, event)` es la coreografía de `dd.md §11.2.3` convertida en una función pura. Quien la use (paso 31) traduce el
+mundo real a eventos y pinta el estado; aquí solo se decide **qué pasa después de qué**.
+
+```
+ idle ──DRILL(down|lateral)──► flying ──FLIGHT_END ok + geometría lista──► revealing ──REVEAL_END──► idle
+                                 │  └── geometría pendiente ──► loading ──GEOMETRY_READY──► revealing
+ idle ──DRILL(up)────────────► flying(up) ──FLIGHT_END──► idle        (todo ya dibujado: solo falta la cámara)
+ idle ──DRILL(jump)──────────► idle (en caché)  |  loading ──GEOMETRY_READY──► idle      (sin animación)
+ error de geometría ──► (al acabar el vuelo / ya) flying(up) de vuelta a `returnCamera` ──► idle, con `error` puesto
+```
+
+Exporta además `createDrillState(path)`, `classifyDrill(from, to)`, `layerKey` y `savedCameraFor`.
+
+## 28.2 Modelo: capas
+
+La capa de profundidad `d` muestra los hijos de `path[0..d)`. En `["ES"]` hay dos: el mundo (`context`) y las regiones de España
+(`active`). Cada transición es «de estas capas a estas otras»; `layersFor` calcula el reparto de roles:
+
+| Transición    | Capas                                                                                       |
+| ------------- | ------------------------------------------------------------------------------------------- |
+| bajar         | durante el vuelo no cambia nada; al revelar, el padre pasa a `context` y el hijo `entering` |
+| lateral ES→FR | el mundo sigue de contexto; las regiones de ES `exiting`, las de FR `entering`              |
+| subir         | **al instante**: la hija `exiting`, el contexto `active`; solo queda el vuelo de cámara     |
+| salto         | estado final directo, sin `entering` ni `exiting`                                           |
+
+`layerKey` es el JSON del prefijo del path (no `join("/")`): un id con `/` o `.` no puede colisionar con otra ruta.
+
+## 28.3 Decisiones (y qué añade respecto al esquema de `dd.md`)
+
+- **`path` ≠ `settledPath`.** `path` es el destino optimista (cambia en el clic); `settledPath` es lo dibujado como activo. Sin
+  esta distinción no se puede deshacer una bajada ni saber cuál es el «origen» de una redirección.
+- **`flightId`.** Un vuelo redirigido se resuelve con `completed: false` **después** de que ya haya empezado el siguiente. Sin un id,
+  ese `FLIGHT_END` viejo cancelaría la bajada nueva. Cada `DRILL` incrementa el id; el `FLIGHT_END` de otro id se ignora. Igual con
+  `geometryKey` para los avisos de geometría de un destino ya abandonado.
+- **La dirección se deduce, no se confía.** `DRILL.direction` solo se respeta si es `"jump"`; el resto sale de `classifyDrill(settledPath, to)`.
+  `down` = un nivel más; `up` = un ancestro (cualquier nº de pasos); `lateral` = cambia solo el último id; **cualquier otra cosa es `jump`**
+  (p. ej. bajar dos niveles de golpe: no hay un vuelo único que lo cuente bien).
+- **Cámaras.** `DRILL.camera` es la cámara en el instante del clic. Se guarda en `savedCameras[origen]` **solo al bajar desde reposo**
+  (una redirección a mitad de vuelo traería una cámara intermedia que pisaría la buena) y se **poda** al subir. `returnCamera` es adonde
+  se vuelve si la bajada falla o se cancela. El lateral no guarda: la cámara de «antes de bajar a España» sigue siendo la válida.
+- **Un gesto que corta el vuelo de bajada cancela la bajada** (no hay vuelo de vuelta: el usuario ya tiene el mapa en la mano). Cortar una
+  **subida** no deshace nada, porque ya estaba dibujada.
+- **Fallo de geometría:** si ocurre volando, se espera al fin del vuelo y se vuela de vuelta; si ocurre cargando, la vuelta es inmediata.
+  `state.error` conserva la `key` fallida hasta el siguiente `DRILL` (de ahí saldrán `onDrillError` y la sacudida). Un nivel con 0 features
+  se tratará igual: la capa de React emitirá `GEOMETRY_ERROR`.
+- **Clic repetido sobre el destino en curso: no hace nada.** Lo descubrí al revisar: reiniciaba `geometry` a `pending` aunque ya hubiera
+  llegado, y nunca volvería a avisar. Volver al origen mientras se baja (`equal`) sí es una cancelación con vuelo de vuelta.
+- **Clic durante el revelado:** se asienta lo que había y empieza la siguiente bajada.
+
+## 28.4 Tests
+
+567 en verde (519 + 48 nuevos); `typecheck`, `lint`, `format:check` limpios; `drill.ts` 100 % líneas, 99 % ramas.
+Cubren: clasificación (10 casos), identidad de capas, montaje con ruta, bajar paso a paso (con y sin caché), redirección en vuelo y
+cargando, clic durante el revelado, cancelar (gesto y «subir antes de terminar de bajar»), subir (1 y N niveles, cámaras podadas),
+lateral, saltos (con y sin caché, con error), errores de geometría (volando, cargando, obsoletos) y eventos fuera de lugar.
+
+Mutaciones a mano revertidas (cada una rompe tests): no ignorar el `FLIGHT_END` viejo; no ignorar la geometría vieja; no guardar la cámara;
+el gesto no cancela; el error no deshace; no podar cámaras; la redirección pisa `returnCamera`; quitar la guarda del clic repetido.
+
+## 28.5 Verificación visual
+
+No aplica: no hay efecto visible hasta el paso 31 (capas `active`/`context`).
+
+## 28.6 Antes de pasar al paso 29: ¿lo tienes claro?
+
+- ¿Por qué `path` y `settledPath` son dos cosas distintas?
+- ¿Qué fallaría sin `flightId`? Pon un ejemplo con dos clics seguidos.
+- ¿Por qué al subir las capas cambian al instante y al bajar no?
+- ¿Por qué bajar dos niveles de golpe es un `jump` y no un `down`?
+- ¿Por qué la cámara se guarda solo al bajar desde reposo?
+
+# Paso 29: `rebaseProjection` y `relativeTransform` (continuidad del drill-down)
+
+Archivos que tocan: `src/core/projection.ts`, `projection.test.ts`, `core/index.ts`. Tarea 16 de `dd.md §21`. Puro `core`, **sin efecto
+visual**. **Sin commitear.**
+
+## 29.1 El problema que resuelve
+
+Al bajar de «mundo» a «España» hay que cambiar de proyección: la del mundo, con `k` enorme, no sirve (a `k ≈ 300` los 3 decimales de
+`geoPath` dan dientes de sierra). Pero si la proyección hija se ajusta con un `fitSize` nuevo, **el hijo aparece a otra escala y
+posición que la imagen que se estaba viendo**: un salto visible justo al final del vuelo.
+
+## 29.2 La idea: una proyección d3 es «raw ∘ afín»
+
+Una proyección d3 calcula `píxel = scale · raw(lon, lat) + translate`. Si dos proyecciones comparten **todo menos `scale` y
+`translate`** (tipo, rotación, centro, paralelas…), la hija es una **transformación afín** de los píxeles de la padre:
+
+```
+ hijo(p) = R(padre(p))        con  R(q) = k·q + (x, y)
+ k = scale_hijo / scale_padre
+ x = translate_hijo.x − k · translate_padre.x   (igual para y)
+```
+
+`R` tiene exactamente la forma de una cámara (`CameraTransform`). Eso es la clave: **el vuelo termina en `R`**, y entonces cambiar a la
+proyección hija con cámara identidad pinta los mismos píxeles. El cambio de proyección es invisible y el hijo tiene precisión completa
+a `k = 1`.
+
+- `relativeTransform(from, to)`: calcula `R`.
+- `rebaseProjection({ parent, factory, focus, width, height, padding })`: crea la hija (`factory()` nueva: las proyecciones son
+  mutables), le copia **todo lo que no sea escala/traslación**, la ajusta a `focus` con `fitExtent` y devuelve
+  `{ projection, relative }`. No modifica `parent`.
+
+## 29.3 Decisiones y desviaciones respecto a `dd.md`
+
+- **Se copia más que `rotate` y `center`.** El esquema de `dd.md` copia solo esos dos. Si el padre tiene otras cosas
+  (`clipAngle`, `precision`, `angle`, `reflectX/Y`, y las **paralelas** de una cónica) y el hijo no, deja de ser una afín del padre y el
+  rebase salta. `copyShape` las copia (las paralelas solo si existen).
+- **`precision` no se ve en un punto.** Afecta al remuestreo de líneas, no a `projection(p)`: la prueba de equivalencia con puntos no la
+  detectaba (la mutación sobrevivió). Por eso hay un test que comprueba `clipAngle` y `precision` directamente.
+- **Errores en inglés y explicados:** tamaño no válido, y foco sin extensión (vacío o un punto: `fitExtent` daría escala 0/∞/NaN).
+- **`R.k` no se limita a `scaleExtent`.** El vuelo del rebase debe acabar exactamente en `R`; el límite de zoom del nivel hijo empieza
+  en su propio `k = 1`. Si algún nivel diese una `R.k` mayor que `zoom.max`, habría que revisarlo en el paso que use esto (31).
+- **Lo que NO está aquí** (a propósito): la **cadena** de proyecciones de toda la ruta y la caché LRU. Son funciones del nivel superior
+  que usarán esto; entran con `useDrillDown` / las capas (pasos 30-31).
+
+## 29.4 Tests
+
+582 en verde (567 + 15 nuevos); `typecheck`, `lint`, `format:check` limpios; `projection.ts` 100 % líneas.
+
+- **El que manda — equivalencia afín:** para 200 puntos dentro de España, `child(p)` y `R(parent(p))` difieren < 1e-6, en las **cinco**
+  proyecciones del registro (equalEarth, naturalEarth, mercator, albers, orthographic).
+- Con el padre **rotado y centrado**; con **paralelas** cónicas personalizadas; con `clipAngle`/`precision`.
+- El hijo encuadra el foco **dentro del padding** y llena el lado limitante; acerca (`R.k > 5` para España en el mundo).
+- No muta al padre; **encadenar dos rebases** es la composición de las dos afines; errores.
+
+Mutaciones a mano revertidas (cada una rompe tests): sin heredar rotate/center; sin heredar paralelas; `R` sin traslación; `R` con la
+traslación mal; ignorar el padding; sin guardas de extensión; sin heredar `precision`; sin heredar `clipAngle`.
+
+## 29.5 Verificación visual
+
+No aplica: nada visible hasta que las capas usen esto (paso 31).
+
+## 29.6 Antes de pasar al paso 30: ¿lo tienes claro?
+
+- ¿Por qué cambiar `scale` y `translate` de una proyección d3 equivale a una transformación afín de la salida?
+- ¿Qué se vería en pantalla si el vuelo terminase en `boundsToTransform` en vez de en `R`?
+- ¿Por qué hay que copiar las paralelas y el `clipAngle` y no solo `rotate` y `center`?
+- ¿Por qué la prueba de equivalencia con puntos no detecta un `precision` mal copiado?
+
+# Paso 30: el estado de navegación del drill-down (`useDrillDown`, niveles, caché LRU)
+
+Archivos nuevos: `src/core/drill-levels.ts` (+ test), `src/react/drill-levels.ts`, `src/react/use-drill-down.ts` (+ test). Tocan
+`core/index.ts` y `react/index.ts`. Primera mitad de la tarea 17 de `dd.md §21`. **Sin efecto visual. Sin commitear.**
+
+## 30.1 Qué se hizo y qué NO
+
+La tarea 17 pide «`useDrillDown` + prop `drill`, `defineDrillLevels`, `data` como selector, `onDrill*`, caché LRU». Tal cual es demasiado para
+un paso verificable, así que **se parte en dos**: este paso es el **estado** (todo probable sin pintar); la **prop `drill` dentro del mapa**
+(cargar la geometría de cada nivel, las capas, el vuelo con rebase, `onDrill*` con la coreografía) es el paso 31, porque necesita las capas.
+
+| Pieza                                                  | Dónde                     | Qué hace                                                                                |
+| ------------------------------------------------------ | ------------------------- | --------------------------------------------------------------------------------------- |
+| `DrillContext`, `contextOf`                            | `core/drill-levels.ts`    | `{ path, parentId, depth }` de una ruta                                                 |
+| `validateLevels`, `clampPath`                          | idem                      | lista de niveles válida; ruta recortada a N − 1 ids                                     |
+| `buildBreadcrumbs`                                     | idem                      | migas: raíz + un paso por id                                                            |
+| `geographyKeyFor`                                      | idem                      | clave de caché de la geometría (`inherit` hereda la del padre)                          |
+| `resolveDrillData`                                     | idem                      | `data` como lista o como selector; `undefined` = cargando                               |
+| `createLruCache`                                       | idem                      | caché LRU (8 por defecto) para los niveles ya calculados                                |
+| `DrillLevel`, `defineDrillLevels`, `DrillEvent`        | `react/drill-levels.ts`   | tipos de `dd.md §11.2.2`; `defineDrillLevels` además **valida al definir**              |
+| `isDrillable`, `buildDrillEvent`                       | idem                      | ¿se puede bajar desde este item?; el evento `{ direction, from, to, item? }`            |
+| `useDrillDown`, `isDrillController`, `DrillController` | `react/use-drill-down.ts` | la ruta (controlada o no), nivel, contexto, migas, `drillDown/Up/To`, `reset`, `status` |
+
+## 30.2 Decisiones
+
+- **Controlado = `path` presente** (como `<input value>`). Controlado: el hook solo **avisa** (`onPathChange`) y la ruta no cambia hasta que el
+  padre re-renderiza con la nueva; así el padre puede rechazar o redirigir. No controlado: estado interno + aviso.
+- **Las funciones son estables** (`useCallback` + una ref con lo último): se pasan a efectos del mapa y a handlers, y no deben reinstalarlos.
+  Dos llamadas en el mismo tick (`drillUp(); drillDown(x)`) se componen porque la ref se actualiza al instante.
+- **La ruta se recorta** a los niveles que existen (N niveles → N − 1 ids). Una URL vieja más profunda no rompe: se recorta y se avisa **una vez**
+  en desarrollo (consola en inglés, `[choropleth] useDrillDown: …`). Bajar más allá del último nivel se ignora con el mismo aviso.
+- **`status` lo escribe el mapa** por un canal externo (`DrillBridge`, `DRILL_BRIDGE`), no por `useState`: no hay que re-renderizar al consumidor
+  en cada cambio de fase (mismo razonamiento que el `map-store`). El controlador lo lee con `useSyncExternalStore`. Es API interna, aunque esté
+  exportada.
+- **`getLabel` sin `feature` ni `datum` por ahora.** El hook no ve la geometría, así que el nombre de las migas es el id salvo que el consumidor dé
+  `getLabel`. El nombre real (`properties.name`) lo pondrá el mapa en el paso 33 (breadcrumb). La raíz usa `levels[0].label ?? levels[0].id`;
+  `labels.breadcrumbRoot` aún no existe en `labels.ts` y se añade con el breadcrumb.
+- **Validar al definir** (`defineDrillLevels`/`useDrillDown`): lista vacía, ids repetidos y un primer nivel `geography: "inherit"` lanzan un error en
+  inglés que dice qué tocar. Más barato que descubrirlo a mitad de un clic.
+- **`geographyKeyFor`:** `geographyKey` del consumidor > `${id}:${parentId}` si la geometría es una función > `id`. Con `"inherit"` la clave es la
+  del nivel padre: las tiendas de una región comparten su geometría y no se cachea dos veces.
+- **Dónde vive cada cosa:** lo puro (contexto, migas, LRU, claves, validación) en `core`; los tipos que mencionan `MapItem` (`DrillLevel`,
+  `DrillEvent`, `isDrillable`) en `react`, porque `core` no puede importar de `react`.
+- **Pendiente del 31:** `onDrill`/`onDrillEnd`/`onDrillError`/`onDrillIntent` como props del mapa; `data` como selector (la función ya está en
+  `resolveDrillData`, falta llamarla desde `Root`); la caché LRU está lista pero nadie la usa todavía.
+
+## 30.3 Tests
+
+643 en verde (582 + 61 nuevos); `typecheck`, `lint`, `format:check`, `build` limpios.
+
+- **`core`:** contexto, validación (los 3 errores), recorte, migas, claves (fija, por padre, `inherit`, personalizada), datos (lista, `undefined`,
+  selector), LRU (expulsa el menos reciente, `get` refresca, `has` no, reescribir no crece, capacidad inválida).
+- **Hook:** raíz, `defaultPath`, bajar/subir/reset con `onPathChange`, `drillUp(n)` y saturación, `drillTo` lateral/salto, ir a la ruta actual no avisa
+  ni re-renderiza, dos llamadas en el mismo tick, bajar de más, estabilidad de las funciones; **controlado** (avisa pero no cambia, el padre rechaza,
+  cambio externo, `path` manda sobre `defaultPath`); ruta demasiado profunda; migas; `status` por el canal; `isDrillController`; `isDrillable`;
+  `buildDrillEvent`.
+
+Mutaciones a mano revertidas (rompen tests): sin avisar `onPathChange`; sin ref sincronizada en el tick; sin recorte de ruta; sin comprobar «misma
+ruta»; `canDrillUp` fijo; último nivel perforable; `canDrill` ignorado; LRU sin refrescar en `get`; LRU que expulsa el más nuevo; clave sin padre;
+`inherit` sin heredar. **Dos supervivientes:** (1) `drillUp` sin saturar: era un hueco real (con `steps = profundidad + 1`, `slice(0, -1)` dejaría
+un id; el test probaba con 5) y se añadió el test; (2) «el modo controlado también escribe el estado interno» es un mutante **equivalente**: el
+estado interno se ignora en controlado, no hay comportamiento observable que probar.
+
+## 30.4 Verificación visual
+
+No aplica: no hay nada que ver hasta que el mapa use `drill` (paso 31).
+
+## 30.5 Antes de pasar al paso 31: ¿lo tienes claro?
+
+- ¿Por qué el hook controlado no cambia `path` por sí mismo, y qué puede hacer el padre gracias a eso?
+- ¿Por qué `status` viaja por un canal externo y no por `useState`?
+- ¿Qué pasa con `?path=ES.MD.X.Y` si solo hay tres niveles?
+- ¿Por qué la clave de caché de un nivel `"inherit"` es la de su padre?
+- ¿Por qué `DrillLevel` está en `react` y `validateLevels` en `core`?
+
+# Paso 31: la prop `drill` en el mapa (motor de niveles, cambio instantáneo)
+
+Archivos nuevos: `src/core/drill-chain.ts` (+ test), `src/react/use-drill-engine.ts`, `src/react/drill.test.tsx`,
+`stories/drill-down.stories.tsx`. Tocan: `use-choropleth.ts`, `core/projection.ts`, `components/regions.tsx`, `map-store.ts`, `use-zoom.ts`,
+`styles.css`, los índices. Parte «motor» de las tareas 17-18 de `dd.md §21`. **Sin commitear.**
+
+## 31.1 Qué se hizo y qué NO
+
+Hasta ahora `useChoropleth` era un motor de **un solo nivel**: una geometría, una proyección, un join. En lugar de reescribirlo, el
+drill lo usa tal cual: **un mapa con `drill` es un mapa de UN nivel (el que se muestra) con otras opciones**. `useDrillEngine` decide
+cuál es ese nivel, carga su geometría y entrega las opciones efectivas; el join, la escala, las burbujas y la leyenda no se enteran.
+
+Lo que **sí** hace este paso (todo con cambio de nivel **instantáneo**): `drill={levels}` (no controlado) o `drill={useDrillDown(...)}`
+(controlado); geometría por nivel con caché LRU; cadena de proyecciones con rebase; `data` como selector; clic que baja; `onDrill`,
+`onDrillEnd`, `onDrillError`; vuelta atrás si falla.
+
+Lo que **no** hace (paso 32): vuelo de cámara hasta `R`, capa de contexto gris, revelado, pulso de carga, navegación lateral animada. Por eso
+al bajar a un país el mapa **salta** (es lo esperado en este paso) y con niveles que no son `"inherit"` los vecinos desaparecen en lugar de
+quedar en gris.
+
+## 31.2 Cómo funciona
+
+```
+ drill (niveles | controlador) ──► useDrillEngine ──► opciones efectivas ──► useChoropleth (igual que siempre)
+                                        │  ├─ geometría de cada profundidad de la ruta (fija o por función; caché LRU)
+                                        │  ├─ ¿qué nivel se muestra? el destino, o el anterior mientras carga
+                                        │  └─ features por profundidad ──► buildProjectionChain ──► proyección del nivel
+```
+
+- **Qué se muestra.** El destino (`controller.path`) puede no estar listo (geometría o datos). Se sigue mostrando el nivel **anterior con SUS
+  datos** hasta que llegan las dos cosas: nunca datos nuevos sobre geometría vieja (mapa gris y avisos de «sin cruzar» falsos).
+  `data` `undefined` = «cargando» (dd.md §11.2.6). Se implementa con un ajuste de estado durante el render (`setShown`), sin parpadeo.
+- **Cadena de proyecciones** (`core/drill-chain.ts`, pura): la raíz se ajusta al mundo y cada nivel es `rebaseProjection` del padre sobre el
+  cuerpo principal de la región elegida (`getFocusGeometry`). `focusBounds` (España con Canarias) manda como caja de 8 puntos.
+- **`"inherit"`.** Un nivel `"inherit"` dibuja la geometría de su padre (la clave de caché también es la del padre). Es el caso de las
+  tiendas: mismas regiones, otra proyección encuadrada y burbujas con `getCoordinates`.
+- **Clic.** Un item navegable **baja** (no se selecciona; `onItemClick` se llama igualmente); uno que no lo es, **selecciona**. La ruta se
+  arma sobre lo que se está MOSTRANDO (`[...shownPath, id]`): si el nivel nuevo aún carga, un segundo clic redirige en vez de apilar.
+- **`isDrillable`/`data-drillable`.** El cursor `zoom-in` solo aparece donde de verdad se puede bajar (`canDrill`, último nivel).
+- **Cámara.** Al cambiar de nivel vuelve al encaje, **antes de pintar** (`useLayoutEffect`; con un efecto normal se vería un fotograma con la
+  cámara vieja sobre la geometría nueva), sin animar ni avisar a `onViewChange` (`resetView({ duration: 0, silent: true })`).
+- **Errores.** Geometría que falla, o nivel con 0 regiones (`[choropleth] drill level "region" has 0 features for "AD". Hint: return false
+from canDrill for it.`): `onDrillError({ error, ctx })` (o `console.error` en inglés si no hay) y **vuelta atrás** con `drillTo(shownPath)`.
+- **`status`** del controlador: `"loading"` mientras el destino no se muestra, `"idle"` después. El resto de fases (`flying`, `revealing`) las
+  escribirá el reducer en el paso 32.
+- **Proporción `"auto"`**: se mide en la geometría **raíz**; si no, el alto del mapa cambiaría al bajar (los hijos tienen otra forma).
+- **Selección**: se limpia al cambiar de nivel (es de un nivel).
+
+## 31.3 Decisiones y desviaciones respecto a `dd.md`
+
+- **`geography` pasa a ser opcional** en las props (con `drill` sale de los niveles). Sin `geography` ni `drill`, error en inglés que dice qué pasar.
+- **`data` admite un selector** `({ depth, parentId }) => rows`. Sin `drill`, se resuelve con el contexto de la raíz.
+- **Cachés de features por identidad** (`WeakMap`): `toFeatureCollection` de un TopoJSON devuelve un objeto nuevo en cada llamada y un filtro, un
+  array nuevo; sin ellas cada render recalcularía todas las rutas. La caché de **geometrías** (LRU de 8) es **por mapa**, no global: dos mapas con
+  los mismos ids de nivel y datos distintos no deben compartirla.
+- **El filtro del mapa (`filterFeatures`) solo vale para la geometría raíz** (Antártida…); cada nivel filtra además con SU `filterFeatures(f, ctx)`.
+- **`projection` por nivel distinta de `"inherit"` NO está soportada todavía** (no es afín: pide fundido de 250 ms, `dd.md §11.2.4`). Hoy se ignora.
+- **Antimeridiano:** la cadena aplica la misma regla que `getFocusExtent`: si el cuerpo principal (o unos `focusBounds`) cruza ±180°, se encuadra
+  la mitad más ancha. Lo demostró un test: sin ello Rusia sale con la caja del mundo.
+- **Limitación conocida:** las islas del otro lado del antimeridiano (parte de Fiyi, Chukotka) quedan fuera de la vista, como en `zoomTo`.
+- **Un mutante «de mentira» me engañó:** mi primera mutación del antimeridiano no se aplicó (Prettier había reformateado la línea) y concluí que
+  «no hacía nada». Regla nueva: **comprobar que la mutación se aplicó** (`assert mut != orig`) antes de fiarse del resultado.
+
+## 31.4 Tests
+
+696 en verde (643 + 53 nuevos); `typecheck`, `lint`, `format:check`, `build`, `build-storybook` limpios.
+
+- **`core/drill-chain`:** raíz, un y dos niveles, afinidad con el padre, `focusBounds`, región ausente/sin geometría (no rompe, `missing`), tamaño
+  inválido, proyección con nombre, **Rusia/Fiyi** (antimeridiano) y límites que lo cruzan.
+- **`react/drill` (32 + geodatos reales):** raíz y `data-drillable`; `canDrill` booleano/función; bajar (hijas con sus datos, rutas dentro del
+  lienzo, el hijo llena la vista, cámara al encaje, selección limpia); `data` como selector (contexto correcto, lista fija, sin `drill`);
+  carga entre niveles (se mantiene el anterior, datos `undefined`, sin avisos); subir y `status`; controlado (avisa, URL al montar, el padre
+  rechaza); `onDrill`/`onDrillEnd` (orden, dirección, item, sin eventos al montar, `up` sin item); errores (carga, 0 regiones, consola, reintento);
+  `encoding` e `inherit`; proporción `"auto"` estable; el hover no re-renderiza; **ES, FR, US, RU, FJ, NO, BR con `world110m`**.
+- **Mutaciones (todas rompen tests):** datos nuevos sobre geometría vieja; commit sin esperar datos; sin vuelta atrás; sin `onDrill`/`onDrillEnd`/item;
+  vacío no es error; sin reinicio de cámara; sin cadena de proyecciones; sin limpiar selección; clic siempre baja / nunca baja; aspecto del nivel; sin
+  antimeridiano. Un código sobrante (limpiar el error antes de reintentar) no tenía efecto observable y se **eliminó**.
+
+## 31.5 Verificación visual: pendiente de ti \*
+
+`pnpm storybook` → **DrillDown / Engine** (datos sintéticos; **ojo: el cambio de nivel es instantáneo, sin vuelo**):
+
+| Story           | Qué comprobar                                                                                                                                                                                                                                                                          |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Uncontrolled`  | Solo 12 países (ES, FR, DE, IT, GB, US, BR, JP, AU, ZA, IN, MX) tienen cursor `zoom-in`. Un clic en uno **salta** a ese país encuadrado con sus tiendas (burbujas); los demás países quedan en gris. El resto de países **solo seleccionan**. El log muestra `onDrill` y `onDrillEnd`. |
+| `Uncontrolled`  | España se encuadra **con Canarias**; EE. UU. y Francia, su cuerpo principal. Con el zoom de rueda se puede acercar dentro del nivel; al cambiar de nivel la cámara vuelve al encaje.                                                                                                   |
+| `ControlledUrl` | La ruta vive en `?path=…`. Bajar muestra «cargando datos…» ~0,9 s: **el nivel anterior se queda tal cual** (con sus colores) y cambia de golpe cuando llegan los datos. «← Subir», «Raíz» y «Saltar a España» funcionan.                                                               |
+| `Errors`        | **España**: la carga falla; **Francia**: 0 regiones. En ambos casos el mapa **se queda donde estaba** y el log dice por qué. Otro país carga bien.                                                                                                                                     |
+| Todas           | Sin parpadeos al cambiar de nivel (un solo fotograma con la geometría nueva y la cámara en el encaje).                                                                                                                                                                                 |
+
+## 31.6 Antes de pasar al paso 32: ¿lo tienes claro?
+
+- ¿Por qué `useChoropleth` no se reescribe para el drill, y qué ve de diferente cuando hay `drill`?
+- ¿Por qué se sigue mostrando el nivel anterior con SUS datos mientras carga el nuevo? ¿Qué se vería si no?
+- ¿Por qué un nivel `"inherit"` tiene la clave de caché de su padre, y qué dibuja?
+- ¿Por qué la cámara se reinicia con `useLayoutEffect` y no con `useEffect`?
+- ¿Por qué la caché de geometrías es por mapa y no global?
