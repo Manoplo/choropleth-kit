@@ -1,8 +1,16 @@
-import type { CSSProperties, ReactNode } from "react";
+import {
+  forwardRef,
+  type CSSProperties,
+  type ForwardedRef,
+  type ReactElement,
+  type ReactNode,
+  type Ref,
+} from "react";
 import { resolveControls, resolveLabels } from "../core";
 import { GestureHint } from "./components/gesture-hint";
 import { Legend } from "./components/legend";
 import { Root } from "./components/root";
+import type { ChoroplethMapHandle } from "./handle";
 import { Svg } from "./components/svg";
 import { ZoomControls } from "./components/zoom-controls";
 import { Tooltip, type TooltipContext } from "./components/tooltip";
@@ -40,21 +48,25 @@ const CORNERS: Record<LegendPosition, CSSProperties> = {
  * (nivel 2) con valores por defecto: no hay lógica propia, solo composición. Si necesitas otra
  * disposición, copia este componente y cambia las piezas.
  */
-export const ChoroplethMap = <TDatum,>({
-  legend,
-  renderTooltip,
-  className,
-  style,
-  unstyled,
-  ariaLabel,
-  ...options
-}: ChoroplethMapProps<TDatum>) => {
+const ChoroplethMapInner = <TDatum,>(
+  {
+    legend,
+    renderTooltip,
+    className,
+    style,
+    unstyled,
+    ariaLabel,
+    ...options
+  }: ChoroplethMapProps<TDatum>,
+  ref: ForwardedRef<ChoroplethMapHandle>,
+) => {
   const legendOptions = legend === false ? null : (legend ?? {});
   // Los botones de zoom son opt-in: `zoom={{ controls: true }}`.
   const controls = resolveControls(options.zoom);
 
   return (
     <Root<TDatum>
+      ref={ref}
       {...(options as UseChoroplethOptions<TDatum>)}
       // La leyenda cuenta también las regiones sin dato, salvo que el consumidor ya haya decidido el texto.
       emptyLabel={options.emptyLabel ?? resolveLabels(options.labels).noData}
@@ -74,3 +86,10 @@ export const ChoroplethMap = <TDatum,>({
     </Root>
   );
 };
+
+/**
+ * Nivel 1 (preset). `ref` da el handle imperativo: `ref.current.zoomTo("ES")`.
+ */
+export const ChoroplethMap = forwardRef(ChoroplethMapInner) as <TDatum>(
+  props: ChoroplethMapProps<TDatum> & { ref?: Ref<ChoroplethMapHandle> },
+) => ReactElement | null;

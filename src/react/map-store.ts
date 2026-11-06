@@ -1,5 +1,12 @@
 import { useSyncExternalStore } from "react";
-import { FIT_TRANSFORM, type CameraTransform, type TransitionResult } from "../core";
+import {
+  FIT_TRANSFORM,
+  type CameraOptions,
+  type CameraTransform,
+  type TransitionResult,
+  type ViewState,
+  type ZoomTarget,
+} from "../core";
 import type { ItemRef } from "./map-item";
 
 /**
@@ -8,10 +15,20 @@ import type { ItemRef } from "./map-item";
  * terminar (`completed: false` si un gesto del usuario lo interrumpió).
  */
 export type ZoomApi = {
+  /**
+   * Vuela a una región, unos límites o un centro con zoom. `silent` (solo con `duration: 0`) coloca la
+   * cámara sin avisar a `onViewChange`: es lo que hacen `focusId` e `initialView` en el primer render.
+   */
+  zoomTo: (
+    target: ZoomTarget,
+    options?: CameraOptions & { silent?: boolean },
+  ) => Promise<TransitionResult>;
   /** Multiplica el zoom actual (×2 acerca, ×0,5 aleja) centrado en la vista. */
   zoomBy: (factor: number, options?: { duration?: number }) => Promise<TransitionResult>;
   /** Vuelo al encaje del nivel. */
   resetView: (options?: { duration?: number }) => Promise<TransitionResult>;
+  /** La vista actual (la real, también a mitad de un vuelo). */
+  getView: () => ViewState;
 };
 
 export type PointerPosition = { x: number; y: number };
@@ -46,6 +63,10 @@ export type MapStore = {
   registerZoom: (api: ZoomApi | null) => void;
   /** La API de zoom, o `null` si el zoom está desactivado o aún no se ha instalado. */
   getZoom: () => ZoomApi | null;
+  /** `Root` registra cómo calcular la vista cuando NO hay zoom (`zoom={false}`): siempre el encaje. */
+  registerFallbackView: (read: (() => ViewState) | null) => void;
+  /** La vista de reserva, o `null` si aún no se ha registrado. */
+  getFallbackView: () => ViewState | null;
 };
 
 /** Cuánto dura el aviso «Usa Ctrl + rueda para hacer zoom» (dd.md §11.1.2). */
@@ -71,6 +92,7 @@ export const createMapStore = (): MapStore => {
   let state = INITIAL_STATE;
   let hintTimer: ReturnType<typeof setTimeout> | undefined;
   let zoomApi: ZoomApi | null = null;
+  let fallbackView: (() => ViewState) | null = null;
   const listeners = new Set<() => void>();
   const store: MapStore = {
     subscribe: (listener) => {
@@ -96,6 +118,10 @@ export const createMapStore = (): MapStore => {
       zoomApi = api;
     },
     getZoom: () => zoomApi,
+    registerFallbackView: (read) => {
+      fallbackView = read;
+    },
+    getFallbackView: () => fallbackView?.() ?? null,
   };
   return store;
 };

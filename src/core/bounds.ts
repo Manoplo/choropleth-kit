@@ -1,5 +1,5 @@
 import type { Feature, Geometry, Polygon, Position } from "geojson";
-import type { GeoPath } from "d3-geo";
+import { geoBounds, type GeoPath } from "d3-geo";
 import polylabel from "polylabel";
 import type { CameraTransform, Extent, Size } from "./camera";
 import type { Point } from "./variants";
@@ -171,4 +171,102 @@ export const boundsToTransform = ({
     x: left + innerW / 2 - k * ((x0 + x1) / 2),
     y: top + innerH / 2 - k * ((y0 + y1) / 2),
   };
+};
+
+/** Límites geográficos [[lonO, latS], [lonE, latN]]. Si `lonE < lonO`, cruzan el antimeridiano. */
+export type LonLatBounds = readonly [Point, Point];
+
+/** Puntos por lado con los que se muestrea un rectángulo geográfico al proyectarlo. */
+const EDGE_SAMPLES = 9;
+
+/**
+ * Rectángulo geográfico → rectángulo en píxeles que lo contiene. Un rectángulo de lon/lat NO es un
+ * rectángulo en pantalla (los paralelos se curvan en Equal Earth, el globo se estrecha en los
+ * polos), así que se proyectan puntos a lo largo de sus cuatro lados y se toma el mínimo que los
+ * contiene. Los puntos que la proyección no sabe proyectar se descartan; si no queda ninguno,
+ * devuelve `null`.
+ *
+ * Si `lonE < lonO` el rectángulo cruza el antimeridiano (Fiyi, el Pacífico). En un mapa plano esa
+ * región aparece partida en los dos bordes y **no existe un rectángulo que contenga las dos mitades**
+ * (saldría un caja del ancho del mundo entero): se encuadra la mitad más ancha, igual que
+ * `getFocusGeometry` se queda con el cuerpo principal.
+ */
+export const projectBounds = (
+  bounds: LonLatBounds,
+  project: (coordinates: Point) => Point | null,
+): Extent | null => {
+  const [[west, south], [east, north]] = bounds;
+  if (east < west) {
+    const eastHalf: LonLatBounds = [
+      [west, south],
+      [180, north],
+    ];
+    const westHalf: LonLatBounds = [
+      [-180, south],
+      [east, north],
+    ];
+    return projectBounds(180 - west >= east + 180 ? eastHalf : westHalf, project);
+  }
+  const samples: Point[] = [];
+  for (let i = 0; i < EDGE_SAMPLES; i += 1) {
+    const t = i / (EDGE_SAMPLES - 1);
+    const lon = west + (east - west) * t;
+    const lat = south + (north - south) * t;
+    samples.push([lon, south], [lon, north], [west, lat], [east, lat]);
+  }
+  const projected = samples.flatMap((at) => {
+    const p = project(at);
+    return p === null ? [] : [p];
+  });
+  if (projected.length === 0) return null;
+  const xs = projected.map(([x]) => x);
+  const ys = projected.map(([, y]) => y);
+  return [
+    [Math.min(...xs), Math.min(...ys)],
+    [Math.max(...xs), Math.max(...ys)],
+  ];
+};
+
+export type GetFocusExtentParams = GetFocusGeometryParams & {
+  /** [lon, lat] → píxeles del lienzo; `null` si no proyecta. */
+  project: (coordinates: Point) => Point | null;
+};
+
+/**
+ * Límites en píxeles del cuerpo principal de una región: lo que se encuadra al volar a ella
+ * (dd.md §11.1.5). Es `getFocusGeometry` + sus límites proyectados, con un caso aparte:
+ *
+ * **Antimeridiano.** El polígono principal de Rusia (y el de Fiyi o Alaska) cruza la línea ±180° sin
+ * partirse, y `path.bounds` mide las dos mitades: el encuadre abarcaría el mapa de borde a borde, con
+ * Chukotka asomando por el lado contrario. Se detecta con `geoBounds` (que devuelve `oeste > este`
+ * cuando se cruza) y se encuadra la mitad más ancha (`projectBounds`).
+ *
+ * Devuelve `null` si la feature no tiene geometría o sus límites no son finitos.
+ */
+export const getFocusExtent = ({
+  feature,
+  path,
+  project,
+  near,
+}: GetFocusExtentParams): Extent | null => {
+  const geometry = getFocusGeometry({ feature, path, near });
+  if (geometry === null) return null;
+
+  const [[west, south], [east, north]] = geoBounds(geometry);
+  if (west > east)
+    return projectBounds(
+      [
+        [west, south],
+        [east, north],
+      ],
+      project,
+    );
+
+  const [[x0, y0], [x1, y1]] = path.bounds(geometry);
+  return [x0, y0, x1, y1].every(Number.isFinite)
+    ? [
+        [x0, y0],
+        [x1, y1],
+      ]
+    : null;
 };

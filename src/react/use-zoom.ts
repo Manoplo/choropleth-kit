@@ -1,5 +1,5 @@
 import { useEffect, useRef, type RefObject } from "react";
-import { easeCubicOut } from "d3-ease";
+import { easeCubicInOut, easeCubicOut } from "d3-ease";
 import { select } from "d3-selection";
 // Importar d3-transition parchea `selection.transition()`; hace falta para los zooms animados.
 import "d3-transition";
@@ -12,11 +12,16 @@ import {
   flightDuration,
   FIT_TRANSFORM,
   toViewState,
+  type CameraTransform,
+  type Padding,
   type Point,
   type ResolvedZoom,
   type TransitionResult,
   type ViewState,
+  type ZoomTarget,
 } from "../core";
+import { isProduction, prefersReducedMotion } from "./env";
+import { fadeThrough, type Fade } from "./fade";
 import { ROOT_LEVEL } from "./map-item";
 import type { MapStore, ZoomApi } from "./map-store";
 
@@ -35,22 +40,19 @@ export type UseZoomParams = {
   invert: (point: Point) => Point | null;
   /** Se llama al TERMINAR un gesto; nunca por frame. */
   onViewChange: ((view: ViewState) => void) | undefined;
+  /** `ZoomTarget` → cámara (ya limitada por `constrain`), o `null` si no se puede resolver. */
+  resolveCamera: (
+    target: ZoomTarget,
+    options?: { padding?: number | Padding },
+  ) => CameraTransform | null;
+  /** Vuela a esta región cuando cambia; `null` = vuelve al encaje; el primer valor se coloca sin volar. */
+  focusId: string | null | undefined;
   /** Cuando pasa de «cargando» a «listo» aparece el `<svg>`: hay que volver a engancharse. */
   ready: boolean;
 };
 
 /** Duración de los botones `+` / `−` (dd.md §11.1.2). */
 const BUTTON_ZOOM_MS = 300;
-
-/**
- * «Reducir movimiento» del sistema. Aquí no hay movimiento: se salta directo a la cámara final. (El
- * fundido que pide dd.md §11.1.5 llega con los vuelos, en el paso 26.) Sin `matchMedia` (SSR, jsdom)
- * se asume que no.
- */
-const prefersReducedMotion = (): boolean =>
-  typeof window !== "undefined" &&
-  typeof window.matchMedia === "function" &&
-  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /** Por encima de esta `k` se considera que el mapa está «ampliado» (y por tanto arrastrable). */
 const ZOOMED_EPSILON = 1.001;
@@ -78,16 +80,18 @@ export const useZoom = ({
   options,
   invert,
   onViewChange,
+  resolveCamera,
+  focusId,
   ready,
 }: UseZoomParams): void => {
   // Lo que cambia en cada render pero no debe reinstalar el comportamiento: se lee al usarlo.
-  const latest = useRef({ invert, onViewChange });
+  const latest = useRef({ invert, onViewChange, resolveCamera });
   useEffect(() => {
-    latest.current = { invert, onViewChange };
+    latest.current = { invert, onViewChange, resolveCamera };
   });
 
   const enabled = options !== null;
-  const { min, max, wheel, pinch, pan, doubleClick, constrain } = options ?? NO_ZOOM;
+  const { min, max, wheel, pinch, pan, doubleClick, constrain, initialView } = options ?? NO_ZOOM;
 
   // useEffect legítimo: suscripción a eventos del DOM con limpieza.
   useEffect(() => {
@@ -171,15 +175,33 @@ export const useZoom = ({
 
     // Movimientos programáticos por el MISMO `behavior`: así d3-zoom siempre conoce la cámara real y
     // un gesto del usuario interrumpe el vuelo de forma natural (dd.md §11.1.3, punto 4).
+    let fade: Fade | null = null;
+    type Target = typeof selection | ReturnType<typeof selection.transition>;
+
     const animate = (
       duration: number,
-      apply: (target: typeof selection | ReturnType<typeof selection.transition>) => void,
+      apply: (target: Target) => void,
+      {
+        ease = easeCubicInOut,
+        silent = false,
+      }: { ease?: (t: number) => number; silent?: boolean } = {},
     ): Promise<TransitionResult> => {
-      if (duration <= 0 || prefersReducedMotion()) {
+      fade?.cancel(); // un movimiento nuevo sustituye al fundido que quedara a medias
+      fade = null;
+
+      // `duration: 0` es explícito («colócala ya»): ni vuelo ni fundido.
+      if (duration <= 0) {
+        restoring = silent;
         apply(selection);
+        restoring = false;
         return Promise.resolve({ completed: true });
       }
-      const transition = selection.transition().duration(duration).ease(easeCubicOut);
+      // «Reducir movimiento»: fundido (opacidad a 0, salto, opacidad a 1) en lugar de vuelo.
+      if (prefersReducedMotion()) {
+        fade = fadeThrough(viewport, () => apply(selection));
+        return fade.promise;
+      }
+      const transition = selection.transition().duration(duration).ease(ease);
       apply(transition);
       // `end()` rechaza si la transición se interrumpe: no es un error, es `completed: false`.
       return transition.end().then(
@@ -188,20 +210,52 @@ export const useZoom = ({
       );
     };
 
+    const toZoomIdentity = ({ k, x, y }: CameraTransform) => zoomIdentity.translate(x, y).scale(k);
+    const current = (): CameraTransform => {
+      const { k, x, y } = zoomTransform(svg);
+      return { k, x, y };
+    };
+
     const api: ZoomApi = {
-      zoomBy: (factor, { duration = BUTTON_ZOOM_MS } = {}) =>
-        animate(duration, (target) => behavior.scaleBy(target as typeof selection, factor)),
-      resetView: ({ duration } = {}) => {
-        const { k, x, y } = zoomTransform(svg);
-        const length = duration ?? flightDuration({ from: { k, x, y }, to: FIT_TRANSFORM, size });
-        return animate(length, (target) =>
-          behavior.transform(target as typeof selection, zoomIdentity),
+      zoomTo: (target, { duration, padding, silent } = {}) => {
+        const destination = latest.current.resolveCamera(target, { padding });
+        if (destination === null) {
+          if (!isProduction()) {
+            console.warn(
+              `[choropleth] zoomTo: could not resolve ${JSON.stringify(target)} (unknown region id, or a point outside the projection).`,
+            );
+          }
+          return Promise.resolve({ completed: false });
+        }
+        const length = duration ?? flightDuration({ from: current(), to: destination, size });
+        return animate(
+          length,
+          (t) => behavior.transform(t as typeof selection, toZoomIdentity(destination)),
+          {
+            silent,
+          },
         );
       },
+      zoomBy: (factor, { duration = BUTTON_ZOOM_MS } = {}) =>
+        animate(duration, (t) => behavior.scaleBy(t as typeof selection, factor), {
+          ease: easeCubicOut,
+        }),
+      resetView: ({ duration } = {}) => {
+        const length = duration ?? flightDuration({ from: current(), to: FIT_TRANSFORM, size });
+        return animate(length, (t) => behavior.transform(t as typeof selection, zoomIdentity));
+      },
+      getView: () =>
+        toViewState({
+          transform: current(),
+          size,
+          invert: latest.current.invert,
+          level: ROOT_LEVEL,
+        }),
     };
     store.registerZoom(api);
 
     return () => {
+      fade?.cancel();
       store.registerZoom(null);
       selection.interrupt();
       selection.on(".zoom", null);
@@ -227,9 +281,36 @@ export const useZoom = ({
     constrain,
   ]);
 
+  // `focusId` (y `initialView`): el primer valor se COLOCA sin volar ni avisar; los cambios posteriores
+  // vuelan; `null` vuelve al encaje. Es un efecto real (mueve la cámara). Va DESPUÉS del que instala
+  // d3-zoom: en el mismo componente los efectos corren en orden, y aquí hace falta la API registrada.
+  const applied = useRef<string | null | typeof UNSET>(UNSET);
+  const focus = focusId ?? null;
+  useEffect(() => {
+    if (!enabled || !ready) return;
+    const api = store.getZoom();
+    if (api === null) return;
+
+    if (applied.current === UNSET) {
+      applied.current = focus;
+      const first = focus ?? initialView;
+      if (first !== undefined && first !== null)
+        void api.zoomTo(first, { duration: 0, silent: true });
+      return;
+    }
+    if (focus === applied.current) return;
+    applied.current = focus;
+    if (focus === null) void api.resetView();
+    else void api.zoomTo(focus);
+    // `initialView` solo cuenta la primera vez: no es una dependencia.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [store, enabled, ready, focus]);
+
   // El aviso de gesto tiene un temporizador propio: se cancela al desmontar.
   useEffect(() => () => store.dispose(), [store]);
 };
+
+const UNSET = Symbol("unset");
 
 /** Valores neutros cuando el zoom está desactivado (los hooks no pueden ser condicionales). */
 const NO_ZOOM: ResolvedZoom = {
@@ -241,4 +322,6 @@ const NO_ZOOM: ResolvedZoom = {
   doubleClick: false,
   constrain: "contain",
   keyboard: false,
+  padding: 0,
+  initialView: undefined,
 };

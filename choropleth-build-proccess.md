@@ -55,7 +55,7 @@
 | 23   | `core/camera.ts` y `boundsToTransform`: la matemática de la cámara, solo con tests                       | ✅ Hecho     |
 | 24   | `use-zoom.ts` + `Viewport`: `d3-zoom` escribe el transform en el DOM; rueda cooperativa, clic ≠ arrastre | ✅ Hecho\*   |
 | 25   | `ZoomControls`, `GestureHint` y teclado de zoom                                                          | ✅ Hecho\*   |
-| 26   | Vuelos: `focusId`, handle `zoomTo` / `zoomBy` / `resetView` con `Promise`, reduced-motion                | ⏳ Pendiente |
+| 26   | Vuelos: `focusId`, handle `zoomTo` / `zoomBy` / `resetView` con `Promise`, reduced-motion                | ✅ Hecho\*   |
 | 27   | Contraescalado de burbujas, inercia y resize sin salto                                                   | ⏳ Pendiente |
 
 **Fase C, drill-down (v0.4)** · **Fase D, pulido visual (v0.5)**: pasos 28-37, en el orden exacto de las
@@ -2180,3 +2180,137 @@ Las flechas del teclado (mover el foco entre regiones, `Shift` + flechas para el
 `dd.md §13` (tabla alternativa, navegación espacial, `aria-live`, el `role="img"` del `<svg>`) **se hacen al final**,
 en un bloque propio, no repartido entre las fases. Hasta entonces los atajos de teclado de zoom (`+`, `−`, `0`) son lo
 único de teclado que hay.
+
+---
+
+# Paso 26: vuelos de cámara (`zoomTo`, `focusId`, `initialView`) y handle imperativo
+
+Archivos nuevos: `src/react/handle.ts`, `fade.ts`, `env.ts`, `fade.test.ts`, `flights.test.tsx`,
+`stories/zoom-flights.stories.tsx`, `stories/zoom-problem-countries.stories.tsx`. Tocan: `core/bounds.ts`,
+`core/zoom.ts`, `use-zoom.ts`, `use-choropleth.ts`, `map-store.ts`, `Root`, el preset y
+`choropleth-context.ts`. Tarea 13 de `dd.md §21`.
+
+## 26.1 Qué se hizo
+
+Hasta ahora la cámara solo se movía por gestos y botones. Ahora **se puede dirigir por código**, de tres formas:
+
+| Forma                       | Cómo                                                             | Cuándo vuela                                                |
+| --------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------- |
+| **Imperativa** (`ref`)      | `ref.current.zoomTo("ES")`, `zoomBy`, `resetView`, `getView`     | Al llamarla; devuelve `Promise<{ completed }>`              |
+| **Declarativa** (`focusId`) | `<ChoroplethMap focusId={pais} />`                               | Cuando `focusId` **cambia**; con `null` vuelve al encaje    |
+| **Inicial** (`initialView`) | `zoom={{ initialView: "ES" \| { bounds } \| { center, zoom } }}` | **Nunca**: coloca la cámara al montar, sin animar ni avisar |
+
+`ZoomTarget` (dd.md §9.5): un **id de región**, `{ bounds: [[lonO, latS], [lonE, latN]] }` o
+`{ center: [lon, lat], zoom }` (zoom **relativo al encaje**, 1 = encaje). `useChoroplethApi()` da el mismo handle
+**dentro del compound**, para que un botón hijo vuele sin necesitar un `ref`.
+
+## 26.2 Cómo funciona por dentro
+
+```
+ ZoomTarget ──► resolveZoomTarget (core, pura) ──► CameraTransform ──► constrain ──► animate ──► d3-zoom
+   "ES"          región → límites en px              k, x, y            (contain)     vuelo       (el MISMO
+   {bounds}      lon/lat → projectBounds                                              o fundido    behavior)
+   {center,zoom} center → proyección
+```
+
+- **`resolveZoomTarget`** es pura: la proyección y la geometría llegan como funciones. Aplica `scaleExtent`
+  (`boundsToTransform` del paso 23) y devuelve `null` si no puede resolver (región inexistente).
+- **`constrain` se aplica aquí, a mano.** `d3-zoom` solo aplica `constrain` a los **gestos**, no a las transiciones
+  programáticas: sin esto, volar a un país en el borde del mapa dejaría la cámara fuera de los límites.
+- **Un solo `behavior`.** Los vuelos pasan por el mismo `d3-zoom` que los gestos (`dd.md §11.1.3`, punto 4): d3 siempre
+  conoce la cámara real y **un gesto interrumpe el vuelo** (la `Promise` resuelve `completed: false`).
+- **Duración:** la natural de `interpolateZoom` × `speed`, acotada a [350, 1200] ms (`flightDuration`, paso 23), con
+  `easeCubicInOut` para vuelos y `easeCubicOut` para `+`/`−`. `duration: 0` = «colócala ya» (ni vuelo ni fundido).
+- **`focusId`** es un efecto real (mueve la cámara) en `use-zoom`, **después** del que instala `d3-zoom` (en un mismo
+  componente los efectos corren en orden, y aquí hace falta la API ya registrada). El primer valor se coloca con
+  `{ duration: 0, silent: true }` (sin volar y **sin avisar a `onViewChange`**); los cambios posteriores vuelan.
+- **Reduced-motion = fundido** (`fade.ts`, Web Animations API nativa): opacidad del viewport a 0 en 100 ms, **salto de
+  cámara**, opacidad a 1 en 150 ms (`dd.md §11.1.5`). «Se quita el movimiento, no la continuidad». Sin `Element.animate`
+  (jsdom) salta directamente. Un movimiento nuevo **cancela** el fundido anterior. Sustituye al «salto inmediato»
+  provisional del paso 25, que ahora también aplica a `+`/`−`.
+
+## 26.3 Encuadre: el cuerpo principal, no la geometría entera
+
+`zoomTo("FR")` encuadra `getFocusGeometry` (paso 20): Francia sin la Guayana, EE. UU. sin Alaska/Hawái, Noruega sin
+Svalbard. Dos casos necesitaron más:
+
+**España incluye Canarias** (decisión del humano). `DEFAULT_FOCUS_BOUNDS = { ES: [[-18.5, 27.5], [4.5, 44]] }`
+(el ejemplo de `dd.md §11.1.5`), porque «para Inditex, Canarias es un caso de negocio, no un detalle geométrico». Se
+fusiona con la prop **`focusBounds`** del consumidor; `focusBounds={{ ES: null }}` vuelve al encuadre de la península.
+
+**Antimeridiano: un fallo real que descubrieron los tests con geodatos reales.** El polígono principal de **Rusia**
+cruza la línea ±180° **sin partirse**, y `path.bounds` mide las dos mitades: el encuadre salía de borde a borde con
+Chukotka asomando por el lado contrario (su centro caía en lon ≈ 2°, en lugar de ≈ 100°). Es justo el problema que
+`dd.md` anuncia de Rusia. Solución (`getFocusExtent`, `core/bounds.ts`): detectar el cruce con `geoBounds` (devuelve
+`oeste > este`) y **encuadrar la mitad más ancha** con `projectBounds`. La misma regla se aplica a los límites
+explícitos que cruzan el antimeridiano: en un mapa plano **no existe un rectángulo que contenga las dos mitades**
+(sale un caja del ancho del mundo), igual que `getFocusGeometry` se queda con el cuerpo principal.
+
+## 26.4 Decisiones y desviaciones respecto a `dd.md`
+
+| Decisión                                                                                                            | Motivo                                                                                                                                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`forwardRef`** (no `ref` como prop) en `Root` y en el preset.                                                     | `dd.md §9.5` dice «prop en React 19; `forwardRef` en 18». La librería declara `react >=18`, así que `forwardRef` funciona en las dos. El tipo se re-expone con el genérico y `ref?: Ref<ChoroplethMapHandle>`.               |
+| El handle **solo tiene** `zoomTo`, `zoomBy`, `resetView` y `getView`.                                               | `drillDown`/`drillUp` llegan en la fase C y `toSVGString`/`toPNG` con la exportación (v0.6). Prometerlos antes sería declarar lo que no existe.                                                                              |
+| Con `zoom={false}` los movimientos resuelven `{ completed: false }` y `getView` devuelve el encaje; **no lanzan**.  | Un mapa estático con un `ref` no debe romper al consumidor que llama a `zoomTo`. La vista de reserva se registra en el store desde un efecto de `Root` (no con una `ref` leída en el render: el linter lo impide con razón). |
+| `getView()` lee `zoomTransform(svg)`, la cámara **real**, no la confirmada.                                         | También es correcta a mitad de un vuelo.                                                                                                                                                                                     |
+| Una región inexistente: `completed: false` + aviso de consola en inglés (solo fuera de producción).                 | Un id mal escrito debe explicarse solo (principio de DX de `dd.md`), sin lanzar.                                                                                                                                             |
+| `initialView` solo cuenta **al montar**; `focusId` manda sobre él; cambiarlo después no mueve la cámara.            | Es una vista inicial, no un estado controlado. Para eso está `focusId`.                                                                                                                                                      |
+| `ZoomOptions` gana `padding` (por defecto 24) e `initialView`. `focusId` y `focusBounds` son props de primer nivel. | Siguen `dd.md §9.2` y §11.1.1.                                                                                                                                                                                               |
+| `silent` existe en `ZoomApi.zoomTo` pero **no** en el handle público ni en `CameraOptions`.                         | Es un detalle interno (colocar sin avisar); solo tiene sentido con `duration: 0`.                                                                                                                                            |
+
+## 26.5 Tests
+
+489 en verde (425 + 64 nuevos), `typecheck`, `lint`, `format:check`, `build` y `build-storybook` limpios; cobertura de
+`src/core` 100 % líneas / 97,6 % ramas.
+
+- **`core`:** `resolveZoomTarget` (región, `focusBounds`, `{ null }`, microestado, `{ bounds }`, `{ center, zoom }`, límites
+  de `k`, entradas inválidas), `projectBounds` (esquinas, paralelos curvos, **antimeridiano**), `getFocusExtent`
+  (incluido un anillo tipo Rusia), `DEFAULT_FOCUS_BOUNDS` (España incluye Canarias).
+- **Handle:** `zoomTo` a región, a otra región, `{ center, zoom }`, `{ bounds }`; `duration: 0` instantáneo; región inexistente;
+  **`constrain: contain` respetado en el destino**; `padding`; **interrupción por rueda**; `onViewChange` una vez por vuelo;
+  `zoom={false}`; `zoomBy`/`resetView`; **encadenar con `await`**; `useChoroplethApi`; `ref` también en el preset.
+- **`focusId` e `initialView`:** colocación inicial **sin volar ni avisar**; vuelo al cambiar; `null` vuelve al encaje; el
+  mismo valor no vuela otra vez; id inexistente; geografía asíncrona; `focusId` sobre `initialView`.
+- **Reduced-motion:** el orden exacto fundido-salida → **salto** → fundido-entrada; la cámara no se mueve hasta el salto;
+  un movimiento nuevo cancela el anterior; `duration: 0` sigue siendo instantáneo; desmontar cancela.
+- **Encuadres con geodatos reales (`world110m`):** **Francia** sin Guayana, **EE. UU.** sin Alaska, **España con
+  Canarias**, `{ ES: null }` y `focusBounds` propio, **Fiyi**, **Rusia**.
+- **Mutaciones hechas a mano y revertidas** (cada una rompe tests): quitar el tratamiento del antimeridiano (rompe el test
+  de `core` **y** el de Rusia con datos reales); España sin Canarias por defecto; no aplicar `constrain` al destino; avisar
+  a `onViewChange` en la colocación inicial; no cancelar el fundido anterior; volar aunque `focusId` no cambie; no
+  liberar el `fill: forwards` del fundido.
+
+Dos trampas, ambas de mis tests y documentadas en ellos: (1) el fixture `twoSquares` tiene el anillo en sentido
+antihorario, así que d3 lo lee como «el globo menos el cuadrado» y su mapa es el mundo entero (`invert(centro) = [0, 0]`
+era correcto): los tests de encuadre usan dos bloques propios con el sentido horario; (2) al re-renderizar un `Root`
+**sin** pasarle el `ref`, React desengancha el handle (correcto).
+
+## 26.6 Verificación visual: pendiente de ti \*
+
+`pnpm storybook` → **Zoom / FocusAndFlights** y **Zoom / ProblemCountries**:
+
+| Story                                          | Qué comprobar                                                                                                                                                                                                                                               |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `FocusAndFlights · Declarative`                | Elige un país: la cámara **vuela** (se aleja, viaja, se acerca) **sin saltos ni parpadeos** y con suavidad. Un viaje largo (España → Fiyi) debe leerse; uno corto, ser rápido. «(mundo entero)» vuelve al encaje.                                           |
+| `FocusAndFlights · ImperativeAndTour`          | «▶ Tour» encadena los 9 países con `await`. **Agarra el mapa a mitad**: el vuelo se corta y el tour se detiene («tour interrumpido en …»). «■ Parar» también.                                                                                               |
+| `ProblemCountries · Default`                   | Cada botón enmarca el **cuerpo principal**: **Francia** sin la Guayana, **EE. UU.** sin Alaska, **Rusia** sin Chukotka asomando por la izquierda, **Fiyi** una isla (no medio mundo), **España CON Canarias**. Las burbujas deben caer **dentro** del país. |
+| `ProblemCountries · SpainWithoutCanaryIslands` | España enmarca solo la península.                                                                                                                                                                                                                           |
+| Sistema con «reducir movimiento»               | Los vuelos y los botones **no se mueven**: hacen un fundido corto (a 0, salto, a 1). Nunca un corte seco.                                                                                                                                                   |
+| Cualquiera                                     | Con `controls` activos, `−` y `⟲` se habilitan al terminar el vuelo.                                                                                                                                                                                        |
+
+## 26.7 Antes de pasar al paso 27: ¿lo tienes claro?
+
+- ¿Por qué `zoomTo` aplica `constrain` a mano si `d3-zoom` ya lo tiene?
+- ¿Por qué `focusId` coloca la cámara sin volar en el primer render, y por qué sin avisar a `onViewChange`?
+- ¿Qué problema tiene Rusia con `path.bounds`, y cómo lo detecta `getFocusExtent`?
+- ¿Por qué el reduced-motion es un **fundido** y no un salto sin más?
+- ¿Por qué `forwardRef` y no `ref` como prop?
+- ¿Por qué el fixture `twoSquares` «funcionaba» en tests de render pero no en los de encuadre?
+
+## 26.8 Pregunta abierta
+
+`getAnchorPoint` (el ancla de las burbujas, paso 20) proyecta los vértices del polígono principal uno a uno. Para Rusia, cuyo
+anillo cruza el antimeridiano, ese anillo proyectado tiene un salto de borde a borde. Visualmente la burbuja de Rusia salió
+plausible en la comprobación del paso 22, pero **no está garantizado**. ¿Lo reviso con una prueba específica (ancla de Rusia
+dentro de su cuerpo principal) antes de seguir, o lo dejamos para el pulido?

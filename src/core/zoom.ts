@@ -1,4 +1,6 @@
-import type { ViewState } from "./camera";
+import { boundsToTransform, projectBounds, type LonLatBounds, type Padding } from "./bounds";
+import type { CameraTransform, Extent, Size, ViewState } from "./camera";
+import type { Point } from "./variants";
 
 export type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 
@@ -7,6 +9,35 @@ export type ZoomControlsOptions = {
   position?: Corner;
   /** Mostrar el botón «restablecer vista». Por defecto `true`. */
   reset?: boolean;
+};
+
+/**
+ * Adónde mover la cámara (dd.md §9.5): una región, unos límites o un centro con zoom.
+ *  - `string`: id de una región del mapa. Se encuadra su **cuerpo principal** (Francia sin la Guayana).
+ *  - `{ bounds }`: [[lonO, latS], [lonE, latN]].
+ *  - `{ center, zoom }`: `zoom` relativo al encaje (1 = encaje).
+ */
+export type ZoomTarget =
+  string | { bounds: LonLatBounds } | { center: readonly [number, number]; zoom: number };
+
+export type CameraOptions = {
+  /** ms. Sin esto, la duración natural del vuelo (350–1200 ms). `0` = sin animación. */
+  duration?: number;
+  /** Margen al encuadrar (px). Por defecto el de `zoom.padding` (24). */
+  padding?: number | Padding;
+};
+
+/**
+ * Encuadres explícitos por región, en lon/lat (dd.md §11.1.5, punto 4). Para Inditex, **Canarias es un
+ * caso de negocio, no un detalle geométrico**: el encuadre por defecto de España las incluye, aunque
+ * el cuerpo principal de la geometría no. Se fusiona con el `focusBounds` del consumidor; con
+ * `{ ES: null }` se vuelve al encuadre geométrico.
+ */
+export const DEFAULT_FOCUS_BOUNDS: Readonly<Record<string, LonLatBounds>> = {
+  ES: [
+    [-18.5, 27.5],
+    [4.5, 44],
+  ],
 };
 
 /** Resultado de un movimiento de cámara animado: `completed` es `false` si algo lo interrumpió. */
@@ -41,6 +72,13 @@ export type ZoomOptions = {
    * significado (`onItemClick` o selección), para no hacer las dos cosas a la vez.
    */
   doubleClick?: boolean | "auto";
+  /** Margen al encuadrar una región o unos límites, en px (dd.md §11.1.1). Default 24. */
+  padding?: number | Padding;
+  /**
+   * Vista inicial: la cámara se coloca ahí **sin animar** en el primer render. `focusId` manda sobre
+   * esto. Útil para URLs compartibles: `initialView: { center: [-3.7, 40.4], zoom: 4 }`.
+   */
+  initialView?: ZoomTarget;
   /** `"contain"` (default): el contenido no se pierde y se centra si cabe. `"free"`: sin límites. */
   constrain?: "contain" | "free";
   /** Atajos de teclado con el mapa enfocado: `+`, `−` y `0`. Default `true`. */
@@ -64,6 +102,8 @@ export type ResolvedZoom = {
   doubleClick: boolean;
   constrain: "contain" | "free";
   keyboard: boolean;
+  padding: number | Padding;
+  initialView: ZoomTarget | undefined;
 };
 
 export const DEFAULT_ZOOM_MIN = 1;
@@ -95,6 +135,8 @@ export const resolveZoomOptions = (
     doubleClick: doubleClick === "auto" ? !clickIsBusy : doubleClick,
     constrain: options.constrain ?? "contain",
     keyboard: options.keyboard ?? true,
+    padding: options.padding ?? 24,
+    initialView: options.initialView,
   };
 };
 
@@ -186,3 +228,55 @@ export const createZoomFilter =
         return !event.button;
     }
   };
+
+export type ResolveZoomTargetParams = {
+  target: ZoomTarget;
+  size: Size;
+  padding?: number | Padding;
+  /** [mínimo, máximo] de `k`. */
+  scaleExtent: readonly [number, number];
+  /** [lon, lat] → píxeles del lienzo; `null` si no proyecta. */
+  project: (coordinates: Point) => Point | null;
+  /** Límites en píxeles del cuerpo principal de una región, o `null` si no existe. */
+  getRegionExtent: (id: string) => Extent | null;
+  /** Encuadres por región (ya fusionados con `DEFAULT_FOCUS_BOUNDS`). `null` = usar la geometría. */
+  focusBounds?: Readonly<Record<string, LonLatBounds | null | undefined>>;
+};
+
+const clamp = (value: number, [min, max]: readonly [number, number]): number =>
+  Math.min(max, Math.max(min, value));
+
+/**
+ * `ZoomTarget` → cámara (dd.md §9.5 y §11.1.5). Pura: la proyección y la geometría llegan como
+ * funciones. Devuelve `null` si no se puede resolver (región inexistente, punto fuera del globo).
+ *
+ * No aplica `constrain`: de eso se encarga quien mueve la cámara, porque d3-zoom solo lo aplica a los
+ * gestos, no a las transiciones programáticas.
+ */
+export const resolveZoomTarget = ({
+  target,
+  size,
+  padding,
+  scaleExtent,
+  project,
+  getRegionExtent,
+  focusBounds,
+}: ResolveZoomTargetParams): CameraTransform | null => {
+  if (typeof target === "string") {
+    const override = focusBounds?.[target];
+    const extent = override ? projectBounds(override, project) : getRegionExtent(target);
+    return extent === null
+      ? null
+      : boundsToTransform({ bounds: extent, size, padding, scaleExtent });
+  }
+  if ("bounds" in target) {
+    const extent = projectBounds(target.bounds, project);
+    return extent === null
+      ? null
+      : boundsToTransform({ bounds: extent, size, padding, scaleExtent });
+  }
+  const at = project([target.center[0], target.center[1]]);
+  if (at === null || !Number.isFinite(target.zoom)) return null;
+  const k = clamp(target.zoom, scaleExtent);
+  return { k, x: size.width / 2 - k * at[0], y: size.height / 2 - k * at[1] };
+};

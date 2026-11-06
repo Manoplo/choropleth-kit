@@ -10,32 +10,41 @@ import type { Feature, FeatureCollection, MultiLineString } from "geojson";
 import { geoPath } from "d3-geo";
 import {
   computeAspectRatio,
+  constrainTransform,
   createBorders,
   createProjection,
   DEFAULT_EMPTY_FILL,
+  DEFAULT_FOCUS_BOUNDS,
   defaultFormatValue,
   formatJoinDiagnostics,
   getAnchorPoint,
+  getFocusExtent,
   getFocusGeometry,
   joinData,
   resolveLabels,
   resolveVariant,
   resolveZoomOptions,
+  resolveZoomTarget,
   toFeatureCollection,
   type Bubble,
   type ChoroplethLabels,
+  type CameraTransform,
   type ColorScale,
   type GeographyInput,
   type JoinResult,
   type LegendItem,
+  type LonLatBounds,
+  type Padding,
   type Point,
   type ProjectionName,
   type ResolvedZoom,
   type SizeLegendItem,
   type VariantConfig,
   type ZoomOptions,
+  type ZoomTarget,
 } from "../core";
 import { isSameItem, ROOT_LEVEL, type ItemContext, type ItemRef, type MapItem } from "./map-item";
+import { isProduction } from "./env";
 import { createMapStore, type MapStore } from "./map-store";
 import { useContainerSize } from "./use-container-size";
 import { useGeography, type GeographyStatus } from "./use-geography";
@@ -115,6 +124,17 @@ type BaseOptions<TDatum> = {
   /** Se llama cada vez que cambia el resultado del cruce datos↔regiones (también en producción). */
   onJoinReport?: (report: JoinReport) => void;
   /**
+   * Vuela a esta región (id) cuando cambia; con `null` vuelve al encaje. En el **primer render** no
+   * vuela: coloca la cámara directamente. Es la forma declarativa de `zoomTo` (dd.md §11.1.5).
+   */
+  focusId?: string | null;
+  /**
+   * Encuadres explícitos por región, en [[lonO, latS], [lonE, latN]]. Se fusionan con los de la
+   * librería (`DEFAULT_FOCUS_BOUNDS`: España **con Canarias**). `{ ES: null }` vuelve al encuadre
+   * geométrico (cuerpo principal) para esa región.
+   */
+  focusBounds?: Readonly<Record<string, LonLatBounds | null>>;
+  /**
    * Zoom y pan (dd.md §11.1). Activo por defecto; `false` = mapa estático. La rueda hace zoom con el
    * ratón encima (`wheel: "always"`); para mapas dentro de una página larga usa `wheel: "cooperative"`.
    */
@@ -184,6 +204,18 @@ export type UseChoroplethResult<TDatum> = {
   onViewChange: ZoomOptions["onViewChange"];
   /** Píxeles del lienzo → [lon, lat] (`projection.invert`); `null` si cae fuera del globo. */
   invert: (point: Point) => Point | null;
+  /** [lon, lat] → píxeles del lienzo; `null` si no proyecta. */
+  project: (coordinates: Point) => Point | null;
+  /** `focusId` tal cual, para que `useZoom` lo aplique (volar o colocar la cámara). */
+  focusId: string | null | undefined;
+  /**
+   * `ZoomTarget` → cámara (ya limitada por `constrain`), o `null` si no se puede resolver (región
+   * inexistente). Es lo que usan `zoomTo`, `focusId` e `initialView`.
+   */
+  resolveCamera: (
+    target: ZoomTarget,
+    options?: { padding?: number | Padding },
+  ) => CameraTransform | null;
   /** Fronteras interiores (`d` de un `<path>`). `null` con GeoJSON: usa `stroke` en cada región. */
   borders: string | null;
   /** Leyenda de color (swatches con conteos). Vacía en `bubble` sin `getColorValue`. */
@@ -293,7 +325,7 @@ export const useChoropleth = <TDatum>(
   const height = options.height ?? measured.height;
 
   // ── rutas (geometría + proyección + tamaño; nada de datos) ────────────────────────────────────
-  const { paths, bordersPath, anchors, project, invert } = useMemo(() => {
+  const { paths, bordersPath, anchors, project, invert, toPath } = useMemo(() => {
     const geoProjection = createProjection({
       name: projection,
       width,
@@ -324,6 +356,7 @@ export const useChoropleth = <TDatum>(
           })
         : [],
       project: toPoint,
+      toPath,
       // Lo contrario: píxeles → [lon, lat]. Lo usa `toViewState` para el `ViewState` público.
       invert: (point: Point): Point | null => {
         const at = geoProjection.invert?.([point[0], point[1]]);
@@ -587,6 +620,46 @@ export const useChoropleth = <TDatum>(
     };
   };
 
+  // ── cámara: ZoomTarget → transform ────────────────────────────────────────────────────────────
+  const zoomOptions = resolveZoomOptions(options.zoom, {
+    clickIsBusy: onItemClick !== undefined || selectable,
+  });
+  const focusBounds = { ...DEFAULT_FOCUS_BOUNDS, ...options.focusBounds };
+
+  /** Límites en píxeles del cuerpo principal de una región (Francia sin la Guayana). Perezoso. */
+  const getRegionExtent = (id: string) => {
+    const feature = featuresById.get(id);
+    return feature === undefined ? null : getFocusExtent({ feature, path: toPath, project });
+  };
+
+  const resolveCamera: UseChoroplethResult<TDatum>["resolveCamera"] = (target, cameraOptions) => {
+    if (zoomOptions === null) return null;
+    const size = { width, height };
+    const transform = resolveZoomTarget({
+      target,
+      size,
+      padding: cameraOptions?.padding ?? zoomOptions.padding,
+      scaleExtent: [zoomOptions.min, zoomOptions.max],
+      project,
+      getRegionExtent,
+      focusBounds,
+    });
+    // `d3-zoom` solo aplica `constrain` a los gestos, no a las transiciones programáticas.
+    return transform !== null && zoomOptions.constrain === "contain"
+      ? constrainTransform({
+          transform,
+          content: [
+            [0, 0],
+            [width, height],
+          ],
+          view: [
+            [0, 0],
+            [width, height],
+          ],
+        })
+      : transform;
+  };
+
   return {
     containerRef: measured.ref,
     width,
@@ -598,11 +671,12 @@ export const useChoropleth = <TDatum>(
     emptyFill,
     fallbackPoints: fallbackMarks,
     labels,
-    zoom: resolveZoomOptions(options.zoom, {
-      clickIsBusy: onItemClick !== undefined || selectable,
-    }),
+    zoom: zoomOptions,
     onViewChange: typeof options.zoom === "object" ? options.zoom.onViewChange : undefined,
     invert,
+    project,
+    focusId: options.focusId,
+    resolveCamera,
     borders: bordersPath,
     legend: variant.legend,
     sizeLegend: variant.sizeLegend,
@@ -628,10 +702,6 @@ const NO_DATA: readonly never[] = [];
 // Color de «sin dato» tematizable con `--cm-empty-fill`; el valor tras la coma es el de respaldo
 // si no se ha cargado `styles.css`.
 const EMPTY_FILL_VAR = `var(--cm-empty-fill, ${DEFAULT_EMPTY_FILL})`;
-
-// `process` no existe en un navegador sin bundler; los bundlers lo sustituyen por una constante.
-const isProduction = (): boolean =>
-  typeof process !== "undefined" && process.env["NODE_ENV"] === "production";
 
 const nameOf = (feature: Feature): string | undefined => {
   const name = (feature.properties as { name?: unknown } | null)?.name;

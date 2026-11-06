@@ -1,5 +1,20 @@
-import { useEffect, useRef, type CSSProperties, type PointerEvent, type ReactNode } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  type CSSProperties,
+  type ForwardedRef,
+  type PointerEvent,
+  type ReactElement,
+  type ReactNode,
+  type Ref,
+} from "react";
+import { FIT_TRANSFORM, toViewState } from "../../core";
 import { ChoroplethContext } from "../choropleth-context";
+import { createHandle, type ChoroplethMapHandle } from "../handle";
+import { ROOT_LEVEL } from "../map-item";
 import {
   useChoropleth,
   type UseChoroplethOptions,
@@ -14,18 +29,10 @@ export type RootProps<TDatum> = UseChoroplethOptions<TDatum> & {
   unstyled?: boolean;
 };
 
-/**
- * Nivel 2: llama a `useChoropleth` UNA vez y reparte el resultado por Context a sus hijos.
- * Es el contenedor medido (`containerRef`) y la referencia de posición del tooltip.
- */
-export const Root = <TDatum,>({
-  children,
-  className,
-  style,
-  unstyled,
-  dimOthers = "selection",
-  ...options
-}: RootProps<TDatum>) => {
+const RootInner = <TDatum,>(
+  { children, className, style, unstyled, dimOthers = "selection", ...options }: RootProps<TDatum>,
+  ref: ForwardedRef<ChoroplethMapHandle>,
+) => {
   const choropleth = useChoropleth<TDatum>({
     ...options,
     dimOthers,
@@ -44,6 +51,18 @@ export const Root = <TDatum,>({
     return store.subscribe(sync);
   }, [store, containerRef]);
 
+  // El handle imperativo (`ref` y `useChoroplethApi()`): un objeto estable que consulta el store en cada
+  // llamada. Sin zoom no hay cámara que consultar: la vista es siempre el encaje, y se registra aquí.
+  const { width, height, invert } = choropleth;
+  useEffect(() => {
+    store.registerFallbackView(() =>
+      toViewState({ transform: FIT_TRANSFORM, size: { width, height }, invert, level: ROOT_LEVEL }),
+    );
+    return () => store.registerFallbackView(null);
+  }, [store, width, height, invert]);
+  const api = useMemo(() => createHandle(store), [store]);
+  useImperativeHandle(ref, () => api, [api]);
+
   const handlePointer = (event: PointerEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     store.setState({ pointer: { x: event.clientX - rect.left, y: event.clientY - rect.top } });
@@ -51,7 +70,7 @@ export const Root = <TDatum,>({
 
   return (
     <ChoroplethContext.Provider
-      value={{ choropleth: choropleth as UseChoroplethResult<unknown>, store, viewportRef }}
+      value={{ choropleth: choropleth as UseChoroplethResult<unknown>, store, viewportRef, api }}
     >
       <div
         ref={containerRef}
@@ -76,3 +95,14 @@ export const Root = <TDatum,>({
     </ChoroplethContext.Provider>
   );
 };
+
+/**
+ * Nivel 2: llama a `useChoropleth` UNA vez y reparte el resultado por Context a sus hijos.
+ * Es el contenedor medido (`containerRef`) y la referencia de posición del tooltip.
+ *
+ * `ref` da el handle imperativo (`zoomTo`, `zoomBy`, `resetView`, `getView`). Se usa `forwardRef`
+ * (y no `ref` como prop, que solo existe en React 19) para que funcione también en React 18.
+ */
+export const Root = forwardRef(RootInner) as <TDatum>(
+  props: RootProps<TDatum> & { ref?: Ref<ChoroplethMapHandle> },
+) => ReactElement | null;

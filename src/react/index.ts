@@ -18,6 +18,8 @@ export type {
   PointItem,
   RegionItem,
 } from "./map-item";
+export type { ChoroplethMapHandle } from "./handle";
+export { useChoroplethApi } from "./choropleth-context";
 export { createMapStore, useMapStore } from "./map-store";
 export type { MapState, MapStore, PointerPosition, ZoomApi } from "./map-store";
 export { clearGeographyCache, useGeography } from "./use-geography";
@@ -46,4 +48,4 @@ export { Tooltip } from "./components/tooltip";
 export type { TooltipContext, TooltipProps } from "./components/tooltip";
 export { ChoroplethMap } from "./choropleth-map";
 export type { ChoroplethMapProps, LegendOptions, LegendPosition } from "./choropleth-map";
-export type { ViewState, ZoomOptions } from "../core";
+export type { CameraOptions, TransitionResult, ViewState, ZoomOptions, ZoomTarget } from "../core";

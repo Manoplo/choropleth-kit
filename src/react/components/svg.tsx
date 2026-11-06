@@ -30,7 +30,18 @@ export type SvgProps = {
  */
 export const Svg = ({ children, className, ariaLabel }: SvgProps) => {
   const { choropleth, store, viewportRef } = useChoroplethContext();
-  const { width, height, status, labels, zoom, invert, onViewChange, containerRef } = choropleth;
+  const {
+    width,
+    height,
+    status,
+    labels,
+    zoom,
+    invert,
+    onViewChange,
+    resolveCamera,
+    focusId,
+    containerRef,
+  } = choropleth;
   const svgRef = useRef<SVGSVGElement | null>(null);
 
   // Antes de los `return` tempranos (los hooks no pueden ser condicionales): mientras carga no hay
@@ -45,6 +56,8 @@ export const Svg = ({ children, className, ariaLabel }: SvgProps) => {
     options: zoom,
     invert,
     onViewChange,
+    resolveCamera,
+    focusId,
     ready: status === "ready",
   });
 

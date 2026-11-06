@@ -1,4 +1,5 @@
 import { createContext, useContext, type RefObject } from "react";
+import type { ChoroplethMapHandle } from "./handle";
 import type { MapStore } from "./map-store";
 import type { UseChoroplethResult } from "./use-choropleth";
 
@@ -7,6 +8,8 @@ export type ChoroplethContextValue = {
   store: MapStore;
   /** La cámara: `<Choropleth.Viewport>` la rellena y `useZoom` (en `Svg`) la lee. */
   viewportRef: RefObject<SVGGElement | null>;
+  /** El handle imperativo (el mismo que se obtiene con `ref`). */
+  api: ChoroplethMapHandle;
 };
 
 export const ChoroplethContext = createContext<ChoroplethContextValue | null>(null);
@@ -19,6 +22,7 @@ export const useChoroplethContext = <TDatum = unknown>(): {
   choropleth: UseChoroplethResult<TDatum>;
   store: MapStore;
   viewportRef: RefObject<SVGGElement | null>;
+  api: ChoroplethMapHandle;
 } => {
   const value = useContext(ChoroplethContext);
   if (value === null) {
@@ -30,5 +34,12 @@ export const useChoroplethContext = <TDatum = unknown>(): {
     choropleth: UseChoroplethResult<TDatum>;
     store: MapStore;
     viewportRef: RefObject<SVGGElement | null>;
+    api: ChoroplethMapHandle;
   };
 };
+
+/**
+ * El handle imperativo desde DENTRO del compound (dd.md §9.5): un botón hijo de `<Choropleth.Root>`
+ * puede llamar a `zoomTo` sin necesitar un `ref`.
+ */
+export const useChoroplethApi = (): ChoroplethMapHandle => useChoroplethContext().api;

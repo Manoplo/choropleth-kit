@@ -1,5 +1,11 @@
+import { geoEqualEarth } from "d3-geo";
+import { applyTransform } from "./camera";
+import type { Extent } from "./camera";
 import {
   createZoomFilter,
+  DEFAULT_FOCUS_BOUNDS,
+  resolveZoomTarget,
+  type ResolveZoomTargetParams,
   resolveControls,
   resolveZoomOptions,
   zoomKeyAction,
@@ -19,6 +25,7 @@ describe("resolveZoomOptions", () => {
       doubleClick: true,
       constrain: "contain",
       keyboard: true,
+      padding: 24,
     });
     expect(resolveZoomOptions(true, idle)).toEqual(resolveZoomOptions(undefined, idle));
   });
@@ -202,5 +209,160 @@ describe("zoomKeyAction", () => {
     expect(zoomKeyAction({ key: "+", ctrlKey: true })).toBeNull();
     expect(zoomKeyAction({ key: "-", metaKey: true })).toBeNull();
     expect(zoomKeyAction({ key: "0", altKey: true })).toBeNull();
+  });
+});
+
+describe("resolveZoomOptions · padding e initialView", () => {
+  it("padding 24 por defecto; padding e initialView se respetan", () => {
+    expect(resolveZoomOptions({}, { clickIsBusy: false })).toMatchObject({
+      padding: 24,
+      initialView: undefined,
+    });
+    expect(
+      resolveZoomOptions({ padding: 8, initialView: "ES" }, { clickIsBusy: false }),
+    ).toMatchObject({ padding: 8, initialView: "ES" });
+  });
+});
+
+describe("DEFAULT_FOCUS_BOUNDS", () => {
+  it("España incluye Canarias (decisión de negocio, no geométrica)", () => {
+    const [[west, south], [east, north]] = DEFAULT_FOCUS_BOUNDS["ES"] ?? [
+      [0, 0],
+      [0, 0],
+    ];
+
+    expect(west).toBeLessThan(-17.5); // El Hierro está en −18,2
+    expect(south).toBeLessThan(28); // La Gomera, Hierro: ~27,7
+    expect(east).toBeGreaterThan(3.3); // Menorca
+    expect(north).toBeGreaterThan(43.7); // Estaca de Bares
+  });
+});
+
+describe("resolveZoomTarget", () => {
+  const size = { width: 960, height: 500 };
+  const projection = geoEqualEarth().fitExtent(
+    [
+      [0, 0],
+      [960, 500],
+    ],
+    { type: "Sphere" },
+  );
+  const project = (c: readonly [number, number]) => {
+    const at = projection([c[0], c[1]]);
+    return at === null ? null : ([at[0], at[1]] as [number, number]);
+  };
+  const scaleExtent = [1, 12] as const;
+  const region: Extent = [
+    [400, 100],
+    [500, 160],
+  ];
+
+  const resolve = (over: Partial<ResolveZoomTargetParams>) =>
+    resolveZoomTarget({
+      target: "XX",
+      size,
+      padding: 20,
+      scaleExtent,
+      project,
+      getRegionExtent: (id) => (id === "XX" ? region : null),
+      ...over,
+    });
+
+  it("un id de región encuadra su extensión y la deja centrada", () => {
+    const t = resolve({});
+
+    expect(t).not.toBeNull();
+    const [cx, cy] = applyTransform(t as never, [450, 130]);
+    expect(cx).toBeCloseTo(480);
+    expect(cy).toBeCloseTo(250);
+    expect(t?.k).toBeCloseTo(Math.min((960 - 40) / 100, (500 - 40) / 60));
+  });
+
+  it("una región que no existe da null", () => {
+    expect(resolve({ target: "ZZ" })).toBeNull();
+  });
+
+  it("un encuadre explícito (`focusBounds`) manda sobre la geometría", () => {
+    const geometric = resolve({ target: "XX" });
+    const override = resolve({
+      target: "XX",
+      focusBounds: {
+        XX: [
+          [-18.5, 27.5],
+          [4.5, 44],
+        ],
+      },
+    });
+
+    expect(override).not.toBeNull();
+    expect(override?.k).not.toBeCloseTo(geometric?.k ?? 0);
+  });
+
+  it("`focusBounds: { XX: null }` vuelve al encuadre geométrico", () => {
+    expect(resolve({ focusBounds: { XX: null } })).toEqual(resolve({}));
+  });
+
+  it("un encuadre explícito vale aunque la región no exista en la geometría (microestado)", () => {
+    const t = resolve({
+      target: "AD",
+      focusBounds: {
+        AD: [
+          [1, 42],
+          [2, 43],
+        ],
+      },
+    });
+
+    expect(t).not.toBeNull();
+  });
+
+  it("{ bounds } encuadra unos límites geográficos", () => {
+    const t = resolve({
+      target: {
+        bounds: [
+          [-10, 35],
+          [5, 45],
+        ],
+      },
+    });
+
+    expect(t).not.toBeNull();
+    expect(t?.k).toBeGreaterThan(1);
+    const [px, py] = project([-2.5, 40]) as [number, number];
+    // el centro de los límites queda cerca del centro de la vista
+    const [sx, sy] = applyTransform(t as never, [px, py]);
+    expect(Math.abs(sx - 480)).toBeLessThan(40);
+    expect(Math.abs(sy - 250)).toBeLessThan(40);
+  });
+
+  it("{ center, zoom } pone ese punto en el centro con esa escala (relativa al encaje)", () => {
+    const t = resolve({ target: { center: [-3.7, 40.4], zoom: 4 } });
+
+    expect(t?.k).toBe(4);
+    const [px, py] = project([-3.7, 40.4]) as [number, number];
+    const [sx, sy] = applyTransform(t as never, [px, py]);
+    expect(sx).toBeCloseTo(480);
+    expect(sy).toBeCloseTo(250);
+  });
+
+  it("{ center, zoom } respeta scaleExtent y rechaza lo que no se puede resolver", () => {
+    expect(resolve({ target: { center: [0, 0], zoom: 99 } })?.k).toBe(12);
+    expect(resolve({ target: { center: [0, 0], zoom: 0.1 } })?.k).toBe(1);
+    expect(resolve({ target: { center: [0, 0], zoom: NaN } })).toBeNull();
+    expect(resolve({ target: { center: [0, 0], zoom: 2 }, project: () => null })).toBeNull();
+  });
+
+  it("unos límites que no proyectan dan null", () => {
+    expect(
+      resolve({
+        target: {
+          bounds: [
+            [0, 0],
+            [1, 1],
+          ],
+        },
+        project: () => null,
+      }),
+    ).toBeNull();
   });
 });

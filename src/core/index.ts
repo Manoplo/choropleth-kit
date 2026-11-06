@@ -4,10 +4,18 @@ export {
   boundsToTransform,
   DEFAULT_PADDING,
   getAnchorPoint,
+  getFocusExtent,
   getFocusGeometry,
   normalizePadding,
+  projectBounds,
 } from "./bounds";
-export type { BoundsToTransformParams, GetFocusGeometryParams, Padding } from "./bounds";
+export type {
+  BoundsToTransformParams,
+  GetFocusExtentParams,
+  GetFocusGeometryParams,
+  LonLatBounds,
+  Padding,
+} from "./bounds";
 export {
   applyTransform,
   constrainAxis,
@@ -85,19 +93,24 @@ export type {
 } from "./variants";
 export {
   createZoomFilter,
+  DEFAULT_FOCUS_BOUNDS,
   DEFAULT_ZOOM_MAX,
   DEFAULT_ZOOM_MIN,
   resolveControls,
   resolveZoomOptions,
+  resolveZoomTarget,
   zoomKeyAction,
 } from "./zoom";
 export type {
+  CameraOptions,
   Corner,
   ResolvedZoom,
+  ResolveZoomTargetParams,
   TransitionResult,
   ZoomControlsOptions,
   ZoomEventLike,
   ZoomFilterParams,
   ZoomKeyAction,
   ZoomOptions,
+  ZoomTarget,
 } from "./zoom";
