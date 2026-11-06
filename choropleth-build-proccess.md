@@ -18,20 +18,20 @@
 
 ## Estado actual y handoff (leer primero)
 
-> Actualizada tras el **paso 31** (visual pendiente del humano; **sin commitear**; el 30 ya está commiteado). Rama `master`. **696 tests** en verde; `typecheck`, `lint`,
+> Actualizada tras el **paso 32** (visual pendiente del humano; **sin commitear**; 27-31 ya están en `master`). Rama `feat/choreography-and-breadcrumbs`. **719 tests** en verde; `typecheck`, `lint`,
 > `format:check`, `build` y `build-storybook` limpios. Cobertura de `src/core` 100 % líneas.
 
 ### Dónde estamos
 
-| Fase                   | Pasos  | Estado                                                                                                                                                                                                                                                                                                                                                              |
-| ---------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| v0.1                   | 1-13   | ✅                                                                                                                                                                                                                                                                                                                                                                  |
-| A · cimientos          | 14-22  | ✅ (revisión visual de «Foundations» pendiente del humano)                                                                                                                                                                                                                                                                                                          |
-| **B · cámara**         | 23-26  | ✅ código y tests. Revisión visual: el 24 la dio por buena el humano; **25 y 26 sin confirmar**                                                                                                                                                                                                                                                                     |
-| B · cámara             | **27** | ✅ (revisión visual confirmada por el humano)                                                                                                                                                                                                                                                                                                                       |
-| C · drill-down (v0.4)  | 28-34  | **28** ✅ reducer. **29** ✅ rebase. **30** ✅ estado (`useDrillDown`). **31** ✅ código y tests (`Hecho*`: visual pendiente) motor de niveles con cambio instantáneo. **32 ⏳ SIGUIENTE**: coreografía (reducer + vuelo a `R` + contexto gris + revelado + lateral). 33: breadcrumb + teclado + `aria-live`. 34: prefetch (`onDrillIntent`) + avisos de desarrollo |
-| D · pulido visual      | 35-38  | ⏳                                                                                                                                                                                                                                                                                                                                                                  |
-| Accesibilidad completa | —      | ⏳ **al final, por decisión del humano** (`dd.md §13`)                                                                                                                                                                                                                                                                                                              |
+| Fase                   | Pasos  | Estado                                                                                                                                                                                                                                                                             |
+| ---------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| v0.1                   | 1-13   | ✅                                                                                                                                                                                                                                                                                 |
+| A · cimientos          | 14-22  | ✅ (revisión visual de «Foundations» pendiente del humano)                                                                                                                                                                                                                         |
+| **B · cámara**         | 23-26  | ✅ código y tests. Revisión visual: el 24 la dio por buena el humano; **25 y 26 sin confirmar**                                                                                                                                                                                    |
+| B · cámara             | **27** | ✅ (revisión visual confirmada por el humano)                                                                                                                                                                                                                                      |
+| C · drill-down (v0.4)  | 28-34  | **28-31** ✅ (commiteados). **32** ✅ código y tests (`Hecho*`: visual pendiente) coreografía: vuelo a `R`, contexto gris, revelado, subir, lateral. **33 ⏳ SIGUIENTE**: breadcrumb + teclado (Enter/Escape) + `aria-live`. 34: prefetch (`onDrillIntent`) + avisos de desarrollo |
+| D · pulido visual      | 35-38  | ⏳                                                                                                                                                                                                                                                                                 |
+| Accesibilidad completa | —      | ⏳ **al final, por decisión del humano** (`dd.md §13`)                                                                                                                                                                                                                             |
 
 ### Qué leer para el paso 27 (no más)
 
@@ -2782,3 +2782,105 @@ from canDrill for it.`): `onDrillError({ error, ctx })` (o `console.error` en in
 - ¿Por qué un nivel `"inherit"` tiene la clave de caché de su padre, y qué dibuja?
 - ¿Por qué la cámara se reinicia con `useLayoutEffect` y no con `useEffect`?
 - ¿Por qué la caché de geometrías es por mapa y no global?
+
+# Paso 32: la coreografía del drill-down (vuelo a `R`, contexto gris, revelado, subir y lateral)
+
+Archivos nuevos: `src/react/use-drill-choreography.ts`, `components/drill-layers.tsx`, `drill-choreography.test.tsx`. Tocan:
+`use-drill-engine.ts` (reescrito sobre `drillReducer`), `use-choropleth.ts`, `use-zoom.ts` + `map-store.ts` (`flyTo`), `drill-levels.ts`
+(`sourceDepth`), `regions.tsx`, `root.tsx`, `svg.tsx`, `styles.css`, `stories/drill-down.stories.tsx`. Tareas 17 (resto) y 18 de `dd.md §21`. **Sin commitear.**
+
+## 32.1 Qué se hizo
+
+Antes (paso 31) el nivel nuevo aparecía de golpe. Ahora la secuencia de `dd.md §11.2.3` se ejecuta de verdad, gobernada por el reducer del paso 28:
+
+| Momento                    | Qué ocurre                                                                                                                                                                    |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Clic (0 ms)                | La ruta cambia ya (optimista) y se avisa `onDrill`. El resto del mapa se atenúa (`opacity .35`); la región elegida conserva su color.                                         |
+| 350-1200 ms                | La cámara **vuela a `R`** (la afín entre la proyección del nivel y la del destino). La geometría y los datos del hijo cargan en paralelo.                                     |
+| Fin del vuelo + hijo listo | **Rebase**: se cambia a la proyección hija con cámara identidad, **los mismos píxeles**. El padre pasa a capa de contexto en gris. Fase `revealing`.                          |
+| Revelado (≤ 450 ms)        | Las regiones nuevas entran con fundido de 200 ms, escalonadas por la distancia al centro («explosión», `--cm-wave`). Al acabar: reposo + `onDrillEnd`.                        |
+| Si la carga tarda          | Fase `loading`: el nivel viejo se mantiene y la región elegida «respira» (opacidad .55 ↔ 1). Nunca un spinner a pantalla completa.                                            |
+| Si falla (o 0 regiones)    | Espera al fin del vuelo, **vuela de vuelta** a la cámara de antes y avisa `onDrillError` una vez. El controlador recupera la ruta anterior.                                   |
+| Subir                      | El nivel de arriba vuelve **al instante** con sus colores; el hijo sale desvaneciéndose; la cámara arranca en `R` (lo que se veía) y vuela a **la cámara de antes de bajar**. |
+| Lateral (clic en contexto) | Un vuelo en el espacio actual al hermano, rebase, revelado. Las regiones navegables del contexto tienen cursor `zoom-in` y se pueden pulsar.                                  |
+
+## 32.2 Cómo encaja
+
+```
+ useDrillEngine ── eventos ──► drillReducer (core, puro) ◄── FLIGHT_END / REVEAL_END ── useDrillChoreography
+   (carga, listo/error, ruta)        │  phase · layers · savedCameras · returnCamera          (necesita tamaño y proyecciones)
+                                     ▼
+                 shownPath = phase === "revealing" ? path : settledPath
+                                     ▼
+        useChoropleth: proyección del nivel mostrado + capas context/exiting (rutas cacheadas + transform R)
+```
+
+- **`R` es exacta.** `flyTo(camera)` (nuevo en `ZoomApi`) va por `behavior.transform`, que **no** aplica `constrain`: si se aplicara, una región
+  junto al borde del mundo acabaría el vuelo desplazada y el rebase se vería como un salto.
+- **Capas sin recálculo.** La capa de contexto reutiliza las rutas del nivel superior (`geoPath(proj_k)`) dentro de un `<g transform="R">`;
+  `R = relativeTransform(proj_k, proj_activa)`, válido entre cualquier par de la cadena. El contorno de la región en que se entró se quita
+  (`data-focus`) para no ver doble borde bajo sus hijas.
+- **Subir = cambiar de proyección sin que se note.** Se pasa a la proyección del padre con la cámara `R(padre → hijo)`, que pinta lo mismo que
+  antes, y desde ahí se vuela a la cámara guardada al bajar (`savedCameras`, del reducer).
+- **Qué espera y qué no.** Bajar y lateral empiezan YA (el vuelo y la carga van en paralelo). Subir y saltar esperan a tener geometría **y datos**
+  del destino (suele ser inmediato); si no, un padre sin datos se pintaría gris. Volver al origen mientras se baja cancela al instante.
+- **El controlador manda sobre la ruta.** Si la máquina deshace una bajada (error, gesto que corta el vuelo), el motor llama a
+  `controller.drillTo(machine.path)` para que `useDrillDown` y el `onPathChange` del consumidor se enteren.
+
+## 32.3 Decisiones y desviaciones respecto a `dd.md`
+
+- **Contexto en gris, sin color de dato** (decisión del humano, ya vigente en el diario y en `dd.md §11.2.5`).
+- **La capa que sale es gris**, no conserva los colores del hijo. Hay un destello de pérdida de color de ~200 ms que se desvanece con la capa; guardar
+  los rellenos del nivel anterior sería el pulido. **Pregunta abierta, ver 32.7.**
+- **Sin tooltip en las regiones de contexto** (la spec pide «tooltip con nombre y pista»): solo resalte y cursor. Se hará con el tooltip de drill (paso 33-34).
+- **`lateral` es por la capa de contexto.** Al pulsar un hermano de un nivel superior que no es el inmediato, `classifyDrill` lo trata como `jump`
+  (sin vuelo). Es coherente con el reducer.
+- **El revelado escalonado parte del centro de la vista**, donde queda la región elegida tras el rebase, no del punto exacto del clic.
+- **`reducir movimiento`:** el vuelo ya es un fundido (paso 26), el revelado dura 0 ms y la capa saliente no se pinta. Todo por CSS + `prefersReducedMotion()`.
+- **Un fallo latente corregido al reescribir:** la clave de caché de la geometría se calculaba con la ruta _destino_ también para la ruta _mostrada_;
+  habría fallado al subir y en lateral. Ahora `keyAt(depth, path)` recibe la ruta.
+- **Otro: el error de «0 regiones»** se construía en cada render, así que se avisaba varias veces; ahora se memoiza por destino.
+
+## 32.4 Tests
+
+719 en verde (696 + 23 nuevos de coreografía); `typecheck`, `lint`, `format:check`, `build`, `build-storybook` limpios.
+
+- **`drill-choreography.test.tsx` (23, con vuelos REALES de d3, temporizadores reales):** orden de fases (vuelo → revelado → reposo), el nivel viejo no se
+  sustituye a mitad, atenuación (`data-drill-target`), `--cm-wave`, **el rebase no se nota** (la cámara con la que acaba el vuelo == el `transform` de la
+  capa de contexto), contexto gris (sin `style` de dato, `data-focus`, `context: "none"`, `"inherit"` no duplica), subir (colores de vuelta, capa saliente,
+  cámara de arranque `R` y no el encaje, termina en reposo, **vuelve a la cámara exacta de antes**, espera a los datos), lateral (vuelo, contexto que
+  sigue, no navegables), carga lenta (`loading` + respiración), fallo (vuelta atrás y un solo aviso), interrupción por gesto, redirección, subir antes de
+  llegar, `onDrill`/`onDrillEnd`, sin zoom, reducir movimiento.
+- **`drill.test.tsx` (40):** adaptado. Los vuelos de d3 **no avanzan con los temporizadores falsos de Vitest** (su reloj de fotogramas usa el
+  `requestAnimationFrame` real, enlazado al cargar el módulo), así que ahí se simula «reducir movimiento» (vuelo = salto, revelado 0 ms) y `until()`
+  avanza el reloj; la coreografía real se prueba aparte.
+- **Mutaciones (todas rompen tests; cada una comprobada como aplicada):** vuelo a `FIT` en vez de `R`; subir sin cámara guardada; sin `REVEAL_END` (14 fallan);
+  entrada al subir con el encaje; sin foco de drill; sin devolver la ruta al controlador; **subir sin esperar a estar listo** (la primera vez sobrevivió:
+  faltaba un test de «el padre sin datos», añadido).
+
+## 32.5 Verificación visual: pendiente de ti \*
+
+`pnpm storybook` → **DrillDown / Engine → Uncontrolled** (hay un botón «← Subir»; Escape y breadcrumb llegan en el 33):
+
+| Qué comprobar                                                                                                                                                                    |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Clic en un país con tiendas: el resto del mapa **se atenúa**, la cámara **vuela** (se aleja, viaja, se acerca) y al llegar **no hay ningún salto** al aparecer las tiendas.      |
+| Las tiendas **entran en abanico** desde el centro (no todas a la vez). El resto de países queda en **gris** y los 12 con tiendas tienen cursor `zoom-in`.                        |
+| Pulsa otro país del contexto: vuelo **lateral** directo, sin pasar por el mundo.                                                                                                 |
+| «← Subir»: el mundo **vuelve con sus colores** al instante, el país se desvanece y la cámara vuela a donde estabas (si habías hecho zoom antes de bajar, **vuelve a ese zoom**). |
+| Agarra el mapa a mitad de un vuelo de bajada: **se cancela** y vuelves al mundo (no sigue contra la mano). Un segundo clic a mitad de vuelo **redirige**.                        |
+| Con el sistema en «reducir movimiento»: sin vuelo ni abanico; el nivel aparece con un fundido corto.                                                                             |
+| **ControlledUrl**: igual, con `?path=` y la espera de datos (el nivel viejo se mantiene). **Errors**: España falla y Francia viene vacía → vuelo de vuelta y mensaje en el log.  |
+
+## 32.6 Antes de pasar al paso 33: ¿lo tienes claro?
+
+- ¿Por qué el vuelo termina en `R` y no en `boundsToTransform`, y por qué `flyTo` no aplica `constrain`?
+- ¿Qué cámara hay al empezar a subir y por qué no es el encaje?
+- ¿Por qué bajar empieza ya pero subir espera a tener los datos?
+- ¿Qué pasa con la ruta del controlador si un gesto corta el vuelo de bajada? ¿Quién la deshace?
+- ¿Por qué las capas de contexto no recalculan rutas?
+
+## 32.7 Pregunta abierta
+
+La capa que sale al subir se pinta **en gris** (no conserva los colores del hijo). ¿Lo dejamos así o guardamos los rellenos del nivel anterior para
+que se desvanezca con su color? Lo segundo se ve mejor pero añade estado (un snapshot de `fill` por región) y un render extra por cambio de nivel.

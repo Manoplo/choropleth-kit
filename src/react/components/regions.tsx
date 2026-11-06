@@ -1,18 +1,28 @@
-import { memo, type SyntheticEvent } from "react";
+import { memo, type CSSProperties, type SyntheticEvent } from "react";
 import { useChoroplethContext } from "../choropleth-context";
 
-type RegionPathProps = { id: string; d: string; fill: string; drillable: boolean };
+type RegionPathProps = {
+  id: string;
+  d: string;
+  fill: string;
+  drillable: boolean;
+  /** Es la región hacia la que se baja (se atenúa el resto; si tarda, «respira»). */
+  target: boolean;
+  /** 0…1: retraso de su entrada en el revelado. */
+  wave: number | undefined;
+};
 
 // Solo se re-renderiza si cambia su color o su ruta: ni el hover ni la selección lo tocan
 // (eso lo pinta `Selection` encima). Todas las props son primitivos para que `memo` sirva.
 // `fill` va en `style` (no como atributo) porque puede ser `var(--cm-empty-fill, …)`.
-const RegionPath = memo(({ id, d, fill, drillable }: RegionPathProps) => (
+const RegionPath = memo(({ id, d, fill, drillable, target, wave }: RegionPathProps) => (
   <path
     className="cm-region"
     data-region-id={id}
     data-drillable={drillable ? "" : undefined}
+    data-drill-target={target ? "" : undefined}
     d={d}
-    style={{ fill }}
+    style={wave === undefined ? { fill } : ({ fill, "--cm-wave": wave } as CSSProperties)}
   />
 ));
 
@@ -31,8 +41,16 @@ const regionIdFrom = (event: SyntheticEvent): string | null =>
  */
 export const Regions = () => {
   const { choropleth, store } = useChoroplethContext();
-  const { regions, anonymousPaths, emptyFill, borders, clickable, hoverItem, clickItem } =
-    choropleth;
+  const {
+    regions,
+    anonymousPaths,
+    emptyFill,
+    borders,
+    clickable,
+    hoverItem,
+    clickItem,
+    drillFocusId,
+  } = choropleth;
 
   const known = new Set(regions.map((region) => region.id));
   const regionRef = (event: SyntheticEvent) => {
@@ -78,6 +96,8 @@ export const Regions = () => {
           d={region.path}
           fill={region.fill}
           drillable={region.drillable}
+          target={region.id === drillFocusId}
+          wave={region.wave}
         />
       ))}
     </g>

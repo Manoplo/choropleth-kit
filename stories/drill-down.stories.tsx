@@ -1,5 +1,5 @@
-// Fase C (v0.4), paso 31: la prop `drill`. El cambio de nivel es INSTANTÁNEO: el vuelo, el contexto gris y
-// el revelado llegan en el paso siguiente. Datos SINTÉTICOS deterministas.
+// Fase C (v0.4), pasos 31-32: la prop `drill` y su coreografía (vuelo a R, contexto gris, revelado
+// escalonado, subir a la cámara de antes, navegación lateral). Datos SINTÉTICOS deterministas.
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect, useState } from "react";
 import { geoBounds, geoCentroid } from "d3-geo";
@@ -103,11 +103,23 @@ const describe = (e: DrillEvent<Row>) =>
 const Uncontrolled = () => {
   const [lines, setLines] = useState<string[]>([]);
   const push = (line: string) => setLines((prev) => [...prev.slice(-5), line]);
+  // `useDrillDown` sin `path` es no controlado; se usa aquí solo para tener un botón «Subir» (el breadcrumb y
+  // Escape llegan en el paso siguiente). `drill={levels}` a secas también funciona.
+  const drill = useDrillDown<Row>({ levels });
   return (
     <div style={{ maxWidth: 1100, font: "13px sans-serif" }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+        <button disabled={!drill.canDrillUp} onClick={() => drill.drillUp()}>
+          ← Subir
+        </button>
+        <span>
+          {drill.breadcrumbs.map((crumb) => crumb.label).join(" › ")} · estado:{" "}
+          <b>{drill.status}</b>
+        </span>
+      </div>
       <ChoroplethMap<Row>
         {...common}
-        drill={levels}
+        drill={drill}
         data={select}
         onDrill={(e) => push(`onDrill     ${describe(e)}`)}
         onDrillEnd={(e) => push(`onDrillEnd  ${describe(e)}`)}
@@ -218,7 +230,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Mundo → país → tiendas, no controlado. Solo los 12 países con tiendas tienen cursor `zoom-in`. */
+/**
+ * Mundo → país → tiendas, no controlado. Solo los 12 países con tiendas tienen cursor `zoom-in`. Al pulsar: el
+ * resto se atenúa, la cámara VUELA al país y las tiendas aparecen en abanico desde el centro. Los demás países
+ * quedan en gris (contexto) y los 12 con tiendas son pulsables (navegación lateral). Subir vuelve a la cámara
+ * de antes de bajar.
+ */
 export const UncontrolledStory: Story = { name: "Uncontrolled", render: () => <Uncontrolled /> };
 
 /** Ruta en el «URL», `useDrillDown` controlado y latencia artificial: mientras llegan los datos se mantiene el nivel anterior. */

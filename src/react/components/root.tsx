@@ -37,7 +37,7 @@ const RootInner = <TDatum,>(
     ...options,
     dimOthers,
   } as UseChoroplethOptions<TDatum>);
-  const { containerRef, store, status, dataLoading, selectedId } = choropleth;
+  const { containerRef, store, status, dataLoading, selectedId, drillPhase } = choropleth;
   const viewportRef = useRef<SVGGElement | null>(null);
 
   // `data-interacting` se escribe en el DOM, NO como prop: si fuera estado de `Root`, empezar y
@@ -81,6 +81,8 @@ const RootInner = <TDatum,>(
         data-status={status}
         data-loading={dataLoading ? "" : undefined}
         data-dim={dimOthers}
+        // La fase del drill en el contenedor + CSS: atenuar, «respirar» y revelar sin tocar las regiones.
+        data-drill-phase={drillPhase === null || drillPhase === "idle" ? undefined : drillPhase}
         data-has-selection={selectedId === null ? undefined : ""}
         style={{ position: "relative", ...style }}
         // `pointerdown` además de `move`: un toque no mueve el puntero, y el tooltip necesita posición.

@@ -8,9 +8,11 @@ import {
   type PointerEventHandler,
 } from "react";
 import type { Feature, FeatureCollection, MultiLineString } from "geojson";
-import { geoPath } from "d3-geo";
+import { geoPath, type GeoProjection } from "d3-geo";
 import {
   buildProjectionChain,
+  FIT_TRANSFORM,
+  relativeTransform,
   computeAspectRatio,
   constrainTransform,
   contextOf,
@@ -31,6 +33,7 @@ import {
   resolveZoomTarget,
   toFeatureCollection,
   type Bubble,
+  type ChainLevel,
   type ChoroplethLabels,
   type CameraTransform,
   type ColorScale,
@@ -42,6 +45,7 @@ import {
   type LonLatBounds,
   type Padding,
   type Point,
+  type ProjectionChain,
   type ProjectionName,
   type ResolvedZoom,
   type SizeLegendItem,
@@ -49,7 +53,8 @@ import {
   type ZoomOptions,
   type ZoomTarget,
 } from "../core";
-import { isDrillable, type DrillEvent, type DrillLevel } from "./drill-levels";
+import { isDrillable, sourceDepth, type DrillEvent, type DrillLevel } from "./drill-levels";
+import { useDrillChoreography } from "./use-drill-choreography";
 import {
   isSameItem,
   ROOT_LEVEL,
@@ -80,6 +85,22 @@ export type Region<TDatum> = {
   formattedValue: string;
   /** Hay un nivel por debajo y `canDrill` lo permite (siempre `false` sin `drill`). */
   drillable: boolean;
+  /** 0…1: cuánto se retrasa su entrada en el revelado (distancia al centro). Solo mientras se revela. */
+  wave: number | undefined;
+};
+
+/**
+ * Una capa del drill que NO es la activa (dd.md §11.2.5). `context`: los niveles de arriba, en gris y sin
+ * dato (la escala del padre y la del hijo no son comparables). `exiting`: el nivel que se acaba de dejar,
+ * que se desvanece. Las rutas están en los píxeles de SU proyección; `transform` las lleva a los del
+ * nivel activo (es la afín `R` entre las dos proyecciones), así que se reutilizan las rutas cacheadas.
+ */
+export type DrillLayerView = {
+  key: string;
+  role: "context" | "exiting";
+  depth: number;
+  transform: CameraTransform;
+  paths: { id: string | undefined; d: string; focus: boolean; drillable: boolean }[];
 };
 
 export type JoinReport = Omit<JoinResult<unknown>, "joined">;
@@ -218,6 +239,14 @@ export type UseChoroplethResult<TDatum> = {
   containerRef: React.RefObject<HTMLDivElement | null>;
   width: number;
   height: number;
+  /** Fase de la coreografía del drill (`null` sin `drill`). Se publica como `data-drill-phase`. */
+  drillPhase: "idle" | "flying" | "loading" | "revealing" | null;
+  /** Región hacia la que se baja mientras dura el vuelo / la carga (se atenúa el resto). */
+  drillFocusId: string | null;
+  /** Capas de contexto (niveles de arriba, en gris) y la que sale. Vacío sin `drill`. */
+  drillLayers: DrillLayerView[];
+  /** Clic en una región de una capa de contexto (navegación lateral o salto). */
+  selectContextItem: (depth: number, id: string) => void;
   /** `loading` mientras llega la geometría asíncrona; `error` si falló. */
   status: GeographyStatus;
   /** `true` mientras `data` es `undefined` (o `loading`): se mantiene el último dato. */
@@ -295,12 +324,16 @@ export type UseChoroplethResult<TDatum> = {
 export const useChoropleth = <TDatum>(
   rawOptions: UseChoroplethOptions<TDatum>,
 ): UseChoroplethResult<TDatum> => {
+  // Estado de interacción (hover, puntero, cámara) fuera de React. Va primero: el drill lee la cámara.
+  const [store] = useState(createMapStore);
+
   // ── drill-down: el nivel que se muestra manda sobre las opciones del mapa ──────────────────────
   // Para el resto del hook, un mapa con `drill` es un mapa de UN nivel con otras opciones.
   const engine = useDrillEngine<TDatum>({
     drill: rawOptions.drill,
     data: rawOptions.data,
     filterFeatures: rawOptions.filterFeatures,
+    store,
     onDrill: rawOptions.onDrill,
     onDrillEnd: rawOptions.onDrillEnd,
     onDrillError: rawOptions.onDrillError,
@@ -434,6 +467,122 @@ export const useChoropleth = <TDatum>(
     }
   }, [chainMissing]);
 
+  /** La cadena de proyecciones de otra ruta con el tamaño y los encuadres vigentes (a dónde vuela la cámara). */
+  const chainFor = (levels: ChainLevel[], path: readonly string[]): ProjectionChain =>
+    buildProjectionChain({
+      levels,
+      path,
+      name: projection,
+      width,
+      height,
+      padding: rebasePadding,
+      focusBounds: drillFocusBounds,
+    });
+  useDrillChoreography({ engine, store, shownChain: chain, chainFor });
+
+  // Lo que se dejó atrás (capa que sale) y su proyección, solo mientras hace falta.
+  const { machine, previous } = engine;
+  const leaving = machine.layers.some((layer) => layer.role === "exiting");
+  const previousChain = useMemo(
+    () =>
+      engine.active &&
+      previous !== null &&
+      width > 0 &&
+      height > 0 &&
+      (leaving || machine.direction === "up")
+        ? buildProjectionChain({
+            levels: [...previous.chain],
+            path: previous.path,
+            name: projection,
+            width,
+            height,
+            padding: rebasePadding,
+            focusBounds: drillFocusBounds,
+          })
+        : null,
+    // `previous` cambia solo al cambiar de nivel; `focusKey` resume `drillFocusBounds`.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+    [
+      engine.active,
+      previous,
+      leaving,
+      machine.direction,
+      projection,
+      width,
+      height,
+      rebasePadding,
+      focusKey,
+    ],
+  );
+  const activeProjection = chain?.projections[chain.projections.length - 1];
+  const layersKey = machine.layers.map((layer) => `${layer.key}:${layer.role}`).join("|");
+  const contextMode = engine.level?.context ?? "siblings";
+  const drillLayers = useMemo<DrillLayerView[]>(() => {
+    if (!engine.active || chain === null || activeProjection === undefined) return [];
+    const views: DrillLayerView[] = [];
+    const activeSource = sourceDepth(engine.levels, engine.depth);
+    for (const layer of machine.layers) {
+      let features: readonly Feature[] | undefined;
+      let projectionOf: GeoProjection | undefined;
+      let idOf: ((f: Feature) => string | undefined) | undefined;
+      let focusId: string | undefined;
+      if (layer.role === "context") {
+        // Un nivel que dibuja las mismas regiones que el activo (`"inherit"`) no necesita capa aparte.
+        if (contextMode === "none" || layer.depth >= engine.depth) continue;
+        if (sourceDepth(engine.levels, layer.depth) === activeSource) continue;
+        features = engine.levelFeatures[layer.depth]?.features;
+        projectionOf = chain.projections[layer.depth];
+        idOf = engine.chain[layer.depth]?.idOf;
+        focusId = engine.shownPath[layer.depth];
+      } else if (layer.role === "exiting") {
+        features = previous?.chain[layer.depth]?.features;
+        projectionOf = previousChain?.projections[layer.depth];
+        idOf = previous?.chain[layer.depth]?.idOf;
+      } else {
+        continue;
+      }
+      if (features === undefined || projectionOf === undefined || idOf === undefined) continue;
+      const path = geoPath(projectionOf);
+      const level = engine.levels[layer.depth];
+      const paths = features.flatMap((feature) => {
+        const d = path(feature);
+        if (d == null) return [];
+        const id = idOf(feature);
+        const drillable =
+          layer.role === "context" &&
+          id !== undefined &&
+          isDrillable(engine.levels, layer.depth, {
+            kind: "region",
+            id,
+            feature,
+            datum: undefined,
+            level: { id: level?.id ?? ROOT_LEVEL.id, depth: layer.depth },
+            drillable: true,
+          });
+        return [{ id, d, focus: id !== undefined && id === focusId, drillable }];
+      });
+      views.push({
+        key: layer.key,
+        role: layer.role,
+        depth: layer.depth,
+        transform: relativeTransform(projectionOf, activeProjection),
+        paths,
+      });
+    }
+    return views;
+    // `layersKey` resume `machine.layers`; el resto cambia solo al cambiar de nivel o de tamaño.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [engine.active, chain, previousChain, previous, layersKey, engine.chainSig, contextMode]);
+
+  /** La región hacia la que se baja (se atenúa el resto; si tarda, «respira»). */
+  const drillFocusId =
+    engine.active &&
+    (machine.phase === "flying" || machine.phase === "loading") &&
+    machine.direction !== "up" &&
+    machine.direction !== null
+      ? (machine.path.at(-1) ?? null)
+      : null;
+
   // ── rutas (geometría + proyección + tamaño; nada de datos) ────────────────────────────────────
   const { paths, bordersPath, anchors, project, invert, toPath } = useMemo(() => {
     const geoProjection =
@@ -558,6 +707,16 @@ export const useChoropleth = <TDatum>(
       return;
     }
     const datum = entry.datum;
+    // Revelado «explosión»: las regiones entran antes cuanto más cerca del centro (donde quedó el clic).
+    let wave: number | undefined;
+    if (engine.active && machine.phase === "revealing") {
+      const [cx, cy] = toPath.centroid(feature);
+      const reach = Math.hypot(width, height) / 2;
+      wave =
+        Number.isFinite(cx) && Number.isFinite(cy)
+          ? Math.min(1, Math.hypot(cx - width / 2, cy - height / 2) / reach)
+          : 0;
+    }
     regions.push({
       id: entry.id,
       feature,
@@ -566,6 +725,7 @@ export const useChoropleth = <TDatum>(
       value: variant.values[index] ?? null,
       formattedValue: variant.labels[index] ?? "",
       fill: variant.fills[index] ?? "",
+      wave,
       drillable:
         engine.active &&
         isDrillable(engine.levels, engine.depth, {
@@ -653,7 +813,6 @@ export const useChoropleth = <TDatum>(
   };
 
   // ── interacción ───────────────────────────────────────────────────────────────────────────────
-  const [store] = useState(createMapStore);
   const { onItemClick, onItemHover } = options;
 
   const regionsById = new Map(regions.map((region) => [region.id, region]));
@@ -759,15 +918,25 @@ export const useChoropleth = <TDatum>(
     };
   };
 
-  // Al cambiar de nivel la proyección es otra y la cámara vuelve al encaje (el rebase deja el hijo a
-  // k = 1). Antes de pintar (`useLayoutEffect`): con un efecto normal se vería un fotograma con la
-  // cámara vieja sobre la geometría nueva. Sin animar ni avisar a `onViewChange`.
+  // Al cambiar de nivel la proyección es otra y hay que recolocar la cámara ANTES de pintar
+  // (`useLayoutEffect`: con un efecto normal se vería un fotograma con la cámara vieja sobre la geometría
+  // nueva). Sin animar ni avisar a `onViewChange`.
+  //  - Bajar / lateral / saltar: identidad (el rebase deja el hijo a k = 1, justo donde acabó el vuelo).
+  //  - Subir: la cámara que reproduce lo que se veía (`R` entre las dos proyecciones); desde ahí vuela a la
+  //    que había antes de bajar (`use-drill-choreography`).
   const shownKey = engine.shownKey;
   const previousLevel = useRef(shownKey);
   useIsoLayoutEffect(() => {
     if (!engine.active || previousLevel.current === shownKey) return;
     previousLevel.current = shownKey;
-    void store.getZoom()?.resetView({ duration: 0, silent: true });
+    const from = chain?.projections[chain.projections.length - 1];
+    const to = previousChain?.projections[previousChain.projections.length - 1];
+    const camera =
+      machine.direction === "up" && from !== undefined && to !== undefined
+        ? relativeTransform(from, to)
+        : FIT_TRANSFORM;
+    void store.getZoom()?.flyTo(camera, { duration: 0, silent: true });
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [engine.active, shownKey, store]);
 
   // ── cámara: ZoomTarget → transform ────────────────────────────────────────────────────────────
@@ -814,6 +983,13 @@ export const useChoropleth = <TDatum>(
     containerRef: measured.ref,
     width,
     height,
+    drillPhase: engine.active ? machine.phase : null,
+    drillFocusId,
+    drillLayers,
+    selectContextItem: (depth: number, id: string) => {
+      // Un item de una capa de contexto: ir a ese hermano (lateral si es el nivel justo encima, si no, salto).
+      engine.controller?.drillTo([...engine.shownPath.slice(0, depth), id]);
+    },
     status,
     dataLoading,
     regions,

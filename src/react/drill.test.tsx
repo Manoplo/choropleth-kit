@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { act, fireEvent, render, waitFor } from "@testing-library/react";
+import { act, fireEvent, render } from "@testing-library/react";
 import type { Feature, FeatureCollection } from "geojson";
 import type { DrillContext } from "../core";
 import { Choropleth } from "./choropleth";
@@ -89,6 +89,49 @@ const setup = (props: Partial<RootProps<Row>> = {}) => {
   };
 };
 
+// El cambio de nivel espera al vuelo de cámara (350-1200 ms). Los vuelos de d3 no avanzan con los
+// temporizadores falsos de Vitest (su reloj de fotogramas usa el `requestAnimationFrame` real), así que
+// salvo en la coreografía real (más abajo) se simula «reducir movimiento»: el vuelo es un salto inmediato
+// y el revelado dura 0 ms. `waitFor` de Testing Library tampoco sabe de temporizadores falsos de Vitest.
+const reduceMotion = (reduced: boolean) =>
+  vi.stubGlobal(
+    "matchMedia",
+    (query: string) =>
+      ({
+        matches: reduced && query.includes("prefers-reduced-motion"),
+        media: query,
+      }) as MediaQueryList,
+  );
+beforeEach(() => {
+  vi.useFakeTimers();
+  reduceMotion(true);
+});
+afterEach(() => {
+  if (vi.isFakeTimers()) act(() => void vi.runOnlyPendingTimers());
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
+
+/** Avanza el reloj y deja correr las promesas (cargas de geometría, vuelos). */
+const flush = (ms = 100) =>
+  act(async () => {
+    await vi.advanceTimersByTimeAsync(ms);
+  });
+
+/** Como `waitFor`, pero avanzando el reloj falso: reintenta la aserción hasta ~6 s de reloj simulado. */
+const until = async (assertion: () => void) => {
+  for (let step = 0; step < 60; step++) {
+    await flush();
+    try {
+      assertion();
+      return;
+    } catch {
+      // todavía no
+    }
+  }
+  assertion();
+};
+
 describe("la prop `drill`: nivel raíz", () => {
   it("pinta la geometría del primer nivel, con sus datos", () => {
     const { ids, path } = setup();
@@ -137,7 +180,7 @@ describe("bajar de nivel (no controlado)", () => {
   it("clic en una región navegable: aparecen sus hijas, con sus datos", async () => {
     const { ids, path } = setup();
     fireEvent.click(path("A"));
-    await waitFor(() => expect(ids()).toEqual(["A1", "A2"]));
+    await until(() => expect(ids()).toEqual(["A1", "A2"]));
 
     expect(path("A1").getAttribute("style")).not.toBe(path("A2").getAttribute("style"));
   });
@@ -145,7 +188,7 @@ describe("bajar de nivel (no controlado)", () => {
   it("el último nivel no es navegable: clic selecciona, no baja", async () => {
     const { ids, path } = setup({ defaultSelectedId: null });
     fireEvent.click(path("A"));
-    await waitFor(() => expect(ids()).toEqual(["A1", "A2"]));
+    await until(() => expect(ids()).toEqual(["A1", "A2"]));
     fireEvent.click(path("A1"));
 
     expect(ids()).toEqual(["A1", "A2"]);
@@ -159,7 +202,7 @@ describe("bajar de nivel (no controlado)", () => {
       >();
     const { ids, path } = setup({ onItemClick: onItemClick as never });
     fireEvent.click(path("A"));
-    await waitFor(() => expect(ids()).toEqual(["A1", "A2"]));
+    await until(() => expect(ids()).toEqual(["A1", "A2"]));
 
     expect(onItemClick).toHaveBeenCalledWith(
       expect.objectContaining({ id: "A", drillable: true, level: { id: "country", depth: 0 } }),
@@ -169,7 +212,7 @@ describe("bajar de nivel (no controlado)", () => {
   it("la proyección del hijo encuadra la región: sus rutas caen dentro del lienzo", async () => {
     const { ids, path } = setup();
     fireEvent.click(path("A"));
-    await waitFor(() => expect(ids()).toEqual(["A1", "A2"]));
+    await until(() => expect(ids()).toEqual(["A1", "A2"]));
     const numbers = (path("A1").getAttribute("d") ?? "").match(/-?\d+(\.\d+)?/g)?.map(Number) ?? [];
 
     expect(numbers.length).toBeGreaterThan(4);
@@ -188,7 +231,7 @@ describe("bajar de nivel (no controlado)", () => {
     const { ids, path } = setup();
     const before = extent(path("A").getAttribute("d") ?? "");
     fireEvent.click(path("A"));
-    await waitFor(() => expect(ids()).toEqual(["A1", "A2"]));
+    await until(() => expect(ids()).toEqual(["A1", "A2"]));
     const after = extent(path("A1").getAttribute("d") ?? "");
 
     expect(after).toBeGreaterThan(before);
@@ -198,11 +241,11 @@ describe("bajar de nivel (no controlado)", () => {
     const { ids, path, container, viewport } = setup({ zoom: { max: 6 } });
     const svg = container.querySelector("svg") as SVGSVGElement;
     fireEvent.wheel(svg, { deltaY: -2000, clientX: 40, clientY: 20 });
-    await waitFor(() =>
+    await until(() =>
       expect(viewport().getAttribute("transform")).not.toBe("translate(0,0) scale(1)"),
     );
     fireEvent.click(path("A"));
-    await waitFor(() => expect(ids()).toEqual(["A1", "A2"]));
+    await until(() => expect(ids()).toEqual(["A1", "A2"]));
 
     expect(viewport().getAttribute("transform")).toBe("translate(0,0) scale(1)");
   });
@@ -216,7 +259,7 @@ describe("bajar de nivel (no controlado)", () => {
     fireEvent.click(path("B")); // no navegable: selecciona
     expect(container.querySelector(".cm-root")?.hasAttribute("data-has-selection")).toBe(true);
     fireEvent.click(path("A"));
-    await waitFor(() => expect(ids()).toEqual(["A1", "A2"]));
+    await until(() => expect(ids()).toEqual(["A1", "A2"]));
 
     expect(container.querySelector(".cm-root")?.hasAttribute("data-has-selection")).toBe(false);
   });
@@ -231,7 +274,7 @@ describe("`data` como selector", () => {
     };
     const { ids, path } = setup({ data });
     fireEvent.click(path("B"));
-    await waitFor(() => expect(ids()).toEqual(["B1", "B2"]));
+    await until(() => expect(ids()).toEqual(["B1", "B2"]));
 
     expect(seen).toContain(null);
     expect(seen).toContain("B");
@@ -265,13 +308,13 @@ describe("carga entre niveles", () => {
     const { ids, path } = setup({ drill: slow });
     const before = path("A").getAttribute("style");
     fireEvent.click(path("A"));
-    await act(async () => {});
+    await flush();
 
     expect(ids()).toEqual(["A", "B", "C"]);
     expect(path("A").getAttribute("style")).toBe(before);
 
     await act(async () => release(children["A"] as FeatureCollection));
-    await waitFor(() => expect(ids()).toEqual(["A1", "A2"]));
+    await until(() => expect(ids()).toEqual(["A1", "A2"]));
   });
 
   it("si los DATOS del nivel nuevo son `undefined`, se mantiene el nivel anterior (sin mapa gris)", async () => {
@@ -298,13 +341,13 @@ describe("carga entre niveles", () => {
         e.getAttribute("data-region-id"),
       );
     fireEvent.click(container.querySelector('[data-region-id="A"]') as Element);
-    await act(async () => {});
+    await flush();
 
     expect(ids()).toEqual(["A", "B", "C"]); // sigue el nivel viejo
     expect(warn).not.toHaveBeenCalled(); // y sin avisos de «sin cruzar»
 
     fireEvent.click(getByText("load"));
-    await waitFor(() => expect(ids()).toEqual(["A1", "A2"]));
+    await until(() => expect(ids()).toEqual(["A1", "A2"]));
     warn.mockRestore();
   });
 });
@@ -324,11 +367,11 @@ describe("subir de nivel", () => {
         e.getAttribute("data-region-id"),
       );
     fireEvent.click(container.querySelector('[data-region-id="A"]') as Element);
-    await waitFor(() => expect(ids()).toEqual(["A1", "A2"]));
+    await until(() => expect(ids()).toEqual(["A1", "A2"]));
     expect(controller?.path).toEqual(["A"]);
 
     act(() => controller?.drillUp());
-    await waitFor(() => expect(ids()).toEqual(["A", "B", "C"]));
+    await until(() => expect(ids()).toEqual(["A", "B", "C"]));
     expect(controller?.path).toEqual([]);
   });
 
@@ -349,11 +392,11 @@ describe("subir de nivel", () => {
     };
     const { container } = render(<Harness />);
     fireEvent.click(container.querySelector('[data-region-id="A"]') as Element);
-    await act(async () => {});
+    await flush();
     expect(controller?.status).toBe("loading");
 
     await act(async () => release(children["A"] as FeatureCollection));
-    await waitFor(() => expect(controller?.status).toBe("idle"));
+    await until(() => expect(controller?.status).toBe("idle"));
   });
 });
 
@@ -378,7 +421,7 @@ describe("modo controlado", () => {
         e.getAttribute("data-region-id"),
       );
     fireEvent.click(container.querySelector('[data-region-id="B"]') as Element);
-    await waitFor(() => expect(ids()).toEqual(["B1", "B2"]));
+    await until(() => expect(ids()).toEqual(["B1", "B2"]));
 
     expect(onPathChange).toHaveBeenCalledWith(["B"]);
   });
@@ -390,7 +433,7 @@ describe("modo controlado", () => {
       Array.from(container.querySelectorAll("[data-region-id]")).map((e) =>
         e.getAttribute("data-region-id"),
       );
-    await waitFor(() => expect(ids()).toEqual(["A1", "A2"]));
+    await until(() => expect(ids()).toEqual(["A1", "A2"]));
   });
 
   it("si el padre rechaza el cambio, el mapa no se mueve", async () => {
@@ -398,7 +441,7 @@ describe("modo controlado", () => {
       mapElement({ drill: useDrillDown<Row>({ levels, path: [], onPathChange: () => {} }) });
     const { container } = render(<Harness />);
     fireEvent.click(container.querySelector('[data-region-id="A"]') as Element);
-    await act(async () => {});
+    await flush();
 
     expect(container.querySelector('[data-region-id="A"]')).not.toBeNull();
     expect(container.querySelector('[data-region-id="A1"]')).toBeNull();
@@ -412,7 +455,8 @@ describe("eventos onDrill / onDrillEnd", () => {
     const onDrillEnd = vi.fn<(e: DrillEvent<Row>) => void>(() => void order.push("end"));
     const { ids, path } = setup({ onDrill, onDrillEnd });
     fireEvent.click(path("A"));
-    await waitFor(() => expect(ids()).toEqual(["A1", "A2"]));
+    await until(() => expect(ids()).toEqual(["A1", "A2"]));
+    await until(() => expect(onDrillEnd).toHaveBeenCalledOnce()); // al acabar el revelado
 
     expect(onDrill).toHaveBeenCalledOnce();
     expect(onDrill.mock.calls[0]?.[0]).toMatchObject({
@@ -444,7 +488,7 @@ describe("eventos onDrill / onDrillEnd", () => {
       return mapElement({ drill: c, onDrill });
     };
     render(<Harness />);
-    await act(async () => {});
+    await flush();
     act(() => controller?.drillUp());
 
     expect(onDrill.mock.calls[0]?.[0]).toMatchObject({ direction: "up", to: { path: [] } });
@@ -467,11 +511,11 @@ describe("errores de geometría", () => {
     };
     const { container } = render(<Harness />);
     fireEvent.click(container.querySelector('[data-region-id="A"]') as Element);
-    await waitFor(() => expect(onDrillError).toHaveBeenCalledOnce());
+    await until(() => expect(onDrillError).toHaveBeenCalledOnce());
 
     expect(onDrillError.mock.calls[0]?.[0]?.error).toEqual(new Error("boom"));
     expect(onDrillError.mock.calls[0]?.[0]?.ctx).toMatchObject({ path: ["A"], depth: 1 });
-    await waitFor(() => expect(controller?.path).toEqual([]));
+    await until(() => expect(controller?.path).toEqual([]));
     expect(container.querySelector('[data-region-id="A"]')).not.toBeNull();
   });
 
@@ -483,7 +527,7 @@ describe("errores de geometría", () => {
     const onDrillError = vi.fn<(e: { error: unknown; ctx: DrillContext }) => void>();
     const { path } = setup({ drill: empty, onDrillError });
     fireEvent.click(path("A"));
-    await waitFor(() => expect(onDrillError).toHaveBeenCalledOnce());
+    await until(() => expect(onDrillError).toHaveBeenCalledOnce());
 
     expect(onDrillError.mock.calls[0]?.[0]?.error).toEqual(
       new Error(
@@ -500,7 +544,7 @@ describe("errores de geometría", () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     const { path } = setup({ drill: failing });
     fireEvent.click(path("A"));
-    await waitFor(() => expect(error).toHaveBeenCalled());
+    await until(() => expect(error).toHaveBeenCalled());
 
     expect(String(error.mock.calls[0]?.[0])).toContain("[choropleth]");
     error.mockRestore();
@@ -521,11 +565,11 @@ describe("errores de geometría", () => {
     const onDrillError = vi.fn<(e: { error: unknown; ctx: DrillContext }) => void>();
     const { ids, path } = setup({ drill: flaky, onDrillError });
     fireEvent.click(path("A"));
-    await waitFor(() => expect(onDrillError).toHaveBeenCalledOnce());
-    await act(async () => {});
+    await until(() => expect(onDrillError).toHaveBeenCalledOnce());
+    await flush();
     fail = false;
     fireEvent.click(path("A"));
-    await waitFor(() => expect(ids()).toEqual(["A1", "A2"]));
+    await until(() => expect(ids()).toEqual(["A1", "A2"]));
   });
 });
 
@@ -542,7 +586,7 @@ describe("niveles con `encoding` y `inherit`", () => {
     const { container, ids, path } = setup({ drill: encoded });
     expect(container.querySelectorAll("circle.cm-bubble")).toHaveLength(0);
     fireEvent.click(path("A"));
-    await waitFor(() => expect(ids()).toEqual(["A1", "A2"]));
+    await until(() => expect(ids()).toEqual(["A1", "A2"]));
 
     expect(container.querySelectorAll("circle.cm-bubble")).toHaveLength(2);
   });
@@ -560,7 +604,7 @@ describe("niveles con `encoding` y `inherit`", () => {
     };
     const before = extent(path("A").getAttribute("d") ?? "");
     fireEvent.click(path("A"));
-    await waitFor(() => expect(extent(path("A").getAttribute("d") ?? "")).toBeGreaterThan(before));
+    await until(() => expect(extent(path("A").getAttribute("d") ?? "")).toBeGreaterThan(before));
 
     expect(ids()).toEqual(["A", "B", "C"]); // mismas regiones; ahora A llena la vista
   });
@@ -576,7 +620,7 @@ describe("proporción automática", () => {
     const viewBox = () => container.querySelector("svg")?.getAttribute("viewBox");
     const before = viewBox();
     fireEvent.click(path("A"));
-    await waitFor(() => expect(ids()).toEqual(["A1", "A2"]));
+    await until(() => expect(ids()).toEqual(["A1", "A2"]));
 
     expect(before).not.toBeNull();
     expect(viewBox()).toBe(before);
@@ -611,7 +655,7 @@ describe("geodatos reales (world110m)", () => {
         mapElement({ drill: real, data: [], width: 960, height: 500, getValue: () => 1 }),
       );
       fireEvent.click(container.querySelector(`[data-region-id="${id}"]`) as Element);
-      await act(async () => {});
+      await flush();
       const d = container.querySelector(`[data-region-id="${id}"]`)?.getAttribute("d") ?? "";
       const parts = d
         .split(/(?=M)/)

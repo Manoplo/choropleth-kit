@@ -29,6 +29,13 @@
   --cm-bubble-stroke: #ffffff;
   --cm-bubble-opacity: 0.75;
   --cm-transition-duration: 250ms;
+  /* Drill-down (dd.md §11.2.5): el contexto va en gris, sin color de dato. */
+  --cm-context-fill: #e5e5e5;
+  --cm-context-stroke: #ffffff;
+  --cm-context-hover-fill: #d4d4d4;
+  --cm-drill-dim-opacity: 0.35;
+  --cm-reveal-duration: 200ms;
+  --cm-reveal-stagger: 250ms;
   --cm-font-family: inherit;
   --cm-font-size: 12px;
   --cm-tooltip-bg: #ffffff;
@@ -329,4 +336,99 @@
   border-radius: 4px;
   padding: 4px 8px;
   white-space: nowrap;
+}
+
+/* ── drill-down ───────────────────────────────────────────────────────────────────────────── */
+
+/*
+ * Contexto: los niveles de arriba, en gris y SIN el color de dato. Razón cartográfica: la escala del padre
+ * y la del hijo son distintas; ver ambas en color invita a comparar lo que no es comparable.
+ */
+.cm-root:not([data-unstyled]) .cm-layer[data-role="context"] .cm-context-region {
+  fill: var(--cm-context-fill);
+  stroke: var(--cm-context-stroke);
+  stroke-width: 0.5px;
+  vector-effect: non-scaling-stroke;
+  transition: fill var(--cm-transition-duration);
+}
+/* La región en la que se entró está cubierta por sus hijas: su contorno no debe verse doble. */
+.cm-root:not([data-unstyled]) .cm-layer[data-role="context"] .cm-context-region[data-focus] {
+  stroke: none;
+}
+.cm-root:not([data-unstyled]) .cm-layer[data-role="context"] .cm-context-region[data-drillable] {
+  cursor: zoom-in;
+}
+.cm-root:not([data-unstyled])
+  .cm-layer[data-role="context"]
+  .cm-context-region[data-drillable]:hover {
+  fill: var(--cm-context-hover-fill);
+}
+/* Durante un gesto no hay hover en el contexto (como en las regiones). */
+.cm-root:not([data-unstyled])[data-interacting] .cm-layer[data-role="context"] {
+  pointer-events: none;
+}
+
+/* La capa que sale (al subir o ir a un hermano) se desvanece. */
+.cm-root:not([data-unstyled]) .cm-layer[data-role="exiting"] .cm-context-region {
+  fill: var(--cm-context-fill);
+  stroke: var(--cm-context-stroke);
+  stroke-width: 0.5px;
+  vector-effect: non-scaling-stroke;
+}
+.cm-root:not([data-unstyled]) .cm-layer[data-role="exiting"] {
+  animation: cm-fade-out var(--cm-reveal-duration) ease-out both;
+}
+
+/* Al empezar a bajar, el resto del mapa se atenúa y la región elegida se queda con su color. */
+.cm-root:not([data-unstyled])[data-drill-phase="flying"] .cm-region:not([data-drill-target]),
+.cm-root:not([data-unstyled])[data-drill-phase="loading"] .cm-region:not([data-drill-target]) {
+  opacity: var(--cm-drill-dim-opacity);
+  transition: opacity var(--cm-reveal-duration);
+}
+/* Si la carga tarda más que el vuelo, la región «respira». Nunca un spinner a pantalla completa. */
+.cm-root:not([data-unstyled])[data-drill-phase="loading"] .cm-region[data-drill-target] {
+  animation: cm-breathe 1.2s ease-in-out infinite alternate;
+}
+
+/* Revelado: las regiones nuevas entran con un fundido, escalonado por la distancia al centro («explosión»). */
+.cm-root:not([data-unstyled])[data-drill-phase="revealing"] .cm-regions .cm-region {
+  animation: cm-fade-in var(--cm-reveal-duration) ease-out both;
+  animation-delay: calc(var(--cm-wave, 0) * var(--cm-reveal-stagger));
+}
+
+@keyframes cm-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes cm-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes cm-breathe {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.55;
+  }
+}
+
+/* «Reducir movimiento»: el nivel aparece sin animar (el vuelo ya es un fundido, en `use-zoom`). */
+@media (prefers-reduced-motion: reduce) {
+  .cm-root:not([data-unstyled])[data-drill-phase="revealing"] .cm-regions .cm-region,
+  .cm-root:not([data-unstyled])[data-drill-phase="loading"] .cm-region[data-drill-target],
+  .cm-root:not([data-unstyled]) .cm-layer[data-role="exiting"] {
+    animation: none;
+  }
+  .cm-root:not([data-unstyled]) .cm-layer[data-role="exiting"] {
+    display: none;
+  }
 }

@@ -23,6 +23,15 @@ export type ZoomApi = {
     target: ZoomTarget,
     options?: CameraOptions & { silent?: boolean },
   ) => Promise<TransitionResult>;
+  /**
+   * Vuela a una cámara EXACTA (sin `constrain` ni límites de `k`): el drill-down necesita acabar justo en
+   * `R` (dd.md §11.2.4) para que el cambio de proyección sea invisible. `duration: 0` coloca la cámara;
+   * con `silent` no avisa a `onViewChange`.
+   */
+  flyTo: (
+    camera: CameraTransform,
+    options?: { duration?: number; silent?: boolean },
+  ) => Promise<TransitionResult>;
   /** Multiplica el zoom actual (×2 acerca, ×0,5 aleja) centrado en la vista. */
   zoomBy: (factor: number, options?: { duration?: number }) => Promise<TransitionResult>;
   /** Vuelo al encaje del nivel. `silent` (solo con `duration: 0`) no avisa a `onViewChange`. */

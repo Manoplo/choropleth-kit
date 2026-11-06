@@ -368,6 +368,16 @@ export const useZoom = ({
           },
         );
       },
+      flyTo: (camera, { duration, silent } = {}) => {
+        const length = duration ?? flightDuration({ from: current(), to: camera, size });
+        return animate(
+          length,
+          (t) => behavior.transform(t as typeof selection, toZoomIdentity(camera)),
+          {
+            silent,
+          },
+        );
+      },
       zoomBy: (factor, { duration = BUTTON_ZOOM_MS } = {}) =>
         animate(duration, (t) => behavior.scaleBy(t as typeof selection, factor), {
           ease: easeCubicOut,
