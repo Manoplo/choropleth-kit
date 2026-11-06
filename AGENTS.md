@@ -17,8 +17,9 @@ Instrucciones para cualquier agente de código que trabaje en este repositorio.
 
 - `coropleth-library.md` (alias `dd.md`): diseño y handoff (`§21` es el vigente).
 - `choropleth-build-proccess.md`: diario de construcción. Cada paso se documenta ahí (qué, por qué,
-  orden interno, decisiones, tests, preguntas de comprobación). Leer la «Revisión de Opus 5.5» antes de
-  seguir.
+  orden interno, decisiones, tests, preguntas de comprobación). **Empieza por su sección «Estado actual y
+  handoff»**: dice dónde estamos, qué decidió el humano, las trampas conocidas y qué leer para el siguiente
+  paso. **No leas los dos documentos enteros** (casi 5.000 líneas): lee solo lo que gobierna el paso.
 
 ## Comandos
 

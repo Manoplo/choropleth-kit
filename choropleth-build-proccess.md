@@ -9,11 +9,102 @@
 > sección (`dd.md §9.2`, `§11`…) son los de ese archivo. Aquí no se repite el diseño, solo se explica
 > cómo se va construyendo.
 >
-> **Handoff vigente:** `dd.md §21` (v0.2-v0.5). Antes de seguir, leer la sección final de este diario,
-> **«Revisión de Opus 5.5 tras el paso 13»**: corrige varias decisiones y reordena los pasos.
+> **Handoff vigente:** la sección **«Estado actual y handoff»** de justo debajo (léela primero) y
+> `dd.md §21`. **No hace falta leer los dos documentos enteros** (casi 5.000 líneas): la sección de
+> handoff dice qué leer para el siguiente paso.
 >
 > **Regla de trabajo:** un paso cada vez, acotado y verificable. No se empieza el siguiente hasta que
 > quien aprende confirma que entiende el actual.
+
+## Estado actual y handoff (leer primero)
+
+> Actualizada tras el **paso 26**. Rama `feat/zoom-pan`. **489 tests** en verde; `typecheck`, `lint`,
+> `format:check`, `build` y `build-storybook` limpios. Cobertura de `src/core` 100 % líneas.
+
+### Dónde estamos
+
+| Fase                   | Pasos  | Estado                                                                                          |
+| ---------------------- | ------ | ----------------------------------------------------------------------------------------------- |
+| v0.1                   | 1-13   | ✅                                                                                              |
+| A · cimientos          | 14-22  | ✅ (revisión visual de «Foundations» pendiente del humano)                                      |
+| **B · cámara**         | 23-26  | ✅ código y tests. Revisión visual: el 24 la dio por buena el humano; **25 y 26 sin confirmar** |
+| B · cámara             | **27** | ⏳ **SIGUIENTE**: contraescalado de burbujas, inercia y resize sin salto                        |
+| C · drill-down (v0.4)  | 28-33  | ⏳ (tareas 15-20 de `dd.md §21`; la parte más grande)                                           |
+| D · pulido visual      | 34-37  | ⏳                                                                                              |
+| Accesibilidad completa | —      | ⏳ **al final, por decisión del humano** (`dd.md §13`)                                          |
+
+### Qué leer para el paso 27 (no más)
+
+1. `AGENTS.md` (reglas; **la primera: commit y push solo bajo petición explícita**).
+2. Este «Estado actual» y el **paso 26** del diario (estilo de la entrada y último código).
+3. `dd.md §11.1.3` (punto 2, resize sin salto), `§11.1.4` (inercia) y `§11.1.6` (contraescalado), líneas
+   ~1142-1345 de `coropleth-library.md`. `§21` tarea 14 resume el alcance.
+4. El código que se toca: `src/react/use-zoom.ts`, `src/core/camera.ts` (`inertiaOffset`, `preserveView`
+   ya existen y están probadas), `src/react/styles.css` (burbujas).
+
+**Alcance del 27** (ya hecho en `core`, falta conectarlo): `bubbleScaling: "sqrt" | "screen" | "geo"` con UNA
+variable CSS (`--cm-bubble-scale`: `1/√k`, `1/k` o `1`; el CSS aplica `transform: scale(...)` con
+`transform-box: fill-box`); inercia al soltar un arrastre (falta la **velocidad de suelta**: muestras de los
+últimos ≤ 100 ms, umbral 0,3 px/ms, `inertiaOffset`, se cancela con `pointerdown`); y **resize sin salto**
+(`preserveView` al cambiar el tamaño). Hoy: las burbujas **crecen** con el zoom y al redimensionar con zoom
+aplicado la vista se desplaza.
+
+### Decisiones del humano que se desvían de `dd.md` (vigentes)
+
+- **Rueda:** `wheel` por defecto `"always"` (con el ratón encima, la rueda hace zoom); `"cooperative"` es opt-in.
+- **Controles de zoom:** opt-in (`zoom={{ controls: true }}`). El aviso de gesto solo sale en `cooperative`.
+- **España** se encuadra **con Canarias** (`DEFAULT_FOCUS_BOUNDS`); `focusBounds={{ ES: null }}` la quita.
+- **Accesibilidad al final**, no repartida (flechas, `role="img"` del `<svg>`, tabla alternativa, `aria-live`…).
+- **Errores y avisos de consola en inglés**, con prefijo `[choropleth]`. Documentación y comentarios, en español.
+- **`dimOthers` por defecto `"selection"`**. Chipre del Norte y Somalilandia quedan en gris sin id (Legal).
+- Se puede **romper la API** antes de 1.0, sin alias de compatibilidad.
+
+### Trampas aprendidas (cuestan tiempo si se repiten)
+
+- **Los `@types` de d3 no son garantía de runtime.** `interpolateZoom.rho` está en la **función**, no en el
+  interpolador (los tipos dicen lo contrario). Ante la duda, probar con una línea de `node -e`.
+- **Winding order:** d3 espera el anillo exterior en sentido **horario**. El fixture `tests/fixtures.ts`
+  (`twoSquares`) lo tiene al revés: su mapa es el mundo entero. Para tests de encuadre, usar polígonos propios.
+- **Antimeridiano:** un polígono que cruza ±180° (Rusia, Fiyi) hace que `path.bounds` mida las dos mitades.
+  Usar `getFocusExtent` / `projectBounds` (encuadran la mitad mayor).
+- **`prettier --write` reformatea `src/geo/world-110m.json`** (está en `.prettierignore`; se genera compacto con
+  `scripts/build-geo/build-world-110m.mjs`).
+- **jsdom:** no tiene `Element.animate` (el fundido de reduced-motion salta directo); `MouseEvent.view` no se
+  puede pasar en el constructor (usar `Object.defineProperty`); con temporizadores falsos, el supresor de clic de
+  `d3-zoom` (`setTimeout 0`) no corre y se queda en `window`: vaciar los pendientes en `afterEach`.
+- **Linter de React:** no leer ni escribir `ref.current` durante el render (también a través de una función que
+  se pasa a algo que corre en el render). Si hace falta, registrar en el store desde un efecto.
+- **`pnpm test <ruta1> <ruta2>`** puede dar recuentos engañosos; para un solo archivo usar
+  `pnpm vitest run <archivo>`.
+- **Hover/zoom no deben re-renderizar `Root`.** Se comprueba contando llamadas a `getId` (el join la llama una vez por
+  fila en cada render). Cualquier cambio en `Root`, el hook o el store debe mantener esos tests en verde.
+
+### Cómo trabajamos (el patrón que funciona)
+
+1. Leer lo que gobierna el paso → diseñar → `core` puro con tests **antes** que React → componentes → story.
+2. **Comprobar que los tests sirven con mutaciones a mano** (romper una línea clave, ver que algún test falla,
+   revertir). Ya ha cazado errores propios.
+3. Documentar el paso en el diario con la estructura de siempre: qué, por qué, orden interno, decisiones y
+   desviaciones respecto a `dd.md`, tests, verificación visual **pendiente del humano**, preguntas de comprobación.
+4. **No hay navegador en la sesión del agente**: lo visual (Storybook) lo revisa el humano. Un paso con efecto visible
+   se marca `✅ Hecho*` hasta que lo confirma.
+5. Ante una duda de diseño que `dd.md §21` marca como «preguntar al humano», **preguntar**, no suponer.
+6. Ver `git status` antes de empezar y **no commitear sin que lo pida**.
+
+### Preguntas abiertas
+
+- **Ancla de las burbujas de Rusia** (§26.8): `getAnchorPoint` proyecta el anillo que cruza el antimeridiano vértice
+  a vértice; visualmente salió plausible pero no está garantizado. ¿Prueba específica ahora o en el pulido?
+- **Aviso de `scroll-jacking`** (§24.8): con `wheel: "always"` y el mapa en una página con scroll, el mapa se come la
+  rueda. ¿El preset lo avisa en desarrollo o basta la documentación de la prop?
+- Fronteras disputadas y política de Chipre del Norte / Somalilandia: decisión de Legal, no técnica (§F.2, §22).
+
+### Prompt de arranque para una sesión nueva
+
+> Lee `AGENTS.md` y la sección «Estado actual y handoff» de `choropleth-build-proccess.md`, y el paso 26 de ese
+> diario. Sigue con el **paso 27** (contraescalado de burbujas, inercia y resize sin salto), leyendo solo
+> `coropleth-library.md` §11.1.3 (punto 2), §11.1.4 y §11.1.6 y el código que se toca. Un paso cada vez; no
+> commitees ni hagas push sin que te lo pida; la revisión visual la hago yo.
 
 ## Índice de pasos
 
