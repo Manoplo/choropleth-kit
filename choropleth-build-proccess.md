@@ -18,20 +18,20 @@
 
 ## Estado actual y handoff (leer primero)
 
-> Actualizada tras el **paso 29** (puro `core`, sin efecto visual; **sin commitear**; el 28 ya está commiteado). Rama `master`. **582 tests** en verde; `typecheck`, `lint`,
+> Actualizada tras el **paso 30** (sin efecto visual; **sin commitear**; el 28 ya está commiteado). Rama `master`. **643 tests** en verde; `typecheck`, `lint`,
 > `format:check`, `build` y `build-storybook` limpios. Cobertura de `src/core` 100 % líneas.
 
 ### Dónde estamos
 
-| Fase                   | Pasos  | Estado                                                                                                                                       |
-| ---------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| v0.1                   | 1-13   | ✅                                                                                                                                           |
-| A · cimientos          | 14-22  | ✅ (revisión visual de «Foundations» pendiente del humano)                                                                                   |
-| **B · cámara**         | 23-26  | ✅ código y tests. Revisión visual: el 24 la dio por buena el humano; **25 y 26 sin confirmar**                                              |
-| B · cámara             | **27** | ✅ (revisión visual confirmada por el humano)                                                                                                |
-| C · drill-down (v0.4)  | 28-33  | **28** ✅ `core/drill.ts`. **29** ✅ `rebaseProjection` + `relativeTransform`. **30 ⏳ SIGUIENTE**: `useDrillDown` + prop `drill` (tarea 17) |
-| D · pulido visual      | 34-37  | ⏳                                                                                                                                           |
-| Accesibilidad completa | —      | ⏳ **al final, por decisión del humano** (`dd.md §13`)                                                                                       |
+| Fase                   | Pasos  | Estado                                                                                                                                                                                                                       |
+| ---------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| v0.1                   | 1-13   | ✅                                                                                                                                                                                                                           |
+| A · cimientos          | 14-22  | ✅ (revisión visual de «Foundations» pendiente del humano)                                                                                                                                                                   |
+| **B · cámara**         | 23-26  | ✅ código y tests. Revisión visual: el 24 la dio por buena el humano; **25 y 26 sin confirmar**                                                                                                                              |
+| B · cámara             | **27** | ✅ (revisión visual confirmada por el humano)                                                                                                                                                                                |
+| C · drill-down (v0.4)  | 28-33  | **28** ✅ reducer. **29** ✅ rebase. **30** ✅ estado de navegación (`useDrillDown`, tipos, LRU). **31 ⏳ SIGUIENTE**: la prop `drill` en el mapa: capas `active`/`context`, vuelo + rebase, revelado (tareas 17 resto y 18) |
+| D · pulido visual      | 34-37  | ⏳                                                                                                                                                                                                                           |
+| Accesibilidad completa | —      | ⏳ **al final, por decisión del humano** (`dd.md §13`)                                                                                                                                                                       |
 
 ### Qué leer para el paso 27 (no más)
 
@@ -2608,3 +2608,78 @@ No aplica: nada visible hasta que las capas usen esto (paso 31).
 - ¿Qué se vería en pantalla si el vuelo terminase en `boundsToTransform` en vez de en `R`?
 - ¿Por qué hay que copiar las paralelas y el `clipAngle` y no solo `rotate` y `center`?
 - ¿Por qué la prueba de equivalencia con puntos no detecta un `precision` mal copiado?
+
+# Paso 30: el estado de navegación del drill-down (`useDrillDown`, niveles, caché LRU)
+
+Archivos nuevos: `src/core/drill-levels.ts` (+ test), `src/react/drill-levels.ts`, `src/react/use-drill-down.ts` (+ test). Tocan
+`core/index.ts` y `react/index.ts`. Primera mitad de la tarea 17 de `dd.md §21`. **Sin efecto visual. Sin commitear.**
+
+## 30.1 Qué se hizo y qué NO
+
+La tarea 17 pide «`useDrillDown` + prop `drill`, `defineDrillLevels`, `data` como selector, `onDrill*`, caché LRU». Tal cual es demasiado para
+un paso verificable, así que **se parte en dos**: este paso es el **estado** (todo probable sin pintar); la **prop `drill` dentro del mapa**
+(cargar la geometría de cada nivel, las capas, el vuelo con rebase, `onDrill*` con la coreografía) es el paso 31, porque necesita las capas.
+
+| Pieza                                                  | Dónde                     | Qué hace                                                                                |
+| ------------------------------------------------------ | ------------------------- | --------------------------------------------------------------------------------------- |
+| `DrillContext`, `contextOf`                            | `core/drill-levels.ts`    | `{ path, parentId, depth }` de una ruta                                                 |
+| `validateLevels`, `clampPath`                          | idem                      | lista de niveles válida; ruta recortada a N − 1 ids                                     |
+| `buildBreadcrumbs`                                     | idem                      | migas: raíz + un paso por id                                                            |
+| `geographyKeyFor`                                      | idem                      | clave de caché de la geometría (`inherit` hereda la del padre)                          |
+| `resolveDrillData`                                     | idem                      | `data` como lista o como selector; `undefined` = cargando                               |
+| `createLruCache`                                       | idem                      | caché LRU (8 por defecto) para los niveles ya calculados                                |
+| `DrillLevel`, `defineDrillLevels`, `DrillEvent`        | `react/drill-levels.ts`   | tipos de `dd.md §11.2.2`; `defineDrillLevels` además **valida al definir**              |
+| `isDrillable`, `buildDrillEvent`                       | idem                      | ¿se puede bajar desde este item?; el evento `{ direction, from, to, item? }`            |
+| `useDrillDown`, `isDrillController`, `DrillController` | `react/use-drill-down.ts` | la ruta (controlada o no), nivel, contexto, migas, `drillDown/Up/To`, `reset`, `status` |
+
+## 30.2 Decisiones
+
+- **Controlado = `path` presente** (como `<input value>`). Controlado: el hook solo **avisa** (`onPathChange`) y la ruta no cambia hasta que el
+  padre re-renderiza con la nueva; así el padre puede rechazar o redirigir. No controlado: estado interno + aviso.
+- **Las funciones son estables** (`useCallback` + una ref con lo último): se pasan a efectos del mapa y a handlers, y no deben reinstalarlos.
+  Dos llamadas en el mismo tick (`drillUp(); drillDown(x)`) se componen porque la ref se actualiza al instante.
+- **La ruta se recorta** a los niveles que existen (N niveles → N − 1 ids). Una URL vieja más profunda no rompe: se recorta y se avisa **una vez**
+  en desarrollo (consola en inglés, `[choropleth] useDrillDown: …`). Bajar más allá del último nivel se ignora con el mismo aviso.
+- **`status` lo escribe el mapa** por un canal externo (`DrillBridge`, `DRILL_BRIDGE`), no por `useState`: no hay que re-renderizar al consumidor
+  en cada cambio de fase (mismo razonamiento que el `map-store`). El controlador lo lee con `useSyncExternalStore`. Es API interna, aunque esté
+  exportada.
+- **`getLabel` sin `feature` ni `datum` por ahora.** El hook no ve la geometría, así que el nombre de las migas es el id salvo que el consumidor dé
+  `getLabel`. El nombre real (`properties.name`) lo pondrá el mapa en el paso 33 (breadcrumb). La raíz usa `levels[0].label ?? levels[0].id`;
+  `labels.breadcrumbRoot` aún no existe en `labels.ts` y se añade con el breadcrumb.
+- **Validar al definir** (`defineDrillLevels`/`useDrillDown`): lista vacía, ids repetidos y un primer nivel `geography: "inherit"` lanzan un error en
+  inglés que dice qué tocar. Más barato que descubrirlo a mitad de un clic.
+- **`geographyKeyFor`:** `geographyKey` del consumidor > `${id}:${parentId}` si la geometría es una función > `id`. Con `"inherit"` la clave es la
+  del nivel padre: las tiendas de una región comparten su geometría y no se cachea dos veces.
+- **Dónde vive cada cosa:** lo puro (contexto, migas, LRU, claves, validación) en `core`; los tipos que mencionan `MapItem` (`DrillLevel`,
+  `DrillEvent`, `isDrillable`) en `react`, porque `core` no puede importar de `react`.
+- **Pendiente del 31:** `onDrill`/`onDrillEnd`/`onDrillError`/`onDrillIntent` como props del mapa; `data` como selector (la función ya está en
+  `resolveDrillData`, falta llamarla desde `Root`); la caché LRU está lista pero nadie la usa todavía.
+
+## 30.3 Tests
+
+643 en verde (582 + 61 nuevos); `typecheck`, `lint`, `format:check`, `build` limpios.
+
+- **`core`:** contexto, validación (los 3 errores), recorte, migas, claves (fija, por padre, `inherit`, personalizada), datos (lista, `undefined`,
+  selector), LRU (expulsa el menos reciente, `get` refresca, `has` no, reescribir no crece, capacidad inválida).
+- **Hook:** raíz, `defaultPath`, bajar/subir/reset con `onPathChange`, `drillUp(n)` y saturación, `drillTo` lateral/salto, ir a la ruta actual no avisa
+  ni re-renderiza, dos llamadas en el mismo tick, bajar de más, estabilidad de las funciones; **controlado** (avisa pero no cambia, el padre rechaza,
+  cambio externo, `path` manda sobre `defaultPath`); ruta demasiado profunda; migas; `status` por el canal; `isDrillController`; `isDrillable`;
+  `buildDrillEvent`.
+
+Mutaciones a mano revertidas (rompen tests): sin avisar `onPathChange`; sin ref sincronizada en el tick; sin recorte de ruta; sin comprobar «misma
+ruta»; `canDrillUp` fijo; último nivel perforable; `canDrill` ignorado; LRU sin refrescar en `get`; LRU que expulsa el más nuevo; clave sin padre;
+`inherit` sin heredar. **Dos supervivientes:** (1) `drillUp` sin saturar: era un hueco real (con `steps = profundidad + 1`, `slice(0, -1)` dejaría
+un id; el test probaba con 5) y se añadió el test; (2) «el modo controlado también escribe el estado interno» es un mutante **equivalente**: el
+estado interno se ignora en controlado, no hay comportamiento observable que probar.
+
+## 30.4 Verificación visual
+
+No aplica: no hay nada que ver hasta que el mapa use `drill` (paso 31).
+
+## 30.5 Antes de pasar al paso 31: ¿lo tienes claro?
+
+- ¿Por qué el hook controlado no cambia `path` por sí mismo, y qué puede hacer el padre gracias a eso?
+- ¿Por qué `status` viaja por un canal externo y no por `useState`?
+- ¿Qué pasa con `?path=ES.MD.X.Y` si solo hay tres niveles?
+- ¿Por qué la clave de caché de un nivel `"inherit"` es la de su padre?
+- ¿Por qué `DrillLevel` está en `react` y `validateLevels` en `core`?

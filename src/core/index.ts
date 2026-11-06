@@ -137,3 +137,15 @@ export type {
   DrillMachineState,
   DrillPhase,
 } from "./drill";
+export {
+  buildBreadcrumbs,
+  clampPath,
+  contextOf,
+  createLruCache,
+  DEFAULT_LEVEL_CACHE_SIZE,
+  drillDirectionBetween,
+  geographyKeyFor,
+  resolveDrillData,
+  validateLevels,
+} from "./drill-levels";
+export type { DrillContext, DrillCrumb, LevelShape, LruCache } from "./drill-levels";
