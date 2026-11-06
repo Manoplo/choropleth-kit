@@ -18,20 +18,20 @@
 
 ## Estado actual y handoff (leer primero)
 
-> Actualizada tras el **paso 28** (puro `core`, sin efecto visual; **sin commitear**; el 27 está confirmado y también sin commitear). Rama `master`. **567 tests** en verde; `typecheck`, `lint`,
+> Actualizada tras el **paso 29** (puro `core`, sin efecto visual; **sin commitear**; el 28 ya está commiteado). Rama `master`. **582 tests** en verde; `typecheck`, `lint`,
 > `format:check`, `build` y `build-storybook` limpios. Cobertura de `src/core` 100 % líneas.
 
 ### Dónde estamos
 
-| Fase                   | Pasos  | Estado                                                                                                        |
-| ---------------------- | ------ | ------------------------------------------------------------------------------------------------------------- |
-| v0.1                   | 1-13   | ✅                                                                                                            |
-| A · cimientos          | 14-22  | ✅ (revisión visual de «Foundations» pendiente del humano)                                                    |
-| **B · cámara**         | 23-26  | ✅ código y tests. Revisión visual: el 24 la dio por buena el humano; **25 y 26 sin confirmar**               |
-| B · cámara             | **27** | ✅ (revisión visual confirmada por el humano)                                                                 |
-| C · drill-down (v0.4)  | 28-33  | **28** ✅ `core/drill.ts` (reducer). **29 ⏳ SIGUIENTE**: `rebaseProjection` + `relativeTransform` (tarea 16) |
-| D · pulido visual      | 34-37  | ⏳                                                                                                            |
-| Accesibilidad completa | —      | ⏳ **al final, por decisión del humano** (`dd.md §13`)                                                        |
+| Fase                   | Pasos  | Estado                                                                                                                                       |
+| ---------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| v0.1                   | 1-13   | ✅                                                                                                                                           |
+| A · cimientos          | 14-22  | ✅ (revisión visual de «Foundations» pendiente del humano)                                                                                   |
+| **B · cámara**         | 23-26  | ✅ código y tests. Revisión visual: el 24 la dio por buena el humano; **25 y 26 sin confirmar**                                              |
+| B · cámara             | **27** | ✅ (revisión visual confirmada por el humano)                                                                                                |
+| C · drill-down (v0.4)  | 28-33  | **28** ✅ `core/drill.ts`. **29** ✅ `rebaseProjection` + `relativeTransform`. **30 ⏳ SIGUIENTE**: `useDrillDown` + prop `drill` (tarea 17) |
+| D · pulido visual      | 34-37  | ⏳                                                                                                                                           |
+| Accesibilidad completa | —      | ⏳ **al final, por decisión del humano** (`dd.md §13`)                                                                                       |
 
 ### Qué leer para el paso 27 (no más)
 
@@ -2540,3 +2540,71 @@ No aplica: no hay efecto visible hasta el paso 31 (capas `active`/`context`).
 - ¿Por qué al subir las capas cambian al instante y al bajar no?
 - ¿Por qué bajar dos niveles de golpe es un `jump` y no un `down`?
 - ¿Por qué la cámara se guarda solo al bajar desde reposo?
+
+# Paso 29: `rebaseProjection` y `relativeTransform` (continuidad del drill-down)
+
+Archivos que tocan: `src/core/projection.ts`, `projection.test.ts`, `core/index.ts`. Tarea 16 de `dd.md §21`. Puro `core`, **sin efecto
+visual**. **Sin commitear.**
+
+## 29.1 El problema que resuelve
+
+Al bajar de «mundo» a «España» hay que cambiar de proyección: la del mundo, con `k` enorme, no sirve (a `k ≈ 300` los 3 decimales de
+`geoPath` dan dientes de sierra). Pero si la proyección hija se ajusta con un `fitSize` nuevo, **el hijo aparece a otra escala y
+posición que la imagen que se estaba viendo**: un salto visible justo al final del vuelo.
+
+## 29.2 La idea: una proyección d3 es «raw ∘ afín»
+
+Una proyección d3 calcula `píxel = scale · raw(lon, lat) + translate`. Si dos proyecciones comparten **todo menos `scale` y
+`translate`** (tipo, rotación, centro, paralelas…), la hija es una **transformación afín** de los píxeles de la padre:
+
+```
+ hijo(p) = R(padre(p))        con  R(q) = k·q + (x, y)
+ k = scale_hijo / scale_padre
+ x = translate_hijo.x − k · translate_padre.x   (igual para y)
+```
+
+`R` tiene exactamente la forma de una cámara (`CameraTransform`). Eso es la clave: **el vuelo termina en `R`**, y entonces cambiar a la
+proyección hija con cámara identidad pinta los mismos píxeles. El cambio de proyección es invisible y el hijo tiene precisión completa
+a `k = 1`.
+
+- `relativeTransform(from, to)`: calcula `R`.
+- `rebaseProjection({ parent, factory, focus, width, height, padding })`: crea la hija (`factory()` nueva: las proyecciones son
+  mutables), le copia **todo lo que no sea escala/traslación**, la ajusta a `focus` con `fitExtent` y devuelve
+  `{ projection, relative }`. No modifica `parent`.
+
+## 29.3 Decisiones y desviaciones respecto a `dd.md`
+
+- **Se copia más que `rotate` y `center`.** El esquema de `dd.md` copia solo esos dos. Si el padre tiene otras cosas
+  (`clipAngle`, `precision`, `angle`, `reflectX/Y`, y las **paralelas** de una cónica) y el hijo no, deja de ser una afín del padre y el
+  rebase salta. `copyShape` las copia (las paralelas solo si existen).
+- **`precision` no se ve en un punto.** Afecta al remuestreo de líneas, no a `projection(p)`: la prueba de equivalencia con puntos no la
+  detectaba (la mutación sobrevivió). Por eso hay un test que comprueba `clipAngle` y `precision` directamente.
+- **Errores en inglés y explicados:** tamaño no válido, y foco sin extensión (vacío o un punto: `fitExtent` daría escala 0/∞/NaN).
+- **`R.k` no se limita a `scaleExtent`.** El vuelo del rebase debe acabar exactamente en `R`; el límite de zoom del nivel hijo empieza
+  en su propio `k = 1`. Si algún nivel diese una `R.k` mayor que `zoom.max`, habría que revisarlo en el paso que use esto (31).
+- **Lo que NO está aquí** (a propósito): la **cadena** de proyecciones de toda la ruta y la caché LRU. Son funciones del nivel superior
+  que usarán esto; entran con `useDrillDown` / las capas (pasos 30-31).
+
+## 29.4 Tests
+
+582 en verde (567 + 15 nuevos); `typecheck`, `lint`, `format:check` limpios; `projection.ts` 100 % líneas.
+
+- **El que manda — equivalencia afín:** para 200 puntos dentro de España, `child(p)` y `R(parent(p))` difieren < 1e-6, en las **cinco**
+  proyecciones del registro (equalEarth, naturalEarth, mercator, albers, orthographic).
+- Con el padre **rotado y centrado**; con **paralelas** cónicas personalizadas; con `clipAngle`/`precision`.
+- El hijo encuadra el foco **dentro del padding** y llena el lado limitante; acerca (`R.k > 5` para España en el mundo).
+- No muta al padre; **encadenar dos rebases** es la composición de las dos afines; errores.
+
+Mutaciones a mano revertidas (cada una rompe tests): sin heredar rotate/center; sin heredar paralelas; `R` sin traslación; `R` con la
+traslación mal; ignorar el padding; sin guardas de extensión; sin heredar `precision`; sin heredar `clipAngle`.
+
+## 29.5 Verificación visual
+
+No aplica: nada visible hasta que las capas usen esto (paso 31).
+
+## 29.6 Antes de pasar al paso 30: ¿lo tienes claro?
+
+- ¿Por qué cambiar `scale` y `translate` de una proyección d3 equivale a una transformación afín de la salida?
+- ¿Qué se vería en pantalla si el vuelo terminase en `boundsToTransform` en vez de en `R`?
+- ¿Por qué hay que copiar las paralelas y el `clipAngle` y no solo `rotate` y `center`?
+- ¿Por qué la prueba de equivalencia con puntos no detecta un `precision` mal copiado?

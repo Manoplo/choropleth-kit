@@ -69,8 +69,15 @@ export {
   createProjection,
   DEFAULT_ASPECT_RATIO,
   DEFAULT_PROJECTION,
+  rebaseProjection,
+  relativeTransform,
 } from "./projection";
-export type { CreateProjectionOptions, ProjectionName } from "./projection";
+export type {
+  CreateProjectionOptions,
+  ProjectionName,
+  RebaseParams,
+  RebaseResult,
+} from "./projection";
 export { buildLegend, defaultFormatValue } from "./legend";
 export type { BuildLegendOptions, LegendItem } from "./legend";
 export { createBorders } from "./borders";
