@@ -89,6 +89,11 @@
   stroke: var(--cm-bubble-stroke);
   stroke-width: 0.5px;
   fill-opacity: var(--cm-bubble-opacity);
+  /* Contraescalado (dd.md §11.1.6): `use-zoom` escribe UNA variable por frame (1/√k, 1/k o 1). */
+  transform: scale(var(--cm-bubble-scale, 1));
+  transform-box: fill-box;
+  transform-origin: center;
+  vector-effect: non-scaling-stroke;
   transition:
     r var(--cm-transition-duration),
     fill var(--cm-transition-duration);

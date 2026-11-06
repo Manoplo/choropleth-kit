@@ -18,20 +18,20 @@
 
 ## Estado actual y handoff (leer primero)
 
-> Actualizada tras el **paso 26**. Rama `feat/zoom-pan`. **489 tests** en verde; `typecheck`, `lint`,
+> Actualizada tras el **paso 27** (código listo, **sin commitear**; visual pendiente). Rama `master`. **519 tests** en verde; `typecheck`, `lint`,
 > `format:check`, `build` y `build-storybook` limpios. Cobertura de `src/core` 100 % líneas.
 
 ### Dónde estamos
 
-| Fase                   | Pasos  | Estado                                                                                          |
-| ---------------------- | ------ | ----------------------------------------------------------------------------------------------- |
-| v0.1                   | 1-13   | ✅                                                                                              |
-| A · cimientos          | 14-22  | ✅ (revisión visual de «Foundations» pendiente del humano)                                      |
-| **B · cámara**         | 23-26  | ✅ código y tests. Revisión visual: el 24 la dio por buena el humano; **25 y 26 sin confirmar** |
-| B · cámara             | **27** | ⏳ **SIGUIENTE**: contraescalado de burbujas, inercia y resize sin salto                        |
-| C · drill-down (v0.4)  | 28-33  | ⏳ (tareas 15-20 de `dd.md §21`; la parte más grande)                                           |
-| D · pulido visual      | 34-37  | ⏳                                                                                              |
-| Accesibilidad completa | —      | ⏳ **al final, por decisión del humano** (`dd.md §13`)                                          |
+| Fase                   | Pasos  | Estado                                                                                             |
+| ---------------------- | ------ | -------------------------------------------------------------------------------------------------- |
+| v0.1                   | 1-13   | ✅                                                                                                 |
+| A · cimientos          | 14-22  | ✅ (revisión visual de «Foundations» pendiente del humano)                                         |
+| **B · cámara**         | 23-26  | ✅ código y tests. Revisión visual: el 24 la dio por buena el humano; **25 y 26 sin confirmar**    |
+| B · cámara             | **27** | ✅ código y tests (`Hecho*`: revisión visual de «Zoom / BubblesAndInertia» y del resize pendiente) |
+| C · drill-down (v0.4)  | 28-33  | ⏳ (tareas 15-20 de `dd.md §21`; la parte más grande)                                              |
+| D · pulido visual      | 34-37  | ⏳                                                                                                 |
+| Accesibilidad completa | —      | ⏳ **al final, por decisión del humano** (`dd.md §13`)                                             |
 
 ### Qué leer para el paso 27 (no más)
 
@@ -2405,3 +2405,60 @@ era correcto): los tests de encuadre usan dos bloques propios con el sentido hor
 anillo cruza el antimeridiano, ese anillo proyectado tiene un salto de borde a borde. Visualmente la burbuja de Rusia salió
 plausible en la comprobación del paso 22, pero **no está garantizado**. ¿Lo reviso con una prueba específica (ancla de Rusia
 dentro de su cuerpo principal) antes de seguir, o lo dejamos para el pulido?
+
+# Paso 27: contraescalado de burbujas, inercia y resize sin salto
+
+Archivos nuevos: `src/react/camera-feel.test.tsx`, `stories/zoom-feel.stories.tsx`. Tocan: `core/camera.ts`,
+`core/zoom.ts`, `use-zoom.ts`, `components/svg.tsx`, `styles.css`. Tarea 14 de `dd.md §21`. **Sin commitear.**
+
+## 27.1 Qué se hizo
+
+| Pieza                | Comportamiento                                                                                                                                                                                                            |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Contraescalado**   | `zoom.bubbleScaling: "sqrt" (default) \| "screen" \| "geo"`. `use-zoom` escribe UNA variable por frame, `--cm-bubble-scale` (`1/√k`, `1/k` o `1`); el CSS de `.cm-bubble` aplica `scale()` con `transform-box: fill-box`. |
+| **Inercia**          | Al soltar un arrastre: velocidad de las muestras de ≤ 100 ms; si ≥ 0,3 px/ms, `inertiaOffset` con τ = 325 ms hasta agotarse. `zoom.inertia` (default `true`).                                                             |
+| **Resize sin salto** | Al cambiar el tamaño se guarda la cámara real y el `invert` del lienzo viejo; al reinstalar, `preserveView` (centro geográfico + `k`) y `constrain`.                                                                      |
+
+`core` nuevo (puro, con tests): `bubbleScale`, `releaseVelocity`, constantes `INERTIA_MIN_VELOCITY` / `INERTIA_WINDOW_MS`.
+
+## 27.2 Decisiones
+
+- **La inercia anima con `requestAnimationFrame`, no con una transición de d3.** `interpolateZoom` entre dos vistas del
+  mismo ancho **hace un arco alejándose** (zoom-out): una inercia de pan no puede pasar por ahí. Cada frame llama a
+  `behavior.transform` con una cámara absoluta; `onViewChange` y el store se tocan **una vez**, al terminar.
+- **`behavior.transform` no aplica `constrain`** (solo gestos, `scaleBy`, `translateBy`): la inercia lo aplica a mano
+  (un test lo cazó: sin él la cámara llegaba a x = −3466). Se detiene al chocar con un límite.
+- **Se frena con** `pointerdown`, con el `start` de cualquier gesto del usuario y con cualquier movimiento programático
+  (`zoomTo`, botones). Al frenarla se confirma la cámara y se avisa a `onViewChange`.
+- **Sin inercia con «reducir movimiento»**, con zoom (la `k` cambia en la ventana), si la mano se paró antes de soltar o
+  si la velocidad no llega al umbral. Mientras desliza hay `data-interacting` (sin hover).
+- **Resize:** no avisa a `onViewChange` (como cualquier restauración). `bubbleScaling` e `inertia` son primitivas en las
+  dependencias del efecto (cambiarlas reinstala, y la variable se recalcula con la cámara actual).
+- **Desviación:** las burbujas llevan `vector-effect: non-scaling-stroke` para que el trazo de 0,5 px no se afine con el
+  contraescalado (no está en `dd.md`; reversible).
+- `bubbleScaling` e `inertia` viven en `ZoomOptions` (`dd.md` no fija dónde va el primero).
+
+## 27.3 Tests
+
+519 en verde (489 + 30 nuevos); `typecheck`, `lint`, `format:check`, `build` limpios; cobertura de `src/core` 100 % líneas.
+Mutaciones a mano revertidas (cada una rompe tests): sin `preserveView`; inercia sin `constrain`; `pointerdown` sin frenar;
+sin escribir `--cm-bubble-scale`; sin umbral/ventana de velocidad; sin frenar en `start`.
+
+## 27.4 Verificación visual: pendiente de ti \*
+
+`pnpm storybook` → **Zoom / BubblesAndInertia** (`Sqrt`, `Screen`, `Geo`, `NoInertia`):
+
+| Qué comprobar                                                                                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Acercar con la rueda: `Sqrt` crece despacio, `Screen` no cambia de tamaño, `Geo` crece con el mapa. Sin parpadeos ni saltos al hacer zoom.  |
+| Con zoom, arrastra **rápido** y suelta: desliza y frena suave (~1 s). Agárralo a mitad: se para al instante. Arrastra despacio: no desliza. |
+| `NoInertia`: al soltar se para en seco.                                                                                                     |
+| **Resize:** con zoom aplicado, cambia el ancho de la ventana: la vista **no vuelve al encaje** ni se desplaza (mismo centro y zoom).        |
+| Las burbujas siguen sobre su país y el trazo blanco se mantiene fino.                                                                       |
+
+## 27.5 Antes de pasar al paso 28: ¿lo tienes claro?
+
+- ¿Por qué la inercia no usa una transición de d3-zoom?
+- ¿Por qué hay que aplicar `constrain` a mano en `behavior.transform`?
+- ¿Qué se conserva en un resize, y por qué hace falta el `invert` del lienzo **antiguo**?
+- ¿Por qué `1/√k` y no `1/k` por defecto?

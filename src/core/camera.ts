@@ -229,6 +229,74 @@ export const inertiaOffset = ({
   return velocity * tau * (1 - Math.exp(-elapsed / tau));
 };
 
+/** Velocidad mínima (px/ms) para que soltar un arrastre arranque la inercia (dd.md §11.1.4). */
+export const INERTIA_MIN_VELOCITY = 0.3;
+
+/** Ventana de muestras para medir la velocidad de suelta, en ms (dd.md §11.1.4). */
+export const INERTIA_WINDOW_MS = 100;
+
+/** Una posición de la cámara en un instante (ms, de `performance.now()`). */
+export type CameraSample = { time: number; k: number; x: number; y: number };
+
+export type ReleaseVelocityParams = {
+  samples: readonly CameraSample[];
+  /** Instante de la suelta. */
+  now: number;
+  windowMs?: number;
+  minVelocity?: number;
+};
+
+/**
+ * Velocidad `[vx, vy]` (px/ms) con la que se soltó un arrastre, o `null` si no debe haber inercia:
+ *  - hubo un zoom (la `k` cambió dentro de la ventana): la inercia es solo de **pan**;
+ *  - la mano se detuvo antes de soltar (la última muestra es más vieja que la ventana);
+ *  - no hay dos muestras en la ventana, o la velocidad queda por debajo del umbral (0,3 px/ms).
+ */
+export const releaseVelocity = ({
+  samples,
+  now,
+  windowMs = INERTIA_WINDOW_MS,
+  minVelocity = INERTIA_MIN_VELOCITY,
+}: ReleaseVelocityParams): Point | null => {
+  const recent = samples.filter((s) => now - s.time <= windowMs);
+  if (recent.length < 2) return null;
+  const first = recent[0];
+  const last = recent[recent.length - 1];
+  if (first === undefined || last === undefined) return null;
+  if (recent.some((s) => s.k !== last.k)) return null;
+  const dt = last.time - first.time;
+  if (!(dt > 0)) return null;
+  const vx = (last.x - first.x) / dt;
+  const vy = (last.y - first.y) / dt;
+  return Math.hypot(vx, vy) >= minVelocity ? [vx, vy] : null;
+};
+
+// ── contraescalado de burbujas ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Qué hacen las burbujas al acercar (dd.md §11.1.6):
+ *  - `"sqrt"` (default): crecen con √k (sensación de profundidad sin tapar el país);
+ *  - `"screen"`: tamaño constante en pantalla;
+ *  - `"geo"`: crecen con el mapa (escala completa).
+ */
+export type BubbleScaling = "sqrt" | "screen" | "geo";
+
+/**
+ * El valor de `--cm-bubble-scale` para una `k`: la burbuja se dibuja dentro del viewport (que ya
+ * multiplica por `k`), así que se compensa con `1/√k`, `1/k` o `1`.
+ */
+export const bubbleScale = (k: number, scaling: BubbleScaling): number => {
+  if (!(k > 0) || !Number.isFinite(k)) return 1;
+  switch (scaling) {
+    case "screen":
+      return 1 / k;
+    case "geo":
+      return 1;
+    case "sqrt":
+      return 1 / Math.sqrt(k);
+  }
+};
+
 // ── estado público de la vista ─────────────────────────────────────────────────────────────────────
 
 /** Nivel del drill-down (dd.md §11.2). Igual que `DrillLevelInfo` de `react/map-item.ts`. */

@@ -2,6 +2,7 @@ import { geoEqualEarth, geoMercator } from "d3-geo";
 import { boundsToTransform, normalizePadding } from "./bounds";
 import {
   applyTransform,
+  bubbleScale,
   constrainAxis,
   constrainTransform,
   createZoomInterpolator,
@@ -14,8 +15,10 @@ import {
   MAX_FLIGHT_MS,
   MIN_FLIGHT_MS,
   preserveView,
+  releaseVelocity,
   toViewState,
   transformToZoomView,
+  type CameraSample,
   type CameraTransform,
 } from "./camera";
 import type { Point } from "./variants";
@@ -385,6 +388,76 @@ describe("inertiaOffset", () => {
     expect(inertiaOffset({ velocity: 1, elapsed: -10 })).toBe(0);
     expect(inertiaOffset({ velocity: 1, elapsed: NaN })).toBe(0);
     expect(inertiaOffset({ velocity: NaN, elapsed: 100 })).toBe(0);
+  });
+});
+
+describe("releaseVelocity", () => {
+  const at = (time: number, x: number, y = 0, k = 2): CameraSample => ({ time, k, x, y });
+
+  it("mide px/ms entre la primera y la última muestra de la ventana", () => {
+    const v = releaseVelocity({ samples: [at(0, 0), at(20, 10), at(40, 40)], now: 50 });
+
+    expect(v?.[0]).toBeCloseTo(1, 6);
+    expect(v?.[1]).toBeCloseTo(0, 6);
+  });
+
+  it("ignora las muestras más viejas que la ventana (100 ms)", () => {
+    const v = releaseVelocity({ samples: [at(0, 0), at(60, 1000), at(100, 1060)], now: 120 });
+
+    // Solo cuentan t = 60 y t = 100: 60 px en 40 ms.
+    expect(v?.[0]).toBeCloseTo(1.5, 6);
+  });
+
+  it("si la mano se detuvo antes de soltar, no hay inercia", () => {
+    expect(releaseVelocity({ samples: [at(0, 0), at(20, 100)], now: 400 })).toBeNull();
+  });
+
+  it("por debajo de 0,3 px/ms no hay inercia; justo en el umbral, sí", () => {
+    expect(releaseVelocity({ samples: [at(0, 0), at(100, 29)], now: 100 })).toBeNull();
+    expect(releaseVelocity({ samples: [at(0, 0), at(100, 31)], now: 100 })).not.toBeNull();
+  });
+
+  it("un zoom dentro de la ventana la cancela (la inercia es solo de pan)", () => {
+    const zoomed = [at(0, 0, 0, 2), at(50, 50, 0, 2.5), at(90, 100, 0, 3)];
+
+    expect(releaseVelocity({ samples: zoomed, now: 100 })).toBeNull();
+  });
+
+  it("sin dos muestras, o con el mismo instante, no hay velocidad", () => {
+    expect(releaseVelocity({ samples: [], now: 0 })).toBeNull();
+    expect(releaseVelocity({ samples: [at(0, 0)], now: 0 })).toBeNull();
+    expect(releaseVelocity({ samples: [at(5, 0), at(5, 100)], now: 5 })).toBeNull();
+  });
+
+  it("usa los dos ejes: la velocidad es el módulo", () => {
+    const v = releaseVelocity({ samples: [at(0, 0, 0), at(100, 24, 32)], now: 100 });
+
+    expect(v).toEqual([0.24, 0.32]);
+  });
+});
+
+describe("bubbleScale", () => {
+  it("sqrt: 1/√k", () => {
+    expect(bubbleScale(4, "sqrt")).toBeCloseTo(0.5, 10);
+    expect(bubbleScale(1, "sqrt")).toBe(1);
+  });
+
+  it("screen: 1/k (tamaño constante en pantalla)", () => {
+    expect(bubbleScale(4, "screen")).toBe(0.25);
+  });
+
+  it("geo: 1 (crecen con el mapa)", () => {
+    expect(bubbleScale(4, "geo")).toBe(1);
+  });
+
+  it("una k inválida no rompe: escala 1", () => {
+    expect(bubbleScale(0, "sqrt")).toBe(1);
+    expect(bubbleScale(NaN, "screen")).toBe(1);
+  });
+
+  it("al multiplicarla por k, sqrt crece √k y screen no crece", () => {
+    expect(4 * bubbleScale(4, "sqrt")).toBeCloseTo(2, 10);
+    expect(4 * bubbleScale(4, "screen")).toBeCloseTo(1, 10);
   });
 });
 

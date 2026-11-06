@@ -18,6 +18,7 @@ export type {
 } from "./bounds";
 export {
   applyTransform,
+  bubbleScale,
   constrainAxis,
   constrainTransform,
   createZoomInterpolator,
@@ -25,16 +26,21 @@ export {
   FIT_TRANSFORM,
   flightDuration,
   inertiaOffset,
+  INERTIA_MIN_VELOCITY,
   INERTIA_TAU_MS,
+  INERTIA_WINDOW_MS,
   invertTransform,
   isFitTransform,
   MAX_FLIGHT_MS,
   MIN_FLIGHT_MS,
   preserveView,
+  releaseVelocity,
   toViewState,
   transformToZoomView,
 } from "./camera";
 export type {
+  BubbleScaling,
+  CameraSample,
   CameraTransform,
   ConstrainAxisParams,
   ConstrainTransformParams,
@@ -42,6 +48,7 @@ export type {
   FlightDurationParams,
   InertiaOffsetParams,
   PreserveViewParams,
+  ReleaseVelocityParams,
   Size,
   ToViewStateParams,
   ViewLevel,

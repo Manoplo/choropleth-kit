@@ -24,6 +24,8 @@ describe("resolveZoomOptions", () => {
       pan: true,
       doubleClick: true,
       constrain: "contain",
+      bubbleScaling: "sqrt",
+      inertia: true,
       keyboard: true,
       padding: 24,
     });
