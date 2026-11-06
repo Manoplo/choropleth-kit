@@ -18,20 +18,20 @@
 
 ## Estado actual y handoff (leer primero)
 
-> Actualizada tras el **paso 27** (código listo, **sin commitear**; visual pendiente). Rama `master`. **519 tests** en verde; `typecheck`, `lint`,
+> Actualizada tras el **paso 28** (puro `core`, sin efecto visual; **sin commitear**; el 27 está confirmado y también sin commitear). Rama `master`. **567 tests** en verde; `typecheck`, `lint`,
 > `format:check`, `build` y `build-storybook` limpios. Cobertura de `src/core` 100 % líneas.
 
 ### Dónde estamos
 
-| Fase                   | Pasos  | Estado                                                                                             |
-| ---------------------- | ------ | -------------------------------------------------------------------------------------------------- |
-| v0.1                   | 1-13   | ✅                                                                                                 |
-| A · cimientos          | 14-22  | ✅ (revisión visual de «Foundations» pendiente del humano)                                         |
-| **B · cámara**         | 23-26  | ✅ código y tests. Revisión visual: el 24 la dio por buena el humano; **25 y 26 sin confirmar**    |
-| B · cámara             | **27** | ✅ código y tests (`Hecho*`: revisión visual de «Zoom / BubblesAndInertia» y del resize pendiente) |
-| C · drill-down (v0.4)  | 28-33  | ⏳ (tareas 15-20 de `dd.md §21`; la parte más grande)                                              |
-| D · pulido visual      | 34-37  | ⏳                                                                                                 |
-| Accesibilidad completa | —      | ⏳ **al final, por decisión del humano** (`dd.md §13`)                                             |
+| Fase                   | Pasos  | Estado                                                                                                        |
+| ---------------------- | ------ | ------------------------------------------------------------------------------------------------------------- |
+| v0.1                   | 1-13   | ✅                                                                                                            |
+| A · cimientos          | 14-22  | ✅ (revisión visual de «Foundations» pendiente del humano)                                                    |
+| **B · cámara**         | 23-26  | ✅ código y tests. Revisión visual: el 24 la dio por buena el humano; **25 y 26 sin confirmar**               |
+| B · cámara             | **27** | ✅ (revisión visual confirmada por el humano)                                                                 |
+| C · drill-down (v0.4)  | 28-33  | **28** ✅ `core/drill.ts` (reducer). **29 ⏳ SIGUIENTE**: `rebaseProjection` + `relativeTransform` (tarea 16) |
+| D · pulido visual      | 34-37  | ⏳                                                                                                            |
+| Accesibilidad completa | —      | ⏳ **al final, por decisión del humano** (`dd.md §13`)                                                        |
 
 ### Qué leer para el paso 27 (no más)
 
@@ -2444,7 +2444,7 @@ Archivos nuevos: `src/react/camera-feel.test.tsx`, `stories/zoom-feel.stories.ts
 Mutaciones a mano revertidas (cada una rompe tests): sin `preserveView`; inercia sin `constrain`; `pointerdown` sin frenar;
 sin escribir `--cm-bubble-scale`; sin umbral/ventana de velocidad; sin frenar en `start`.
 
-## 27.4 Verificación visual: pendiente de ti \*
+## 27.4 Verificación visual: confirmada por el humano
 
 `pnpm storybook` → **Zoom / BubblesAndInertia** (`Sqrt`, `Screen`, `Geo`, `NoInertia`):
 
@@ -2462,3 +2462,81 @@ sin escribir `--cm-bubble-scale`; sin umbral/ventana de velocidad; sin frenar en
 - ¿Por qué hay que aplicar `constrain` a mano en `behavior.transform`?
 - ¿Qué se conserva en un resize, y por qué hace falta el `invert` del lienzo **antiguo**?
 - ¿Por qué `1/√k` y no `1/k` por defecto?
+
+# Paso 28: la máquina de estados del drill-down (`core/drill.ts`)
+
+Archivos nuevos: `src/core/drill.ts`, `src/core/drill.test.ts`; `core/index.ts` exporta. Tarea 15 de `dd.md §21`. Sin React, sin DOM y
+**sin efecto visual** (nada que abrir en Storybook). **Sin commitear.**
+
+## 28.1 Qué se hizo
+
+`drillReducer(state, event)` es la coreografía de `dd.md §11.2.3` convertida en una función pura. Quien la use (paso 31) traduce el
+mundo real a eventos y pinta el estado; aquí solo se decide **qué pasa después de qué**.
+
+```
+ idle ──DRILL(down|lateral)──► flying ──FLIGHT_END ok + geometría lista──► revealing ──REVEAL_END──► idle
+                                 │  └── geometría pendiente ──► loading ──GEOMETRY_READY──► revealing
+ idle ──DRILL(up)────────────► flying(up) ──FLIGHT_END──► idle        (todo ya dibujado: solo falta la cámara)
+ idle ──DRILL(jump)──────────► idle (en caché)  |  loading ──GEOMETRY_READY──► idle      (sin animación)
+ error de geometría ──► (al acabar el vuelo / ya) flying(up) de vuelta a `returnCamera` ──► idle, con `error` puesto
+```
+
+Exporta además `createDrillState(path)`, `classifyDrill(from, to)`, `layerKey` y `savedCameraFor`.
+
+## 28.2 Modelo: capas
+
+La capa de profundidad `d` muestra los hijos de `path[0..d)`. En `["ES"]` hay dos: el mundo (`context`) y las regiones de España
+(`active`). Cada transición es «de estas capas a estas otras»; `layersFor` calcula el reparto de roles:
+
+| Transición    | Capas                                                                                       |
+| ------------- | ------------------------------------------------------------------------------------------- |
+| bajar         | durante el vuelo no cambia nada; al revelar, el padre pasa a `context` y el hijo `entering` |
+| lateral ES→FR | el mundo sigue de contexto; las regiones de ES `exiting`, las de FR `entering`              |
+| subir         | **al instante**: la hija `exiting`, el contexto `active`; solo queda el vuelo de cámara     |
+| salto         | estado final directo, sin `entering` ni `exiting`                                           |
+
+`layerKey` es el JSON del prefijo del path (no `join("/")`): un id con `/` o `.` no puede colisionar con otra ruta.
+
+## 28.3 Decisiones (y qué añade respecto al esquema de `dd.md`)
+
+- **`path` ≠ `settledPath`.** `path` es el destino optimista (cambia en el clic); `settledPath` es lo dibujado como activo. Sin
+  esta distinción no se puede deshacer una bajada ni saber cuál es el «origen» de una redirección.
+- **`flightId`.** Un vuelo redirigido se resuelve con `completed: false` **después** de que ya haya empezado el siguiente. Sin un id,
+  ese `FLIGHT_END` viejo cancelaría la bajada nueva. Cada `DRILL` incrementa el id; el `FLIGHT_END` de otro id se ignora. Igual con
+  `geometryKey` para los avisos de geometría de un destino ya abandonado.
+- **La dirección se deduce, no se confía.** `DRILL.direction` solo se respeta si es `"jump"`; el resto sale de `classifyDrill(settledPath, to)`.
+  `down` = un nivel más; `up` = un ancestro (cualquier nº de pasos); `lateral` = cambia solo el último id; **cualquier otra cosa es `jump`**
+  (p. ej. bajar dos niveles de golpe: no hay un vuelo único que lo cuente bien).
+- **Cámaras.** `DRILL.camera` es la cámara en el instante del clic. Se guarda en `savedCameras[origen]` **solo al bajar desde reposo**
+  (una redirección a mitad de vuelo traería una cámara intermedia que pisaría la buena) y se **poda** al subir. `returnCamera` es adonde
+  se vuelve si la bajada falla o se cancela. El lateral no guarda: la cámara de «antes de bajar a España» sigue siendo la válida.
+- **Un gesto que corta el vuelo de bajada cancela la bajada** (no hay vuelo de vuelta: el usuario ya tiene el mapa en la mano). Cortar una
+  **subida** no deshace nada, porque ya estaba dibujada.
+- **Fallo de geometría:** si ocurre volando, se espera al fin del vuelo y se vuela de vuelta; si ocurre cargando, la vuelta es inmediata.
+  `state.error` conserva la `key` fallida hasta el siguiente `DRILL` (de ahí saldrán `onDrillError` y la sacudida). Un nivel con 0 features
+  se tratará igual: la capa de React emitirá `GEOMETRY_ERROR`.
+- **Clic repetido sobre el destino en curso: no hace nada.** Lo descubrí al revisar: reiniciaba `geometry` a `pending` aunque ya hubiera
+  llegado, y nunca volvería a avisar. Volver al origen mientras se baja (`equal`) sí es una cancelación con vuelo de vuelta.
+- **Clic durante el revelado:** se asienta lo que había y empieza la siguiente bajada.
+
+## 28.4 Tests
+
+567 en verde (519 + 48 nuevos); `typecheck`, `lint`, `format:check` limpios; `drill.ts` 100 % líneas, 99 % ramas.
+Cubren: clasificación (10 casos), identidad de capas, montaje con ruta, bajar paso a paso (con y sin caché), redirección en vuelo y
+cargando, clic durante el revelado, cancelar (gesto y «subir antes de terminar de bajar»), subir (1 y N niveles, cámaras podadas),
+lateral, saltos (con y sin caché, con error), errores de geometría (volando, cargando, obsoletos) y eventos fuera de lugar.
+
+Mutaciones a mano revertidas (cada una rompe tests): no ignorar el `FLIGHT_END` viejo; no ignorar la geometría vieja; no guardar la cámara;
+el gesto no cancela; el error no deshace; no podar cámaras; la redirección pisa `returnCamera`; quitar la guarda del clic repetido.
+
+## 28.5 Verificación visual
+
+No aplica: no hay efecto visible hasta el paso 31 (capas `active`/`context`).
+
+## 28.6 Antes de pasar al paso 29: ¿lo tienes claro?
+
+- ¿Por qué `path` y `settledPath` son dos cosas distintas?
+- ¿Qué fallaría sin `flightId`? Pon un ejemplo con dos clics seguidos.
+- ¿Por qué al subir las capas cambian al instante y al bajar no?
+- ¿Por qué bajar dos niveles de golpe es un `jump` y no un `down`?
+- ¿Por qué la cámara se guarda solo al bajar desde reposo?

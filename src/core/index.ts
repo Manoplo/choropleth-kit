@@ -121,3 +121,12 @@ export type {
   ZoomOptions,
   ZoomTarget,
 } from "./zoom";
+export { classifyDrill, createDrillState, drillReducer, layerKey, savedCameraFor } from "./drill";
+export type {
+  DrillDirection,
+  DrillLayer,
+  DrillLayerRole,
+  DrillMachineEvent,
+  DrillMachineState,
+  DrillPhase,
+} from "./drill";
