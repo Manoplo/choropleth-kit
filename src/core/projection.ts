@@ -1,6 +1,7 @@
 import type { FeatureCollection } from "geojson";
 import {
   geoAlbers,
+  geoPath,
   geoEqualEarth,
   geoMercator,
   geoNaturalEarth1,
@@ -61,7 +62,7 @@ export const createProjection = ({
   // con tamaño 0 (tarea del hook de tamaño del contenedor).
   if (!(Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0)) {
     throw new Error(
-      `createProjection: width y height deben ser números finitos > 0 (recibido: ${width} × ${height}).`,
+      `[choropleth] createProjection: width and height must be finite numbers > 0 (received: ${width} × ${height}).`,
     );
   }
 
@@ -74,4 +75,33 @@ export const createProjection = ({
   if (featureCollection.features.length === 0) return projection;
 
   return projection.fitSize([width, height], featureCollection);
+};
+
+/** Proporción de la que se parte si la geometría no se puede medir (el mundo en Equal Earth). */
+export const DEFAULT_ASPECT_RATIO = 960 / 500;
+
+const MIN_ASPECT_RATIO = 0.2;
+const MAX_ASPECT_RATIO = 5;
+
+/**
+ * ancho / alto que ocupa la geometría con esa proyección (`aspectRatio: "auto"`).
+ *
+ * Chile es muy alto y Noruega muy ancha: con una proporción fija sobraría o faltaría espacio. Se
+ * ajusta la proyección a un ancho de referencia y se mide el rectángulo resultante; la proporción
+ * no depende del ancho elegido. Se limita a [0,2 – 5] para que un dato raro (una sola isla)
+ * no deje un contenedor de 1 px de alto.
+ */
+export const computeAspectRatio = ({
+  name = DEFAULT_PROJECTION,
+  featureCollection,
+}: {
+  name?: ProjectionName;
+  featureCollection: FeatureCollection;
+}): number => {
+  if (featureCollection.features.length === 0) return DEFAULT_ASPECT_RATIO;
+  const projection = PROJECTIONS[name]().fitWidth(1000, featureCollection);
+  const [[x0, y0], [x1, y1]] = geoPath(projection).bounds(featureCollection);
+  const ratio = (x1 - x0) / (y1 - y0);
+  if (!Number.isFinite(ratio) || ratio <= 0) return DEFAULT_ASPECT_RATIO;
+  return Math.min(MAX_ASPECT_RATIO, Math.max(MIN_ASPECT_RATIO, ratio));
 };

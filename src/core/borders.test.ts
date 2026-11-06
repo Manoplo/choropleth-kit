@@ -15,6 +15,28 @@ describe("createBorders", () => {
     ]);
   });
 
+  describe("filterFeatures", () => {
+    it("conserva la frontera si se conservan los dos lados", () => {
+      const borders = createBorders({ geography: twoSquares, filterFeatures: () => true });
+
+      expect(borders?.coordinates).toHaveLength(1);
+    });
+
+    it("quita la frontera si se descarta cualquiera de los dos lados", () => {
+      const withoutB = createBorders({
+        geography: twoSquares,
+        filterFeatures: (f) => f.id !== "B",
+      });
+      const withoutA = createBorders({
+        geography: twoSquares,
+        filterFeatures: (f) => f.id !== "A",
+      });
+
+      expect(withoutB?.coordinates).toEqual([]);
+      expect(withoutA?.coordinates).toEqual([]);
+    });
+  });
+
   it("con GeoJSON no hay topología: devuelve null", () => {
     const fc: FeatureCollection = { type: "FeatureCollection", features: [] };
 

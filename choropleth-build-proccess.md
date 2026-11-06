@@ -9,11 +9,102 @@
 > sección (`dd.md §9.2`, `§11`…) son los de ese archivo. Aquí no se repite el diseño, solo se explica
 > cómo se va construyendo.
 >
-> **Handoff vigente:** `dd.md §21` (v0.2-v0.5). Antes de seguir, leer la sección final de este diario,
-> **«Revisión de Opus 5.5 tras el paso 13»**: corrige varias decisiones y reordena los pasos.
+> **Handoff vigente:** la sección **«Estado actual y handoff»** de justo debajo (léela primero) y
+> `dd.md §21`. **No hace falta leer los dos documentos enteros** (casi 5.000 líneas): la sección de
+> handoff dice qué leer para el siguiente paso.
 >
 > **Regla de trabajo:** un paso cada vez, acotado y verificable. No se empieza el siguiente hasta que
 > quien aprende confirma que entiende el actual.
+
+## Estado actual y handoff (leer primero)
+
+> Actualizada tras el **paso 26**. Rama `feat/zoom-pan`. **489 tests** en verde; `typecheck`, `lint`,
+> `format:check`, `build` y `build-storybook` limpios. Cobertura de `src/core` 100 % líneas.
+
+### Dónde estamos
+
+| Fase                   | Pasos  | Estado                                                                                          |
+| ---------------------- | ------ | ----------------------------------------------------------------------------------------------- |
+| v0.1                   | 1-13   | ✅                                                                                              |
+| A · cimientos          | 14-22  | ✅ (revisión visual de «Foundations» pendiente del humano)                                      |
+| **B · cámara**         | 23-26  | ✅ código y tests. Revisión visual: el 24 la dio por buena el humano; **25 y 26 sin confirmar** |
+| B · cámara             | **27** | ⏳ **SIGUIENTE**: contraescalado de burbujas, inercia y resize sin salto                        |
+| C · drill-down (v0.4)  | 28-33  | ⏳ (tareas 15-20 de `dd.md §21`; la parte más grande)                                           |
+| D · pulido visual      | 34-37  | ⏳                                                                                              |
+| Accesibilidad completa | —      | ⏳ **al final, por decisión del humano** (`dd.md §13`)                                          |
+
+### Qué leer para el paso 27 (no más)
+
+1. `AGENTS.md` (reglas; **la primera: commit y push solo bajo petición explícita**).
+2. Este «Estado actual» y el **paso 26** del diario (estilo de la entrada y último código).
+3. `dd.md §11.1.3` (punto 2, resize sin salto), `§11.1.4` (inercia) y `§11.1.6` (contraescalado), líneas
+   ~1142-1345 de `coropleth-library.md`. `§21` tarea 14 resume el alcance.
+4. El código que se toca: `src/react/use-zoom.ts`, `src/core/camera.ts` (`inertiaOffset`, `preserveView`
+   ya existen y están probadas), `src/react/styles.css` (burbujas).
+
+**Alcance del 27** (ya hecho en `core`, falta conectarlo): `bubbleScaling: "sqrt" | "screen" | "geo"` con UNA
+variable CSS (`--cm-bubble-scale`: `1/√k`, `1/k` o `1`; el CSS aplica `transform: scale(...)` con
+`transform-box: fill-box`); inercia al soltar un arrastre (falta la **velocidad de suelta**: muestras de los
+últimos ≤ 100 ms, umbral 0,3 px/ms, `inertiaOffset`, se cancela con `pointerdown`); y **resize sin salto**
+(`preserveView` al cambiar el tamaño). Hoy: las burbujas **crecen** con el zoom y al redimensionar con zoom
+aplicado la vista se desplaza.
+
+### Decisiones del humano que se desvían de `dd.md` (vigentes)
+
+- **Rueda:** `wheel` por defecto `"always"` (con el ratón encima, la rueda hace zoom); `"cooperative"` es opt-in.
+- **Controles de zoom:** opt-in (`zoom={{ controls: true }}`). El aviso de gesto solo sale en `cooperative`.
+- **España** se encuadra **con Canarias** (`DEFAULT_FOCUS_BOUNDS`); `focusBounds={{ ES: null }}` la quita.
+- **Accesibilidad al final**, no repartida (flechas, `role="img"` del `<svg>`, tabla alternativa, `aria-live`…).
+- **Errores y avisos de consola en inglés**, con prefijo `[choropleth]`. Documentación y comentarios, en español.
+- **`dimOthers` por defecto `"selection"`**. Chipre del Norte y Somalilandia quedan en gris sin id (Legal).
+- Se puede **romper la API** antes de 1.0, sin alias de compatibilidad.
+
+### Trampas aprendidas (cuestan tiempo si se repiten)
+
+- **Los `@types` de d3 no son garantía de runtime.** `interpolateZoom.rho` está en la **función**, no en el
+  interpolador (los tipos dicen lo contrario). Ante la duda, probar con una línea de `node -e`.
+- **Winding order:** d3 espera el anillo exterior en sentido **horario**. El fixture `tests/fixtures.ts`
+  (`twoSquares`) lo tiene al revés: su mapa es el mundo entero. Para tests de encuadre, usar polígonos propios.
+- **Antimeridiano:** un polígono que cruza ±180° (Rusia, Fiyi) hace que `path.bounds` mida las dos mitades.
+  Usar `getFocusExtent` / `projectBounds` (encuadran la mitad mayor).
+- **`prettier --write` reformatea `src/geo/world-110m.json`** (está en `.prettierignore`; se genera compacto con
+  `scripts/build-geo/build-world-110m.mjs`).
+- **jsdom:** no tiene `Element.animate` (el fundido de reduced-motion salta directo); `MouseEvent.view` no se
+  puede pasar en el constructor (usar `Object.defineProperty`); con temporizadores falsos, el supresor de clic de
+  `d3-zoom` (`setTimeout 0`) no corre y se queda en `window`: vaciar los pendientes en `afterEach`.
+- **Linter de React:** no leer ni escribir `ref.current` durante el render (también a través de una función que
+  se pasa a algo que corre en el render). Si hace falta, registrar en el store desde un efecto.
+- **`pnpm test <ruta1> <ruta2>`** puede dar recuentos engañosos; para un solo archivo usar
+  `pnpm vitest run <archivo>`.
+- **Hover/zoom no deben re-renderizar `Root`.** Se comprueba contando llamadas a `getId` (el join la llama una vez por
+  fila en cada render). Cualquier cambio en `Root`, el hook o el store debe mantener esos tests en verde.
+
+### Cómo trabajamos (el patrón que funciona)
+
+1. Leer lo que gobierna el paso → diseñar → `core` puro con tests **antes** que React → componentes → story.
+2. **Comprobar que los tests sirven con mutaciones a mano** (romper una línea clave, ver que algún test falla,
+   revertir). Ya ha cazado errores propios.
+3. Documentar el paso en el diario con la estructura de siempre: qué, por qué, orden interno, decisiones y
+   desviaciones respecto a `dd.md`, tests, verificación visual **pendiente del humano**, preguntas de comprobación.
+4. **No hay navegador en la sesión del agente**: lo visual (Storybook) lo revisa el humano. Un paso con efecto visible
+   se marca `✅ Hecho*` hasta que lo confirma.
+5. Ante una duda de diseño que `dd.md §21` marca como «preguntar al humano», **preguntar**, no suponer.
+6. Ver `git status` antes de empezar y **no commitear sin que lo pida**.
+
+### Preguntas abiertas
+
+- **Ancla de las burbujas de Rusia** (§26.8): `getAnchorPoint` proyecta el anillo que cruza el antimeridiano vértice
+  a vértice; visualmente salió plausible pero no está garantizado. ¿Prueba específica ahora o en el pulido?
+- **Aviso de `scroll-jacking`** (§24.8): con `wheel: "always"` y el mapa en una página con scroll, el mapa se come la
+  rueda. ¿El preset lo avisa en desarrollo o basta la documentación de la prop?
+- Fronteras disputadas y política de Chipre del Norte / Somalilandia: decisión de Legal, no técnica (§F.2, §22).
+
+### Prompt de arranque para una sesión nueva
+
+> Lee `AGENTS.md` y la sección «Estado actual y handoff» de `choropleth-build-proccess.md`, y el paso 26 de ese
+> diario. Sigue con el **paso 27** (contraescalado de burbujas, inercia y resize sin salto), leyendo solo
+> `coropleth-library.md` §11.1.3 (punto 2), §11.1.4 y §11.1.6 y el código que se toca. Un paso cada vez; no
+> commitees ni hagas push sin que te lo pida; la revisión visual la hago yo.
 
 ## Índice de pasos
 
@@ -36,21 +127,30 @@
 
 **Fase A, cimientos (v0.2)**: lo que el zoom y el drill-down necesitan que esté bien.
 
-| Paso | Título                                                                                            | Estado       |
-| ---- | ------------------------------------------------------------------------------------------------- | ------------ |
-| 14   | Limpieza: borrar `placeholder`; `@types/geojson` y `topojson-specification` a `dependencies`      | ⏳ Pendiente |
-| 15   | `map-store`: hover, foco, puntero y estado fuera de `Root`                                        | ⏳ Pendiente |
-| 16   | `MapItem` unificado (regiones + puntos) y Pointer Events                                          | ⏳ Pendiente |
-| 17   | Selección controlada / no controlada y `dimOthers`                                                | ⏳ Pendiente |
-| 18   | `labels` (i18n): fuera los textos en español fijos                                                | ⏳ Pendiente |
-| 19   | Geometría robusta: regiones sin id, `filterFeatures`, trazos no escalables, `aspectRatio: "auto"` | ⏳ Pendiente |
-| 20   | `getFocusGeometry` + anclas `polylabel`                                                           | ⏳ Pendiente |
-| 21   | `geography` asíncrona con caché + `data: undefined` = cargando                                    | ⏳ Pendiente |
-| 22   | `src/geo`: `world-110m` alpha-2, tabla ISO, `fallbackPoints`                                      | ⏳ Pendiente |
+| Paso | Título                                                                                            | Estado     |
+| ---- | ------------------------------------------------------------------------------------------------- | ---------- |
+| 14   | Limpieza: borrar `placeholder`; `@types/geojson` y `topojson-specification` a `dependencies`      | ✅ Hecho   |
+| 15   | `map-store`: hover, foco, puntero y estado fuera de `Root`                                        | ✅ Hecho   |
+| 16   | `MapItem` unificado (regiones + puntos) y Pointer Events                                          | ✅ Hecho   |
+| 17   | Selección controlada / no controlada y `dimOthers`                                                | ✅ Hecho\* |
+| 18   | `labels` (i18n): fuera los textos en español fijos                                                | ✅ Hecho\* |
+| 19   | Geometría robusta: regiones sin id, `filterFeatures`, trazos no escalables, `aspectRatio: "auto"` | ✅ Hecho\* |
+| 20   | `getFocusGeometry` + anclas `polylabel`                                                           | ✅ Hecho\* |
+| 21   | `geography` asíncrona con caché + `data: undefined` = cargando                                    | ✅ Hecho\* |
+| 22   | `src/geo`: `world-110m` alpha-2, tabla ISO, `fallbackPoints`                                      | ✅ Hecho\* |
 
-**Fase B, cámara (v0.3)** · **Fase C, drill-down (v0.4)** · **Fase D, pulido visual (v0.5)**:
-pasos 23-37, en el orden exacto de las tareas 10-24 de `dd.md §21`. Cada uno se añade a esta tabla al
-empezarlo.
+**Fase B, cámara (v0.3)**: zoom y pan (tareas 10-14 de `dd.md §21`).
+
+| Paso | Título                                                                                                   | Estado       |
+| ---- | -------------------------------------------------------------------------------------------------------- | ------------ |
+| 23   | `core/camera.ts` y `boundsToTransform`: la matemática de la cámara, solo con tests                       | ✅ Hecho     |
+| 24   | `use-zoom.ts` + `Viewport`: `d3-zoom` escribe el transform en el DOM; rueda cooperativa, clic ≠ arrastre | ✅ Hecho\*   |
+| 25   | `ZoomControls`, `GestureHint` y teclado de zoom                                                          | ✅ Hecho\*   |
+| 26   | Vuelos: `focusId`, handle `zoomTo` / `zoomBy` / `resetView` con `Promise`, reduced-motion                | ✅ Hecho\*   |
+| 27   | Contraescalado de burbujas, inercia y resize sin salto                                                   | ⏳ Pendiente |
+
+**Fase C, drill-down (v0.4)** · **Fase D, pulido visual (v0.5)**: pasos 28-37, en el orden exacto de las
+tareas 15-24 de `dd.md §21`. Cada uno se añade a esta tabla al empezarlo.
 
 ---
 
@@ -1442,3 +1542,866 @@ El trabajo es **sólido y por encima de lo habitual** para una v0.1: comprobado 
    (`dd.md §11.2`).
 
 **Siguiente paso: 14 (limpieza).** Después, los pasos de la fase A en orden.
+
+---
+
+# Paso 14: limpieza (`placeholder` fuera, tipos a `dependencies`)
+
+Primer paso de la fase A. Corrige los problemas #4 y #11 de la revisión (R.2).
+
+## 14.1 Qué se hizo
+
+| Cambio                                                                                                                                                                | Por qué                                                                                                                                                                                          |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Borrados `core/placeholder.ts`, `react/placeholder.tsx`, sus 2 tests y `stories/placeholder.stories.tsx`; quitados sus `export` de `core/index.ts` y `react/index.ts` | Era andamiaje del paso 1 para probar la cadena tipos → tests → build → Storybook. Ya hay código real que la prueba, y `describeLibrary`/`Placeholder` estaban **en la API pública** sin ser API. |
+| `@types/geojson` y `@types/topojson-specification` pasan de `devDependencies` a `dependencies`                                                                        | La API pública expone `Feature`, `FeatureCollection` y `Topology`. Los `.d.ts` de `dist/` los importan: si el consumidor no los tiene instalados, TypeScript los ve como `any` o falla.          |
+
+## 14.2 Comprobación
+
+`pnpm typecheck`, `pnpm lint`, `pnpm build` limpios; `pnpm test`: **200 tests** en verde (los 202 de la revisión menos los 2 del
+placeholder). Sin efecto visual: no aplica la verificación en navegador (R.4 #1), salvo que la barra lateral de Storybook ya no
+muestra «Setup → Placeholder».
+
+## 14.3 Antes de pasar al paso 15: ¿lo tienes claro?
+
+- ¿Por qué un tipo de `geojson` que aparece en un `.d.ts` exige `dependencies` y no `devDependencies`?
+- ¿Qué ve un consumidor con TypeScript si no está `@types/geojson` instalado?
+
+---
+
+# Paso 15: `map-store` (el hover sale de `Root`)
+
+Archivos: `src/react/map-store.ts` (+ test), reemplaza a `pointer-store.ts`. Toca `use-choropleth.ts`,
+`choropleth-context.ts` y los componentes `Root`, `Regions`, `Selection` y `Tooltip`.
+Corrige el problema n.º 1 de la revisión (R.2), el de severidad alta.
+
+## 15.1 El problema
+
+`hoveredId` era un `useState` dentro de `useChoropleth`. Cada vez que el cursor pasaba a otra región,
+`Root` se re-renderizaba y recalculaba **join, escala, leyenda y burbujas**, aunque nada de eso
+hubiera cambiado. Con 177 países no se nota; con miles de regiones, o con zoom, produce tirones.
+
+## 15.2 La solución
+
+```
+ useChoropleth ── crea ──► store (hoveredId, pointer) ◄── lee con useMapStore(store, selector)
+      │                                                       ▲                ▲
+      └─ getRegionProps / Root escriben ─────────────────────┘                │
+                                                        Selection (hoveredId)  Tooltip (pointer + hoveredId)
+```
+
+- **`createMapStore()`**: un objeto con `subscribe`, `getState` y `setState(parche)`. Es JS puro, sin
+  React. `setState` **no notifica si el valor no cambia** (`Object.is`).
+- **`useMapStore(store, selector)`**: `useSyncExternalStore` con un selector. Un componente solo se
+  re-renderiza si **lo que su selector devuelve** cambia. `Selection` pide `hoveredId`; mover el cursor
+  dentro de la misma región no lo toca. El `Tooltip` pide también `pointer`.
+- **`Regions` lee el hover sin suscribirse** (`store.getState()` dentro del manejador). Necesita saber
+  la región actual para no repetir `onRegionHover`, pero no pinta nada que dependa de ella.
+- **Dueño del store: `useChoropleth`**, no `Root`. Así el nivel 3 (headless) también lo tiene: el
+  resultado del hook trae `store` en lugar de `hoveredId`, y quien quiera el hover hace
+  `useMapStore(store, s => s.hoveredId)` (ver `stories/headless.stories.tsx`).
+- **El selector debe devolver algo estable** (primitivo o la misma referencia). Si crea un objeto
+  nuevo en cada llamada, React entra en bucle. Está documentado en el código.
+
+## 15.3 Decisiones y desviaciones respecto a `dd.md §21`
+
+| Decisión                                                                                        | Motivo                                                                                                                                                                         |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| El store tiene solo `hoveredId` y `pointer`; **no** `focus`, `interacting`, cámara ni `status`. | Todavía no hay nada que los escriba (teclado: paso 16-17; cámara: fase B). Añadir un campo es una línea en `MapState`; declararlos ahora sería código muerto sin tests reales. |
+| Los eventos siguen siendo `mouse*`.                                                             | Pasar a Pointer Events y `MapItem` es el paso 16; mezclarlo aquí haría el cambio difícil de revisar.                                                                           |
+| `hoveredId` desaparece del resultado de `useChoropleth` sin alias.                              | Rotura permitida antes de 1.0 (R.4 #4). Tests y story actualizados.                                                                                                            |
+| `createMapStore` y `useMapStore` se exportan.                                                   | El nivel 3 los necesita para leer el hover.                                                                                                                                    |
+
+## 15.4 Tests
+
+205 en verde (200 + 5 nuevos), `typecheck` y `lint` limpios, cobertura de `src/core` sin cambios.
+
+- `map-store.test.tsx`: parches, no notificar si no cambia, desuscripción y **`useMapStore` no
+  re-renderiza si cambia otro campo**.
+- `choropleth.test.tsx`, «rendimiento»: el criterio de aceptación de `dd.md §21`. Para contar renders
+  de `Root` sin tocar producción se cuenta cuántas veces se llama a `getId` (el join lo llama una vez
+  por fila en cada render de `useChoropleth`). Tras hover entre dos regiones, mover el cursor y salir,
+  el contador **no cambia**. Un test de control comprueba que sí sube cuando el consumidor
+  re-renderiza, para que el primero no pase por casualidad.
+
+## 15.5 Verificación visual (pendiente de ti) \*
+
+No he podido abrir Storybook en un navegador. Por la regla R.4 #1, **revisa antes de seguir**:
+`pnpm storybook` y, en `ChoroplethMap` y en la story headless, comprueba que (1) el borde del hover
+sigue a la región, (2) el tooltip sigue al cursor y se voltea en las esquinas, (3) al salir del mapa
+ambos desaparecen.
+
+## 15.6 Antes de pasar al paso 16: ¿lo tienes claro?
+
+- ¿Por qué `useMapStore` necesita un selector y qué pasa si devuelve un objeto nuevo cada vez?
+- ¿Por qué `Regions` lee `store.getState()` en el manejador en lugar de suscribirse?
+- ¿Cómo demuestra el test que `Root` no se re-renderiza, y por qué hay un test de control?
+
+---
+
+# Paso 16: `MapItem` unificado y Pointer Events
+
+Archivos nuevos: `src/react/map-item.ts`. Tocan: `core/variants.ts` (`Bubble.coordinates`),
+`map-store.ts`, `use-choropleth.ts`, `Regions`, `Bubbles`, `Selection`, `Tooltip`, `Root` y
+`styles.css`. Corrige el problema n.º 5 de la revisión (R.2).
+
+## 16.1 El problema
+
+- Solo había eventos de ratón (`onMouseEnter`…): no funcionaban bien con táctil ni con lápiz.
+- Las burbujas con coordenadas propias (tiendas) no recibían eventos: `pointer-events: none`.
+- `RegionEvent` solo describía regiones. Una tienda no es una región, pero el consumidor quiere **un**
+  handler y **un** tooltip.
+
+## 16.2 Qué se hizo
+
+**Un tipo para todo lo interactivo** (`dd.md §9.2`): `MapItem<TDatum>` es una unión discriminada por `kind`.
+
+| `kind`     | Qué es                                                                    | Campos propios                                                          |
+| ---------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `"region"` | Una región del mapa                                                       | `feature`, `datum` (`undefined` = sin dato)                             |
+| `"point"`  | Una burbuja con coordenadas propias (`getCoordinates`), p. ej. una tienda | `coordinates`, `datum`, `feature` (la región de debajo, si el id cruza) |
+
+Ambos llevan `level` y `drillable`. Mientras no exista el drill, `level` es siempre `{ id: "root", depth: 0 }` y
+`drillable` es `false`. Están ya en el tipo para no romper la API otra vez en la fase C.
+
+**API (se rompe sin alias, permitido antes de 1.0):**
+
+| Antes                                   | Ahora                                                                       |
+| --------------------------------------- | --------------------------------------------------------------------------- |
+| `onRegionClick(event)`                  | `onItemClick(item: MapItem)`                                                |
+| `onRegionHover(event \| null)`          | `onItemHover(item: MapItem \| null)`                                        |
+| `RegionEvent`                           | `MapItem` (`RegionItem` \| `PointItem`)                                     |
+| `getRegionProps` → `onMouseEnter/Leave` | `onPointerEnter/Leave`; nuevo `getPointProps` para `<circle>` de un punto   |
+| `TooltipContext` = región + valor/color | `ItemContext` = `MapItem` + `value`, `formattedValue`, `color`, **`label`** |
+| Store: `hoveredId: string \| null`      | `hovered: { kind, id } \| null` (un punto y una región pueden compartir id) |
+
+El consumidor recibe en `onItemClick` / `onItemHover` un **superconjunto** de `MapItem` (también `value`, `color` y
+`label`): es el mismo objeto que usa el tooltip.
+
+**Dónde vive la lógica.** `useChoropleth` ahora devuelve `hoverItem(ref)`, `clickItem(ref)` y
+`getItemContext(ref)`. `hoverItem` **no hace nada si el item no cambia** (ni toca el store ni llama a
+`onItemHover`), así que el dedupe que antes tenía `Regions` está en un solo sitio y lo heredan el nivel 2 y el 3.
+
+**Burbujas: dos tipos con interacción distinta.**
+
+- En el **centroide de una región** (`coordinates: null`): siguen sin capturar el ratón; el item es la región de debajo.
+- Con **coordenadas propias**: `pointer-events: auto` en su `<circle>` (el `none` del grupo se hereda y se anula
+  ahí). Hover, clic, tooltip y un anillo de hover en `Selection`.
+
+**Táctil.** No hay hover, y el navegador manda `pointerleave` justo al levantar el dedo, lo que quitaría la vista
+previa al instante. Por eso, con `pointerType === "touch"`: el primer toque deja el tooltip y el resalte (vista
+previa) y **se ignora `pointerleave`**; tocar el océano lo quita. `Root` actualiza la posición también en
+`pointerdown`, porque un toque no genera `pointermove`.
+
+## 16.3 Decisiones y desviaciones respecto a `dd.md §21`
+
+| Decisión                                                                                                   | Motivo                                                                                                                                                                                               |
+| ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **El «segundo toque = acción» NO está.** Hoy un toque deja la vista previa y además llama a `onItemClick`. | Esa regla de `dd.md §11.2.5` aplica a items **navegables** (`drillable`), y todavía no hay ninguno. Implementarla ahora sería código muerto sin comportamiento que probar. Va con el drill (fase C). |
+| **Tocar fuera del mapa no quita la vista previa táctil.** Solo la quita tocar el océano o otra región.     | Detectarlo exige un listener global en `document`. Limitación conocida; se resuelve cuando haya más estado táctil (drill).                                                                           |
+| **`selectedId` sigue siendo solo de regiones.**                                                            | La selección de puntos va en el paso 17 (selección controlada/no controlada).                                                                                                                        |
+| El texto «Sin dato» sigue fijo en español en el tooltip.                                                   | Es el paso 18 (`labels`).                                                                                                                                                                            |
+| `ItemContext.label` = `properties.name` de la región, o el id.                                             | Para un punto sin región cruzada es su id; el consumidor puede usar `renderTooltip` para mostrar lo suyo (`datum`).                                                                                  |
+
+## 16.4 Tests
+
+212 en verde (205 + 7 nuevos), `typecheck`, `lint` y `build` limpios; cobertura de `core` sin cambios.
+Nuevos: un punto tiene hover/clic/tooltip/anillo y se desmonta al salir; las burbujas de centroide siguen sin
+capturar; un punto y una región con el mismo id no se confunden; el punto enlaza su `feature`; táctil conserva la
+vista previa tras `pointerleave`; con ratón, `pointerleave` sí quita el hover; `Bubble.coordinates` en `core`.
+Los tests de hover que usaban `mouse*` pasan a `pointer*`, y el contador de renders de `Root` del paso 15 sigue en verde.
+
+## 16.5 Verificación visual (pendiente de ti) \*
+
+No he abierto Storybook. Revisa con `pnpm storybook`:
+
+1. **Variants → BubbleStores**: pasar el ratón por una tienda la resalta con un anillo y muestra su tooltip;
+   no hay hover de región debajo mientras estás sobre la burbuja.
+2. **Variants → BubbleOnCountries**: el hover sigue funcionando a través de las burbujas (la región, no la burbuja).
+3. En un móvil o con el modo táctil de las DevTools: el primer toque deja el tooltip fijo; tocar el mar lo quita.
+4. El resto de stories: hover y clic como en el paso 15.
+
+## 16.6 Antes de pasar al paso 17: ¿lo tienes claro?
+
+- ¿Por qué `hovered` guarda `{ kind, id }` y no solo el id?
+- ¿Por qué las burbujas de centroide no capturan eventos pero las de tienda sí?
+- ¿Qué problema habría en táctil si se tratara `pointerleave` igual que con ratón?
+- ¿Por qué `hoverItem` comprueba que el item haya cambiado antes de llamar a `onItemHover`?
+
+---
+
+# Pasos 17-22: cierre de la fase A
+
+Se hicieron seguidos, por petición de iterar rápido hacia la cámara (fase B). Cada paso mantiene su
+entrada, pero con el «orden interno» condensado. Estado al terminar: **274 tests** en verde (212 + 62
+nuevos), `typecheck`, `lint`, `format:check`, `build` y `build-storybook` limpios, cobertura de
+`src/core` 100 % líneas / 96,6 % ramas. Verificación visual: ver **§F.1**.
+
+## Paso 17: selección controlada / no controlada y `dimOthers`
+
+**Qué.** Tres props nuevas (`selectedId`, `defaultSelectedId`, `onSelectedIdChange`) y `dimOthers`.
+
+| Modo          | Cómo se activa                               | Quién manda                                         |
+| ------------- | -------------------------------------------- | --------------------------------------------------- |
+| Sin selección | ninguna de las tres props                    | Un clic **no** selecciona ni cambia el cursor       |
+| No controlada | `defaultSelectedId` y/o `onSelectedIdChange` | La librería; clic en la seleccionada la quita       |
+| Controlada    | `selectedId` (incluido `null`)               | Tú: la librería solo avisa con `onSelectedIdChange` |
+
+- **Solo se seleccionan regiones.** Los puntos no: su id puede coincidir con el de una región.
+- **`dimOthers`** (`"never" | "selection" | "hover-and-selection"`, por defecto `"selection"`) no cambia
+  ninguna prop de las regiones. `Root` pone `data-dim` y `data-has-selection` en el contenedor y el CSS baja
+  la opacidad de `.cm-regions`; `Selection` pinta encima una copia **con el color de la región**, que queda a
+  opacidad completa. El hover usa `:has(path[data-selection="hover"])`, también sin renders.
+- **Desviación:** el default `"selection"` es el de `dd.md §12.1`, pero cambia lo que se ve en cuanto hay
+  una región seleccionada (el resto se atenúa). Pon `dimOthers="never"` para el comportamiento anterior.
+
+## Paso 18: `labels` (i18n)
+
+`core/labels.ts`: `ChoroplethLabels` (`noData`, `geographyError`), `en` por defecto, `es` exportado y
+`resolveLabels`. `Tooltip` y el preset (`emptyLabel`) leen de ahí; ya no queda español fijo en la UI. Cada
+fase añadirá sus claves (`drillHint`, `breadcrumbRoot`…). **Los mensajes de consola siguen en inglés** y no
+pasan por `labels`. (Los `throw new Error(...)` también están ya en inglés y con el prefijo `[choropleth]`: ver «Decisiones
+tras la revisión de la fase A».)
+
+## Paso 19: geometría robusta
+
+| Problema (R.2)   | Solución                                                                                                                                                                            |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| #2 agujeros      | Las regiones sin id se pintan en una **capa no interactiva** (`.cm-region--anonymous`, `emptyFill`, cursor normal). Pasar el cursor por ellas quita el hover de la región anterior. |
+| #7 trazos        | `vector-effect: non-scaling-stroke` también en `.cm-borders` y en el contorno de las regiones (GeoJSON).                                                                            |
+| #8 proporción    | `aspectRatio: number \| "auto"`. `"auto"` = `computeAspectRatio` (core): ajusta la proyección a un ancho de referencia y mide el rectángulo; limitado a [0,2 – 5].                  |
+| `filterFeatures` | Descarta regiones **y sus fronteras** (`createBorders` solo dibuja una frontera si se conservan los dos lados).                                                                     |
+
+Dos decisiones con consecuencias:
+
+- **`filterFeatures` se memoiza por su resultado, no por su identidad.** Se evalúa en cada render (O(regiones)),
+  pero la dependencia del `useMemo` es la lista de índices que sobreviven. Así
+  `filterFeatures={(f) => f.id !== "AQ"}` en línea (lo natural) **no recalcula las rutas**.
+- **`useContainerSize` guarda solo lo medido.** El alto derivado de la proporción se calcula al renderizar. Si
+  `aspectRatio` cambia (con `"auto"`, al terminar de cargar la geometría), el alto se corrige sin esperar a
+  otro evento de `ResizeObserver`.
+
+Bug encontrado por los tests: d3 devuelve `[NaN, NaN]`, no `null`, para una coordenada que no sabe proyectar.
+Se normaliza en un único sitio (la función `project` del hook).
+
+## Paso 20: `getFocusGeometry` + anclas `polylabel`
+
+`core/bounds.ts`, con tests antes que el componente:
+
+- `getFocusGeometry({ feature, path, near })`: el polígono de mayor **área proyectada** + los que están a
+  menos de `near × diagonal` de él. Francia sin Guayana; EE. UU. sin Alaska/Hawái; Noruega sin Svalbard.
+- `getAnchorPoint({ geometry, project })`: `polylabel` del polígono proyectado más grande. Siempre cae
+  **dentro** (el test usa una «U» cuyo centroide cae en el hueco).
+
+`useChoropleth` ancla las burbujas ahí (con el centroide de respaldo si no hay polígono). Nueva dependencia
+**`polylabel`** (en `dependencies`; `@types/polylabel` en `devDependencies`, sus tipos no aparecen en la API
+pública). Los `focusBounds` por nivel (Canarias) y el uso para encuadrar llegan con la cámara (fase B).
+
+⚠️ **Trampa de los tests:** los cuadrados de prueba deben ir en sentido **horario**; con el sentido contrario
+d3 interpreta «todo el globo menos el cuadrado» (el _winding order_ de `dd.md §2.9`).
+
+## Paso 21: `geography` asíncrona con caché + `data: undefined` = cargando
+
+- **`GeographyInput`** = dato | `Promise` | `() => import("…")` (vale el módulo entero con `default`).
+  Un dato síncrono se devuelve **en el mismo render** (sin efecto ni parpadeo).
+- **`useGeography`** (`use-geography.ts`): carga en un efecto real. Caché por `geographyKey` o, si no, por la
+  identidad de la función/promesa; un segundo mapa con la misma clave **no parpadea** (se lee de la caché
+  en el render). Un fallo no se cachea.
+- **Función en línea:** `geography={() => import(…)}` cambia de identidad en cada render. No entra en bucle
+  (el módulo devuelve el mismo objeto y React no re-renderiza), pero la caché solo sirve con una función
+  estable o con `geographyKey`. Hay test.
+- **Estados:** `status` = `loading` → `Svg` pinta un **esqueleto con la proporción** que tendrá el mapa (la
+  página no salta); `error` → `role="alert"` con `labels.geographyError` y `onGeographyError` (sin él,
+  `console.error` en inglés). `Root` expone `data-status`.
+- **`data: undefined`** = datos en camino: se **mantiene el último dato** (en una `ref`, no en estado: `data`
+  suele llegar con identidad nueva en cada render y guardarlo en estado provocaría un render por cada una),
+  `data-loading` en el contenedor hace «respirar» el mapa y **no hay avisos de consola**. `loading` fuerza el
+  estado. El diagnóstico de join no se ejecuta hasta que la geometría está lista.
+
+## Paso 22: `src/geo` (nuevo _entry point_ `choropleth-kit/geo`)
+
+| Export                | Qué es                                                                                                                              |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `world110m`           | `world-atlas` a 1:110m con **ids ISO alpha-2** (`"ES"`) y `properties.name`. Objeto `countries`. 177 regiones, **Kosovo = `"XK"`**. |
+| `isoNumericToAlpha2`  | Tabla de los 250 códigos ISO (`"724"` → `"ES"`), para quien use `world-atlas` directamente.                                         |
+| `worldFallbackPoints` | `[lon, lat]` de 42 microestados y territorios ausentes a 1:110m (Andorra, Mónaco, Singapur, Hong Kong…). No exhaustivo.             |
+
+- **Se genera, no se escribe a mano:** `scripts/build-geo/build-world-110m.mjs` (`world-atlas` +
+  `i18n-iso-countries`, ambas **devDependencies**) y la salida **se commitea**. Chipre del Norte y Somalilandia
+  no tienen código: quedan sin id y salen como capa anónima (paso 19).
+- **`fallbackPoints`** (prop, nuevo): un dato cuyo id no cruza con ninguna región pero está en la tabla se
+  pinta como **punto** (item `point`: hover, clic, tooltip) con el color de su dato; en `bubble`, como burbuja.
+  Entra en la leyenda y **deja de salir en el aviso de ids sin cruzar**. Nuevo componente
+  `<Choropleth.FallbackPoints>`, incluido en `Svg`.
+- **Peso:** ver «Decisiones tras la revisión de la fase A» (`geo.js` ≈ 128 KB / 42 KB gzip, y es opcional). El presupuesto de `dd.md §14.2` se mide con `size-limit`
+  cuando se añada.
+- ⚠️ **Fronteras disputadas:** son las de Natural Earth, tal cual (`dd.md §6.2`). Hay que validarlas con
+  Legal/Comunicación antes de mostrar un mapa en una herramienta de empresa. Está en el comentario del export.
+- Las stories pasan a `world110m` (ids alpha-2) con un `seed(id)` determinista (`stories/seed.ts`).
+
+## F.1 Verificación visual (parcialmente hecha; el resto, pendiente de ti) \*
+
+No hay navegador en esta sesión. Lo que sí se hizo: renderizar a SVG con `react-dom/server`, convertirlo a PNG
+y mirarlo (sin CSS, así que **no** cubre atenuado, esqueleto ni pulso). Visto y correcto:
+
+- Las burbujas de EE. UU. y Francia caen en el **territorio continental** y en Francia (no en Alaska ni en el
+  Golfo de Vizcaya).
+- Los microestados (Singapur, Maldivas, Bahréin, Mónaco, Malta…) aparecen como puntos con color.
+
+**Revisa en `pnpm storybook` → «Foundations (fase A)»** (todo lo que depende de CSS o de interacción):
+
+| Story                                             | Qué comprobar                                                                                                                                       |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SelectionAndDim`                                 | Clic selecciona/deselecciona; con `selection` el resto se atenúa y España mantiene su color; con `hover-and-selection`, también al pasar el cursor. |
+| `Labels`                                          | El tooltip de un país gris cambia entre «No data», «Sin dato» y «—».                                                                                |
+| `NoHoles`                                         | Kosovo con color; Chipre del Norte y Somalilandia en gris; sin huecos.                                                                              |
+| `AutoAspectRatio`                                 | Con Chile el contenedor es alto; con Noruega, ancho. Sin franjas en blanco.                                                                         |
+| `AnchorsBeforeAfter`, `BubblesOnProblemCountries` | Rojo (antes) frente a azul (ahora) en Francia, EE. UU., Rusia, Noruega, Países Bajos.                                                               |
+| `AsyncLoading`                                    | Esqueleto → mapa gris que «respira» → datos. Sin saltos de altura. Con reduced-motion, sin animación.                                               |
+| `GeographyError`                                  | Mensaje de error, no un mapa vacío.                                                                                                                 |
+| `Microstates`                                     | Puntos con hover, tooltip y clic (consola).                                                                                                         |
+| Todas las anteriores                              | Hover y tooltip siguen funcionando; el borde del hover **no engorda** con el zoom del navegador.                                                    |
+
+## F.2 Qué queda de la auditoría (R.2) y preguntas abiertas
+
+**Corregidos en la fase A:** #1, #2, #3, #4, #5, #6, #7, #8, #11. **Pendientes por diseño:** #9 (a11y:
+`role="img"` oculta los hijos; se decide en `dd.md §13.4`), #10 (colocación del tooltip: `placeTooltip`, fase D),
+#12 (FLIP de burbujas, fase D) y #13 (`rebaseProjection`, fase C).
+
+Preguntas abiertas (para ti):
+
+1. ¿`dimOthers` por defecto en `"selection"` (como dice `dd.md`) o preferimos `"never"` hasta que haya zoom?
+2. Los `throw new Error(...)` de `core` están en español; `dd.md §21` pide mensajes de consola en inglés. ¿Los unificamos?
+3. ¿Qué hacemos con Chipre del Norte y Somalilandia (hoy, capa gris sin id)? Es una decisión de Legal, no técnica.
+4. Peso de `choropleth-kit/geo` (196 KB): ¿aceptable, o generamos también una versión más simplificada?
+
+**Siguiente: paso 23 (fase B, cámara).** `core/camera.ts` y `core/bounds.ts` (`boundsToTransform`, etc.), solo tests.
+
+## Decisiones tras la revisión de la fase A
+
+Respuestas a las preguntas abiertas de §F.2:
+
+1. **`dimOthers`:** se queda en `"selection"` por defecto (como dice `dd.md §12.1`).
+2. **Errores en inglés:** los `throw new Error(...)` de `core` y de `react` pasan a inglés, con el prefijo
+   `[choropleth]`, como los avisos de consola (`dd.md §21`). Tests actualizados.
+3. **Chipre del Norte y Somalilandia:** se queda como está (capa gris sin id); decisión de Legal, no técnica.
+4. **Peso de `geo`:** ver abajo.
+
+**Qué es `dist/geo.js` y si entra en el bundle.** Es el _entry point_ opcional `choropleth-kit/geo`
+(`world110m`, `isoNumericToAlpha2`, `worldFallbackPoints`). **No entra en el bundle principal**: `index.js`
+y `core.js` no lo importan (comprobado con `grep` sobre `dist/`); solo lo paga quien escriba
+`import … from "choropleth-kit/geo"`. Quien traiga su propia geometría no lo carga. Dentro de `geo.js`, el
+mundo es casi todo el peso, y los otros dos exports son tree-shakeables si no se usan.
+
+**Corrección de un error mío:** al medirlo salió **196 KB**, el doble de lo esperado. `prettier --write src`
+había reformateado `world-110m.json` (que se genera compacto) con sangrías. Está en `.prettierignore`,
+regenerado, y el tamaño real es:
+
+| Archivo                             | Sin comprimir | gzip    | brotli  |
+| ----------------------------------- | ------------- | ------- | ------- |
+| `dist/geo.js`                       | 128 KB        | 42 KB   | 35 KB   |
+| `dist/index.js` + chunk compartido  | 55 KB         | ≈ 16 KB | ≈ 14 KB |
+| `world-atlas` original (referencia) | 105 KB        | 38 KB   | —       |
+
+Es esencialmente la geometría (`world-atlas` con los ids cambiados), ya al mínimo razonable a 1:110m. Para
+bajarlo hay que simplificar (mapshaper, `dd.md §2.6`) o cargarlo bajo demanda con
+`geography={() => import("choropleth-kit/geo")…}`, que el paso 21 ya permite.
+
+---
+
+# Paso 23: `core/camera.ts` y `boundsToTransform` (la matemática de la cámara)
+
+Archivos: `src/core/camera.ts`, `src/core/camera.test.ts`; `boundsToTransform` y `normalizePadding` en
+`src/core/bounds.ts`. Primer paso de la fase B. **No hay efecto visual** y no se toca React: es la
+tarea 10 de `dd.md §21` («solo tests»), y la regla R.4 #3 («lo puro, a `core`, con tests antes que el
+componente»).
+
+## 23.1 El modelo mental (`dd.md §11.0`)
+
+Un mapa se separa en dos cosas:
+
+- **El lienzo**: el mapa ya proyectado a píxeles (las rutas `d`). Se calcula una vez por nivel y tamaño.
+- **La cámara**: un `transform` afín `{ k, x, y }` (escala + traslación). Un punto del lienzo `[px, py]` se
+  ve en pantalla en `[px·k + x, py·k + y]`. **`k = 1` es el encaje**: el mapa cabe justo en el contenedor.
+
+Zoom y pan **no recalculan rutas**: solo cambian la cámara. Por eso toda la lógica de «dónde está la cámara y
+adónde puede ir» es aritmética sobre tres números, sin DOM ni `d3-zoom`. Se escribe y se prueba aquí; el
+paso 24 solo la conecta a los gestos.
+
+## 23.2 Las funciones
+
+| Función                                | Responde a                                                                | Notas                                                                                                                                         |
+| -------------------------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `applyTransform` / `invertTransform`   | Lienzo ↔ pantalla                                                         | Las dos mitades de la misma fórmula; los tests las usan como oráculo.                                                                         |
+| `constrainAxis` / `constrainTransform` | ¿Hasta dónde se puede arrastrar?                                          | Si el contenido **cabe**, lo centra; si no, impide que sus bordes entren en la vista. `overscroll` = holgura elástica (fracción de la vista). |
+| `boundsToTransform` (`bounds.ts`)      | ¿Qué cámara encaja estos límites con margen?                              | Destino de «zoom a un país». Respeta `scaleExtent` y no devuelve `Infinity`/`NaN` con límites degenerados.                                    |
+| `preserveView`                         | ¿Cómo no «volver al encaje» al redimensionar?                             | Conserva el **centro geográfico** y la `k`; si el centro cae fuera del globo, devuelve el encaje.                                             |
+| `flightDuration`                       | ¿Cuánto dura un vuelo?                                                    | La duración natural de `interpolateZoom` × `speed`, acotada a **[350, 1200] ms**.                                                             |
+| `inertiaOffset`                        | ¿Cuánto se desliza el mapa tras soltar?                                   | `v·τ·(1 − e^(−t/τ))`, τ = 325 ms (la de iOS). Tiende a `v·τ` sin superarlo.                                                                   |
+| `toViewState`                          | ¿Qué le digo al consumidor (`onViewChange`)?                              | `{ k, x, y, zoom, center, bounds, level }` con coordenadas geográficas.                                                                       |
+| `transformToZoomView`                  | Cámara → «vista» de `interpolateZoom` (centro x, centro y, ancho visible) | Pieza interna de `flightDuration`; se exporta porque el paso 26 también la necesita.                                                          |
+
+## 23.3 Por qué cada una es como es (lo que no es evidente)
+
+- **`constrainAxis` centra en vez de pegar a una esquina.** El `translateExtent` por defecto de d3 deja un
+  mapa más pequeño que la vista en una esquina. Con `k = 1` el contenido cabe justo: no hay nada que
+  arrastrar (el test lo comprueba: cualquier `t` da 0). Esa propiedad hace que el cursor `grab` no tenga que
+  aparecer en el encaje.
+- **`boundsToTransform` clampa `k` y aun así centra.** Si el país es tan pequeño que haría falta más zoom
+  del permitido, la cámara se queda en `max` pero con el país **en el centro**, no en un lado. Un margen que
+  se come toda la vista baja a `min` en lugar de dar una escala negativa.
+- **`preserveView` trabaja con funciones, no con proyecciones.** Recibe `invertOld` (píxeles → lon/lat) y
+  `projectNew` (lon/lat → píxeles). Así se prueba con proyecciones reales de d3 sin acoplar `core` a una forma
+  concreta, y el test comprueba lo importante: el centro geográfico **antes y después** de redimensionar es el
+  mismo (a 3 decimales).
+- **`toViewState` muestrea la vista.** Un mapa del mundo en Equal Earth no es un rectángulo: las **esquinas
+  de la vista caen fuera del globo** y `invert` da `null`. Los límites se estiman con una rejilla de 5 × 5
+  puntos de la vista, descartando los que no proyectan. Si ninguno proyecta, devuelve el mundo entero y el
+  centro `[0, 0]`. Son límites **aproximados** (no contemplan el antimeridiano), como dice `dd.md §11.1.7`.
+- **`flightDuration` cae al mínimo ante un transform inválido** (`NaN`) en vez de propagar `NaN` a una
+  animación.
+
+## 23.4 Un problema que apareció (y cómo se detectó)
+
+`dd.md §11.1.5` pide `interpolateZoom` con curvatura ρ (1,2–1,3 para dashboards). `@types/d3-interpolate`
+declara `rho` **en el interpolador ya creado** (`interpolateZoom(a, b).rho(r)`), pero **en runtime ese método
+no existe** (`undefined`): vive en la **función** (`interpolateZoom.rho(r)(a, b)`). El `typecheck` pasa con el
+código correcto según los tipos y **rompe con el real**.
+
+Cómo se vio: tras corregir el typecheck, la primera ejecución de los tests dio «38 passed» porque aún
+usaba la otra forma; al reejecutar toda la suite fallaron 6 tests de `flightDuration`, y una prueba de una
+línea con `node -e` lo confirmó (`fn.rho: function`, `instance.rho: undefined`). Se usa lo que hace de verdad
+con un cast tipado y un comentario, y hay un test («la curvatura se aplica de verdad») que falla si alguien
+«arregla» el código para contentar a los tipos.
+
+> **Lección para el resto de la fase:** con d3, los `@types` no son una garantía de runtime. Cuando un
+> método venga de un `@types` y no de la documentación del módulo, probarlo con una línea de `node`.
+
+## 23.5 Decisiones y desviaciones respecto a `dd.md`
+
+| Decisión                                                                                                           | Motivo                                                                                                                                                      |
+| ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `boundsToTransform` está en `bounds.ts` (donde lo sitúa `dd.md §11.1.5`) y el resto en `camera.ts`.                | Es lo que dice el documento; la tarea 10 menciona ambos archivos.                                                                                           |
+| **No** se implementa la velocidad de suelta de la inercia (muestras de los últimos 100 ms, umbral 0,3 px/ms).      | Solo la usa `use-zoom` en el paso 27. Hacerlo ahora sería código sin consumidor. `inertiaOffset`, que sí está en la tarea 10, es lo único que se pide aquí. |
+| `ViewState.level` es `{ id, depth }` (`ViewLevel`), duplicando la forma de `DrillLevelInfo` (`react/map-item.ts`). | `core` no puede importar de `react`. Cuando llegue el drill (fase C) se unifica moviendo el tipo a `core`.                                                  |
+| Dependencia nueva: **`d3-interpolate`** (`dependencies`) + `@types/d3-interpolate` (dev).                          | Permitida por `dd.md §21`; da `interpolateZoom`. Las demás (`d3-zoom`, `d3-selection`, `d3-transition`, `d3-ease`) se añaden en el paso que las usa.        |
+| `DEFAULT_FLIGHT_CURVATURE = 1.25`.                                                                                 | El punto medio del rango 1,2–1,3 que recomienda `dd.md` para dashboards.                                                                                    |
+
+## 23.6 Tests
+
+312 en verde (274 + 38 nuevos), `typecheck`, `lint`, `format:check` y `build` limpios; cobertura de `src/core`
+100 % en líneas. Cubren: ida y vuelta lienzo↔pantalla; centrado cuando cabe y límites duros/elásticos
+(incluido un contenido que no empieza en 0); encaje con margen simétrico y asimétrico, país minúsculo y
+enorme, límites degenerados y margen excesivo; **centro geográfico conservado al redimensionar** con
+proyecciones reales; duración siempre en [350, 1200], más larga cuanto más lejos, sin `NaN`; inercia (0 al
+soltar, límite `v·τ`, 63,2 % a `t = τ`, monotonía, entradas inválidas); `toViewState` con Mercator, con
+Equal Earth (esquinas fuera del globo) y con `invert` que falla.
+
+## 23.7 Verificación visual
+
+No aplica: no hay UI en este paso. Lo primero que se verá es el paso 24.
+
+## 23.8 Antes de pasar al paso 24: ¿lo tienes claro?
+
+- ¿Por qué `k = 1` es «el encaje» y no una escala arbitraria? ¿Qué se simplifica con eso?
+- Con `constrain: "contain"` y `k = 1`, ¿por qué no hay nada que arrastrar?
+- ¿Qué dos cosas conserva `preserveView` al redimensionar, y qué hace si el centro cae fuera del globo?
+- ¿Por qué `toViewState` muestrea una rejilla en vez de invertir las cuatro esquinas?
+- ¿Qué pasó con `interpolateZoom.rho` y qué test lo vigila?
+
+## 23.9 Decisiones del humano para la fase B (respuestas a `dd.md §21`)
+
+1. **Rueda: `wheel` es una prop con tres valores y por defecto `"always"`.** Mientras el ratón esté sobre
+   el mapa, la rueda hace zoom. `"cooperative"` es opt-in: la rueda solo hace zoom con **Ctrl/⌘ + rueda**
+   (la página sigue haciendo scroll y aparece el aviso del `GestureHint`); `"never"` la desactiva.
+   **Desviación de `dd.md §11.1.1`**, que pone `"cooperative"` por defecto: se hace así por decisión del
+   humano. Consecuencia a vigilar: con `"always"`, un mapa dentro de una página con scroll «secuestra» la
+   rueda al pasar por encima (el _scroll-jacking_ del que avisa `dd.md §11.1.2`); la documentación de la prop
+   debe decirlo y recomendar `"cooperative"` para mapas incrustados en dashboards largos. El filtro de
+   gestos de `dd.md §11.1.2` se implementa tal cual, solo cambia el valor por defecto.
+2. **España se encuadra con las islas (Canarias incluidas).** El encuadre por defecto de España no usa el
+   cuerpo principal de `getFocusGeometry` (que descarta Canarias) sino la geometría completa; se
+   implementa en el paso 26 (`focusId` / `zoomTo`) como un override por defecto de `focusBounds` para `ES`
+   (`[[-18.5, 27.5], [4.5, 44]]`, el ejemplo de `dd.md §11.1.5`), documentado y sustituible por el consumidor.
+   Otros países con territorios lejanos (Francia, EE. UU., Portugal) siguen usando el cuerpo principal.
+
+---
+
+# Paso 24: `use-zoom.ts` + `Viewport` (el primer zoom visible)
+
+Archivos nuevos: `src/core/zoom.ts` (+ test), `src/react/use-zoom.ts`, `src/react/components/viewport.tsx`,
+`src/react/zoom.test.tsx`, `stories/zoom.stories.tsx`. Tocan: `map-store.ts`, `use-choropleth.ts`, `Root`,
+`Svg`, `choropleth-context.ts` y `styles.css`. Tarea 11 de `dd.md §21`: «§11.1.3 al pie de la letra».
+
+## 24.1 El problema que resuelve este paso
+
+`d3-zoom` y React no se llevan bien por defecto: `d3-zoom` quiere escribir en el DOM en cada frame, y React
+quiere ser el único dueño del DOM. La regla de `dd.md §11.1.3` es: **React nunca escribe el `transform`
+del viewport; `d3-zoom` sí, y React solo se entera al terminar el gesto**. Todo el diseño sale de ahí.
+
+| Qué cambia                                          | Quién lo escribe           | Cuándo                     | ¿Render de React? |
+| --------------------------------------------------- | -------------------------- | -------------------------- | ----------------- |
+| Atributo `transform` de `.cm-viewport`              | `d3-zoom` (`setAttribute`) | **cada frame**             | **Nunca**         |
+| `--cm-k` y `data-zoomed` en `.cm-root`              | `d3-zoom` (DOM directo)    | cada frame                 | Nunca             |
+| `data-interacting` en `.cm-root`                    | suscripción al store (DOM) | empieza / termina el gesto | Nunca             |
+| `interacting`, `camera` (confirmada) en `map-store` | `use-zoom`                 | empieza / termina el gesto | Solo suscriptores |
+| `onViewChange` del consumidor                       | `use-zoom`                 | **al terminar** el gesto   | Lo que él haga    |
+
+## 24.2 Qué se hizo
+
+**`core/zoom.ts` (puro, con tests).**
+
+- `ZoomOptions` / `resolveZoomOptions`: `zoom` (`boolean | objeto`) → opciones completas o `null`. Valida
+  `min > 0`, `max` finito y `≥ min`. `doubleClick: "auto"` se resuelve a `false` si el clic ya tiene otro
+  significado (`onItemClick` o selección), para no hacer las dos cosas a la vez.
+- `createZoomFilter`: sustituye al filtro por defecto de d3 (`(!ctrlKey || wheel) && !button`). Recibe
+  eventos «de mentira» (`{ type, ctrlKey, touches… }`), así que se prueba sin DOM. Devolver `false` **no
+  llama a `preventDefault`**: en `cooperative` la página sigue haciendo scroll.
+
+**`react/use-zoom.ts`.** El único sitio con `d3-selection`. En un `useEffect` (es un efecto real: eventos del
+DOM con limpieza) crea el `zoom()`, lo engancha al `<svg>` y:
+
+1. `extent` y `scaleExtent([min, max])`.
+2. **`clickDistance(4)`**: el valor por defecto de d3 es 0, y cualquier micro-temblor del ratón se come el clic.
+3. El filtro de gestos, con el aviso (`store.showGestureHint`) cuando la rueda no hace zoom.
+4. `start` → `interacting = true` (solo si el gesto es del usuario, no un vuelo programático);
+   `zoom` → 3 escrituras en el DOM; `end` → cámara confirmada al store, `interacting = false` y `onViewChange`.
+5. `constrain` propio (el de `core/camera.ts`): centra si cabe, no deja salir los bordes. `"free"` lo desactiva.
+6. En `cooperative`, `touch-action: pan-x pan-y` (d3 pone `none`, que **bloquea el scroll táctil** de la página).
+7. Restaura la cámara confirmada al (re)instalar, **sin avisar** (`restoring`: no es un gesto).
+
+**`<Choropleth.Viewport>`**: el `<g class="cm-viewport">` al que se aplica el transform. No tiene ninguna prop
+que toque `transform`. `Svg` lo incluye por defecto (y llama a `useZoom`); si pasas tus propias capas, envuélvelas
+en `<Choropleth.Viewport>`.
+
+**CSS** (todo por atributos, sin renders): cursor `grab` solo si `data-zoomed` (en el encaje no hay nada que
+arrastrar) y `grabbing` si `data-interacting`; durante el gesto, regiones/burbujas con `pointer-events: none`, sin
+transiciones de color y tooltip oculto (arrastrar sobre 200 países dispararía 200 hovers).
+
+## 24.3 Por qué el orden interno es ese
+
+| #   | Paso                                    | Por qué va aquí                                                                                            | Qué pasaría si se invierte                                                                   |
+| --- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| 1   | `scaleExtent`, `clickDistance`, filtro  | Se configuran **antes** de `.call(behavior)`: d3 lee la configuración al enganchar los listeners.          | Cambiar `clickDistance` después no afectaría a los gestos ya enganchados con otro valor.     |
+| 2   | `.constrain(...)`                       | Antes de `.call`, y **antes** de restaurar la cámara: la restauración también pasa por `constrain`.        | Una cámara restaurada de otro tamaño podría quedar fuera de los límites.                     |
+| 3   | `select(svg).call(behavior)`            | Instala los listeners (`wheel`, `mousedown`, `touchstart`…).                                               | —                                                                                            |
+| 4   | `touch-action` **después** de `.call`   | d3 lo escribe dentro de `.call`; el nuestro tiene que ir detrás para ganar.                                | d3 lo pisaría con `none` y la página dejaría de poder hacer scroll con un dedo.              |
+| 5   | `behavior.transform(selection, camera)` | Restaura la cámara con los listeners ya activos, para que escriba el DOM por el mismo camino que un gesto. | Habría dos caminos de escritura (uno de restauración y otro de gesto) y se desincronizarían. |
+
+## 24.4 Decisiones y desviaciones respecto a `dd.md`
+
+| Decisión                                                                                                                                      | Motivo                                                                                                                                                                                                                            |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`wheel` por defecto = `"always"`**, no `"cooperative"` (§23.9, decisión del humano).                                                        | Con el ratón encima, la rueda hace zoom. `cooperative` es opt-in. El comentario de la prop avisa del _scroll-jacking_.                                                                                                            |
+| `ZoomOptions` solo tiene lo que hace algo: `min`, `max`, `wheel`, `pinch`, `pan`, `doubleClick`, `constrain`, `onViewChange`.                 | `controls`, `keyboard`, `inertia`, `padding`, `initialView` se añaden en los pasos 25-27 con su comportamiento. Declararlas antes sería prometer lo que no existe.                                                                |
+| El filtro refina `pan` y `pinch` en táctil: con `pan = false` un dedo no arrastra pero dos dedos sí pellizcan.                                | El filtro de `dd.md` los ignora. Sin esto, `pan: false` seguiría dejando arrastrar con el dedo.                                                                                                                                   |
+| `onViewChange` **no** forma parte de las opciones resueltas: se lee con una `ref` al usarlo.                                                  | Suele ser una función en línea: si fuera dependencia del efecto, se reinstalaría `d3-zoom` en cada render. Lo mismo para `invert`.                                                                                                |
+| `data-interacting` se escribe **en el DOM** mediante una suscripción al store, no como prop de `Root`.                                        | Como prop, empezar y terminar cada gesto re-renderizaría todo el mapa (join, escala, leyenda).                                                                                                                                    |
+| El store gana `interacting`, `camera`, `gestureHint`, `showGestureHint` y `dispose`; **no** `registerZoom`, `liveCamera` ni `setInteracting`. | `setState` ya cubre lo primero; `registerZoom` (para `zoomTo`) lo necesita el paso 25-26 y `liveCamera` los `Marker` (paso 37). Sin consumidor ahora, no se añaden.                                                               |
+| **`--cm-bubble-scale` y el resize sin salto NO están** (paso 27).                                                                             | Hoy **las burbujas crecen con el zoom** (son círculos dentro del viewport escalado). Al redimensionar con `k > 1`, la cámara se conserva en píxeles y la vista se desplaza; con `k = 1` no pasa nada. Ambos se arreglan en el 27. |
+| `Svg` es quien llama a `useZoom`.                                                                                                             | Es quien tiene el `<svg>`. Quien use `useChoropleth` (nivel 3) y pinte su propio `<svg>` debe llamar a `useZoom` él mismo (está exportado).                                                                                       |
+| Las capas que se pasan a `<Svg>` a mano deben ir dentro de `<Choropleth.Viewport>`.                                                           | Si no, no se mueven con el zoom. `dd.md §9.3` ya lo muestra así.                                                                                                                                                                  |
+
+## 24.5 Tests
+
+372 en verde (312 + 60 nuevos), `typecheck`, `lint`, `format:check`, `build` y `build-storybook` limpios; cobertura de
+`src/core` 100 % líneas / 97 % ramas.
+
+- **`core/zoom.test.ts` (24):** defaults, validación, `doubleClick: "auto"`, y el filtro caso a caso (rueda en los
+  tres modos, aviso, Ctrl y ⌘, táctil con uno y dos dedos, `pan`/`pinch`, botón secundario, doble clic).
+- **`react/zoom.test.tsx` (34), simulando gestos reales sobre `d3-zoom` en jsdom:**
+  - rueda: zoom **anclado al cursor** (el punto bajo el cursor no se mueve), límites `min`/`max`, `never`,
+    `cooperative` (**no se llama a `preventDefault`**, `touch-action`, Ctrl y ⌘);
+  - arrastre: con `k = 1` no hay nada que arrastrar, ampliado sí y con límites, `pan: false`, botón secundario;
+  - **clic ≠ arrastre:** 2 px de temblor sigue siendo clic; un arrastre real no produce clic;
+  - `data-interacting` durante el gesto y fuera al terminar; `onViewChange` **una sola vez**, al terminar, y **nunca
+    al montar**;
+  - **rendimiento:** diez eventos de rueda y un arrastre **no re-renderizan `Root`** (contador de `getId`, la misma
+    técnica del paso 15), y tampoco al terminar;
+  - **React no pisa la cámara:** un render con datos nuevos a mitad de un zoom no reinicia el transform; opciones
+    en línea con los mismos valores **no reinstalan** `d3-zoom`; al cambiar una opción se reinstala y se restaura la
+    cámara; cambiar el tamaño la conserva; `zoom` true → false quita los gestos;
+  - el zoom se engancha cuando el `<svg>` aparece tras la carga asíncrona.
+- **Comprobación de que los tests detectan lo que dicen** (mutaciones hechas a mano y revertidas): con
+  `clickDistance(0)` falla «2 px de temblor sigue siendo un clic»; quitando el guard `restoring` fallan los dos
+  tests de `onViewChange`.
+
+Dos trampas de jsdom, documentadas en el test: (1) `MouseEvent.view` no se puede pasar en el constructor, así que se
+fija con `defineProperty` (d3 engancha `mousemove`/`mouseup` a `event.view`); (2) `d3-zoom` quita su supresor de clic
+con un `setTimeout(…, 0)` que con temporizadores falsos no corre y se quedaba en la `window`, tragándose el clic del
+test siguiente. En un navegador real sí corre.
+
+## 24.6 Verificación visual: pendiente de ti \*
+
+No hay navegador en esta sesión, y este es el primer paso donde lo visual importa de verdad (jsdom no tiene layout).
+Abre `pnpm storybook` → **Zoom / Basic** y comprueba:
+
+| Story                          | Qué comprobar                                                                                                                                                                                                    |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Default`                      | La rueda hace zoom **anclado al cursor**; arrastrar desplaza; no se puede arrastrar fuera del mapa; con el mapa entero a la vista, **el cursor no cambia** (no es `grab`) y al ampliar pasa a `grab`/`grabbing`. |
+| `Default`                      | **Las fronteras y el contorno del hover NO engordan** al ampliar (`non-scaling-stroke`). El tooltip **no parpadea** ni sale mientras arrastras.                                                                  |
+| `Default`                      | Doble clic = ×2 (animado). La línea de `onViewChange` solo se actualiza **al terminar** el gesto.                                                                                                                |
+| `Default` (trackpad)           | El pellizco funciona (llega como Ctrl + rueda). **Safari** puede emitir eventos `gesture*` distintos: `dd.md §11.1.2` pide verificarlo.                                                                          |
+| `CooperativeInAScrollablePage` | Rueda sobre el mapa: **la página hace scroll**, el mapa no se mueve. Ctrl/⌘ + rueda: zoom. (Aún no hay aviso visual: es el paso 25.)                                                                             |
+| `ClickVersusDrag`              | Un clic con un pequeño temblor **selecciona** (sube el contador de clics); arrastrar no selecciona nada al soltar. El doble clic **no** hace zoom (hay `onItemClick`).                                           |
+| `PanOnly`                      | La rueda no hace nada; arrastrar sí.                                                                                                                                                                             |
+| Móvil / DevTools táctil        | `cooperative`: un dedo hace scroll de la página, dos dedos mueven el mapa. `dd.md` pide probar en **iOS Safari y Chrome Android** reales.                                                                        |
+| Cualquiera con burbujas        | Esperado y **pendiente del paso 27**: las burbujas **crecen** al hacer zoom.                                                                                                                                     |
+
+## 24.7 Antes de pasar al paso 25: ¿lo tienes claro?
+
+- ¿Por qué React no puede escribir el atributo `transform` del viewport? ¿Qué pasaría si lo hiciera?
+- ¿Qué cosas se escriben por frame y cuáles solo al empezar o terminar el gesto?
+- ¿Por qué `clickDistance(4)` y qué ocurre con el valor por defecto de d3?
+- ¿Por qué `touch-action` se escribe **después** de `.call(behavior)`?
+- ¿Por qué `onViewChange` y `invert` se leen desde una `ref` en lugar de ser dependencias del efecto?
+- ¿Cómo demuestra un test que el zoom no re-renderiza `Root`, y qué mutación demuestra que el test sirve?
+
+## 24.8 Pregunta abierta
+
+Con `wheel: "always"` por defecto y el mapa dentro de una página con scroll, el mapa se come la rueda. ¿Quieres
+que el preset (`<ChoroplethMap>`) lo avise en desarrollo, o basta con la documentación de la prop?
+
+---
+
+# Paso 25: `ZoomControls`, `GestureHint` y teclado de zoom
+
+Archivos nuevos: `src/react/components/zoom-controls.tsx`, `gesture-hint.tsx`, `src/react/platform.ts`,
+`src/react/zoom-controls.test.tsx`. Tocan: `core/zoom.ts`, `core/camera.ts`, `core/labels.ts`,
+`map-store.ts`, `use-zoom.ts`, `Svg`, el preset, `styles.css` y `stories/zoom.stories.tsx`. Tarea 12 de
+`dd.md §21`.
+
+## 25.1 Qué se hizo
+
+| Pieza                           | Qué es                                                                                                                                                                                                             |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **`<Choropleth.ZoomControls>`** | Botones `+` / `−` / `⟲`: `<button type="button">` reales con `aria-label` desde `labels`. **Opt-in**: `zoom={{ controls: true }}` o `{ position, reset }`. Esquina por defecto: abajo a la derecha.                |
+| **`<Choropleth.GestureHint>`**  | El aviso «Usa Ctrl + rueda…» (⌘ en macOS e iOS) o «Usa dos dedos…». Solo sale con `wheel: "cooperative"`. 1,5 s, `aria-hidden`. El preset lo incluye.                                                              |
+| **Teclado**                     | Con el `<svg>` enfocado (`tabIndex = 0`): `+` / `=` acercan, `-` / `_` alejan, `0` vuelve al encaje. Anillo de foco `--cm-focus-ring`, solo con teclado (`:focus-visible`). `zoom={{ keyboard: false }}` lo quita. |
+| **`ZoomApi`** (store)           | `zoomBy(factor)` y `resetView()`: **animados y con `Promise<{ completed }>`**. Los usan los botones y el teclado, y el paso 26 los amplía a `zoomTo` y `focusId`.                                                  |
+
+## 25.2 Cómo funciona por dentro
+
+**Los botones, el teclado y la rueda hablan con el MISMO `d3-zoom`** (`dd.md §11.1.3`, punto 4). `use-zoom`
+registra en el store una `ZoomApi` al instalarse (y `null` al desinstalarse). Un `zoomBy` es
+`selection.transition().duration(300).ease(easeCubicOut)` sobre `behavior.scaleBy`; un `resetView` es
+`behavior.transform(transition, identidad)` con una duración de `flightDuration` (350–1200 ms) y el
+interpolador de curvatura 1,25 del paso 23. Como todo pasa por `d3-zoom`, **un gesto del usuario interrumpe
+el vuelo de forma natural** (d3 llama a `interrupt` al empezar un gesto).
+
+**`Promise` con `completed`.** `transition.end()` de d3 **rechaza** si algo interrumpe la transición. Aquí no
+es un error: se convierte en `{ completed: false }`. Así `await api.zoomBy(2)` nunca lanza, y un guion de
+varios vuelos (`await a; await b`) puede comprobar si el usuario lo cortó.
+
+**Los botones se deshabilitan según la cámara confirmada** (`useMapStore(store, s => s.camera)`): `−` en
+`min`, `+` en `max`, `⟲` si ya estás en el encaje (`isFitTransform`, en `core`). Se actualizan **al terminar**
+el movimiento (no por frame), y como solo ellos se suscriben, **pulsar un botón no re-renderiza `Root`**
+(hay test con el contador de `getId`).
+
+**El aviso siempre está en el DOM** y se muestra con `data-visible` + CSS: así hay un fundido de salida, y el
+texto no cambia mientras se apaga (se conserva el último tipo de aviso). Su temporizador vive en el store
+(`showGestureHint` / `dispose`).
+
+**⌘ o Ctrl.** `useIsApplePlatform` usa `useSyncExternalStore` con `false` en el servidor: el render del
+servidor y el de la hidratación coinciden y el cliente se corrige después, sin avisos de hidratación.
+
+## 25.3 Decisiones y desviaciones respecto a `dd.md`
+
+| Decisión                                                                                                                | Motivo                                                                                                                                                                         |
+| ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Los controles son opt-in** (decisión del humano); el preset los dibuja solo con `zoom={{ controls: … }}`.             | Menos ruido visual por defecto. En el compound se colocan a mano.                                                                                                              |
+| **El aviso solo sale en `cooperative`** (decisión del humano). El preset incluye el componente siempre, pero invisible. | Con `"always"` (el default) no hay nada que enseñar.                                                                                                                           |
+| **Ctrl, ⌘ y Alt + `+`/`−`/`0` NO se interceptan.**                                                                      | Es el zoom de la página del navegador: quitárselo al usuario sería un fallo de accesibilidad. (`dd.md` no lo dice; es lo correcto.)                                            |
+| `=` cuenta como `+` y `_` como `-`.                                                                                     | Es la misma tecla física sin Shift en un teclado US; si no, `+` exigiría Shift.                                                                                                |
+| **Solo `+`, `−` y `0`**; flechas, Enter, Escape, Home/End **no** están.                                                 | Son de `dd.md §13` (accesibilidad): las flechas mueven el **foco entre regiones** (navegación espacial) y `Shift` + flechas el pan. Es otro bloque de trabajo, no la tarea 12. |
+| **«Reducir movimiento» = salto inmediato** por ahora (sin transición).                                                  | `dd.md §11.1.5` pide un **fundido** (opacidad a 0 en 100 ms, salto, a 1 en 150 ms); llega con los vuelos del paso 26. Hasta entonces es lo más conservador: cero movimiento.   |
+| Duración de `+`/`−`: 300 ms con `easeCubicOut`; de `⟲`: la de `flightDuration`.                                         | Lo que pide `dd.md §11.1.2` y §11.1.5.                                                                                                                                         |
+| Dependencias nuevas: **`d3-transition`** y **`d3-ease`** (`dependencies`) + `@types` (dev).                             | Permitidas por `dd.md §21`. `d3-transition` se importa por efecto secundario (parchea `selection.transition()`).                                                               |
+| `labels` gana `zoomIn`, `zoomOut`, `resetView`, `gestureHintWheel`, `gestureHintWheelMac` y `gestureHintTouch` (en/es). | Sin texto fijo en ningún idioma. Un test comprueba que `en` y `es` tienen exactamente las mismas claves y ninguna vacía.                                                       |
+
+⚠️ **Tab stop sobre `role="img"`.** El `<svg>` sigue con `role="img"` (R.2 #9, pendiente de `dd.md §13`) y ahora además
+es enfocable cuando hay teclado. Es incoherente a ojos de un lector de pantalla; se decide con la prueba real de
+VoiceOver/NVDA que pide `dd.md §13` antes de v0.5. Hasta entonces, `keyboard: false` lo deshace.
+
+## 25.4 Tests
+
+425 en verde (372 + 53 nuevos), `typecheck`, `lint`, `format:check`, `build` y `build-storybook` limpios; cobertura de
+`core` 100 % líneas / 97 % ramas.
+
+- **`core`:** `resolveControls` (opt-in), `zoomKeyAction` (todas las teclas, y **Ctrl/⌘/Alt no se interceptan**),
+  `isFitTransform`, `createZoomInterpolator`, y que `en` y `es` tienen las mismas claves.
+- **Botones:** no existen por defecto; las tres etiquetas (en/es); `reset: false`; la esquina; el estado
+  deshabilitado en el encaje, en `max` y tras `⟲`; `+` acerca ×2 **centrado** (el centro sigue en el centro);
+  la rueda también actualiza los botones; `onViewChange` al terminar; «reducir movimiento» = inmediato.
+- **`ZoomApi`:** `completed: true` al terminar; **`completed: false` (no rechaza) cuando otro movimiento, una rueda o
+  el desmontaje lo interrumpen**; se des-registra al desmontar.
+- **Teclado:** tab stop, `+ = - 0`, `preventDefault` solo cuando se actúa, Ctrl/⌘ intactos, `Tab` intacto,
+  `keyboard: false` y `zoom={false}`.
+- **Aviso:** aparece y se apaga a los 1,5 s conservando el texto; ⌘ en macOS; «dos dedos» en táctil; `labels`; no
+  aparece con `always` ni con Ctrl + rueda.
+- **Rendimiento:** ni los botones ni el teclado re-renderizan `Root`.
+- **Mutaciones hechas a mano (y revertidas)** para comprobar que los tests sirven. Cada una rompe tests: quitar el guard
+  de Ctrl/⌘; `−` nunca deshabilitado; `⟲` nunca deshabilitado; no interrumpir al desmontar; tratar una interrupción
+  como `completed: true`.
+
+## 25.5 Verificación visual: pendiente de ti \*
+
+`pnpm storybook` → **Zoom / Basic**:
+
+| Story                            | Qué comprobar                                                                                                                                                                                                                                                                                                          |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WithControlsAndKeyboard`        | Botones abajo a la derecha, **con aspecto cuidado** y sin tapar la leyenda. `−` y `⟲` apagados en el encaje; `+` acerca ×2 **con suavidad (300 ms)**; `⟲` vuela al encaje. Con teclado: tabula hasta el mapa (**anillo de foco azul**) y prueba `+`, `−`, `0`; el anillo **no** debe verse al hacer clic con el ratón. |
+| `WithControlsAndKeyboard`        | `Ctrl`/`⌘` + `+` hace zoom de la **página** (no del mapa).                                                                                                                                                                                                                                                             |
+| `CooperativeInAScrollablePage`   | Rueda sobre el mapa sin tecla: **la página hace scroll y aparece 1,5 s el aviso** centrado, que se desvanece. Con Ctrl/⌘ + rueda: zoom, sin aviso. En Mac el texto dice **⌘**.                                                                                                                                         |
+| Móvil / DevTools táctil          | Un dedo en `cooperative`: aparece «Usa dos dedos para mover el mapa» y la página hace scroll.                                                                                                                                                                                                                          |
+| Sistema con «reducir movimiento» | Los botones saltan sin animación.                                                                                                                                                                                                                                                                                      |
+| Tema oscuro / `--cm-controls-*`  | Los botones usan variables CSS (`--cm-controls-bg`, `-color`, `-border`, `--cm-focus-ring`, `--cm-hint-*`): se pueden retematizar.                                                                                                                                                                                     |
+
+## 25.6 Antes de pasar al paso 26: ¿lo tienes claro?
+
+- ¿Por qué los botones, el teclado y la rueda deben pasar por el **mismo** `d3-zoom`?
+- ¿Por qué una transición interrumpida resuelve `completed: false` en lugar de rechazar la `Promise`?
+- ¿Por qué `Ctrl/⌘ + +` no se intercepta?
+- ¿Por qué el aviso de gesto está siempre en el DOM y se muestra con un atributo?
+- ¿Cómo se evita un aviso de hidratación al decidir entre «Ctrl» y «⌘»?
+
+## 25.7 Decisión del humano: la accesibilidad, al final
+
+Las flechas del teclado (mover el foco entre regiones, `Shift` + flechas para el pan) y todo lo demás de
+`dd.md §13` (tabla alternativa, navegación espacial, `aria-live`, el `role="img"` del `<svg>`) **se hacen al final**,
+en un bloque propio, no repartido entre las fases. Hasta entonces los atajos de teclado de zoom (`+`, `−`, `0`) son lo
+único de teclado que hay.
+
+---
+
+# Paso 26: vuelos de cámara (`zoomTo`, `focusId`, `initialView`) y handle imperativo
+
+Archivos nuevos: `src/react/handle.ts`, `fade.ts`, `env.ts`, `fade.test.ts`, `flights.test.tsx`,
+`stories/zoom-flights.stories.tsx`, `stories/zoom-problem-countries.stories.tsx`. Tocan: `core/bounds.ts`,
+`core/zoom.ts`, `use-zoom.ts`, `use-choropleth.ts`, `map-store.ts`, `Root`, el preset y
+`choropleth-context.ts`. Tarea 13 de `dd.md §21`.
+
+## 26.1 Qué se hizo
+
+Hasta ahora la cámara solo se movía por gestos y botones. Ahora **se puede dirigir por código**, de tres formas:
+
+| Forma                       | Cómo                                                             | Cuándo vuela                                                |
+| --------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------- |
+| **Imperativa** (`ref`)      | `ref.current.zoomTo("ES")`, `zoomBy`, `resetView`, `getView`     | Al llamarla; devuelve `Promise<{ completed }>`              |
+| **Declarativa** (`focusId`) | `<ChoroplethMap focusId={pais} />`                               | Cuando `focusId` **cambia**; con `null` vuelve al encaje    |
+| **Inicial** (`initialView`) | `zoom={{ initialView: "ES" \| { bounds } \| { center, zoom } }}` | **Nunca**: coloca la cámara al montar, sin animar ni avisar |
+
+`ZoomTarget` (dd.md §9.5): un **id de región**, `{ bounds: [[lonO, latS], [lonE, latN]] }` o
+`{ center: [lon, lat], zoom }` (zoom **relativo al encaje**, 1 = encaje). `useChoroplethApi()` da el mismo handle
+**dentro del compound**, para que un botón hijo vuele sin necesitar un `ref`.
+
+## 26.2 Cómo funciona por dentro
+
+```
+ ZoomTarget ──► resolveZoomTarget (core, pura) ──► CameraTransform ──► constrain ──► animate ──► d3-zoom
+   "ES"          región → límites en px              k, x, y            (contain)     vuelo       (el MISMO
+   {bounds}      lon/lat → projectBounds                                              o fundido    behavior)
+   {center,zoom} center → proyección
+```
+
+- **`resolveZoomTarget`** es pura: la proyección y la geometría llegan como funciones. Aplica `scaleExtent`
+  (`boundsToTransform` del paso 23) y devuelve `null` si no puede resolver (región inexistente).
+- **`constrain` se aplica aquí, a mano.** `d3-zoom` solo aplica `constrain` a los **gestos**, no a las transiciones
+  programáticas: sin esto, volar a un país en el borde del mapa dejaría la cámara fuera de los límites.
+- **Un solo `behavior`.** Los vuelos pasan por el mismo `d3-zoom` que los gestos (`dd.md §11.1.3`, punto 4): d3 siempre
+  conoce la cámara real y **un gesto interrumpe el vuelo** (la `Promise` resuelve `completed: false`).
+- **Duración:** la natural de `interpolateZoom` × `speed`, acotada a [350, 1200] ms (`flightDuration`, paso 23), con
+  `easeCubicInOut` para vuelos y `easeCubicOut` para `+`/`−`. `duration: 0` = «colócala ya» (ni vuelo ni fundido).
+- **`focusId`** es un efecto real (mueve la cámara) en `use-zoom`, **después** del que instala `d3-zoom` (en un mismo
+  componente los efectos corren en orden, y aquí hace falta la API ya registrada). El primer valor se coloca con
+  `{ duration: 0, silent: true }` (sin volar y **sin avisar a `onViewChange`**); los cambios posteriores vuelan.
+- **Reduced-motion = fundido** (`fade.ts`, Web Animations API nativa): opacidad del viewport a 0 en 100 ms, **salto de
+  cámara**, opacidad a 1 en 150 ms (`dd.md §11.1.5`). «Se quita el movimiento, no la continuidad». Sin `Element.animate`
+  (jsdom) salta directamente. Un movimiento nuevo **cancela** el fundido anterior. Sustituye al «salto inmediato»
+  provisional del paso 25, que ahora también aplica a `+`/`−`.
+
+## 26.3 Encuadre: el cuerpo principal, no la geometría entera
+
+`zoomTo("FR")` encuadra `getFocusGeometry` (paso 20): Francia sin la Guayana, EE. UU. sin Alaska/Hawái, Noruega sin
+Svalbard. Dos casos necesitaron más:
+
+**España incluye Canarias** (decisión del humano). `DEFAULT_FOCUS_BOUNDS = { ES: [[-18.5, 27.5], [4.5, 44]] }`
+(el ejemplo de `dd.md §11.1.5`), porque «para Inditex, Canarias es un caso de negocio, no un detalle geométrico». Se
+fusiona con la prop **`focusBounds`** del consumidor; `focusBounds={{ ES: null }}` vuelve al encuadre de la península.
+
+**Antimeridiano: un fallo real que descubrieron los tests con geodatos reales.** El polígono principal de **Rusia**
+cruza la línea ±180° **sin partirse**, y `path.bounds` mide las dos mitades: el encuadre salía de borde a borde con
+Chukotka asomando por el lado contrario (su centro caía en lon ≈ 2°, en lugar de ≈ 100°). Es justo el problema que
+`dd.md` anuncia de Rusia. Solución (`getFocusExtent`, `core/bounds.ts`): detectar el cruce con `geoBounds` (devuelve
+`oeste > este`) y **encuadrar la mitad más ancha** con `projectBounds`. La misma regla se aplica a los límites
+explícitos que cruzan el antimeridiano: en un mapa plano **no existe un rectángulo que contenga las dos mitades**
+(sale un caja del ancho del mundo), igual que `getFocusGeometry` se queda con el cuerpo principal.
+
+## 26.4 Decisiones y desviaciones respecto a `dd.md`
+
+| Decisión                                                                                                            | Motivo                                                                                                                                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`forwardRef`** (no `ref` como prop) en `Root` y en el preset.                                                     | `dd.md §9.5` dice «prop en React 19; `forwardRef` en 18». La librería declara `react >=18`, así que `forwardRef` funciona en las dos. El tipo se re-expone con el genérico y `ref?: Ref<ChoroplethMapHandle>`.               |
+| El handle **solo tiene** `zoomTo`, `zoomBy`, `resetView` y `getView`.                                               | `drillDown`/`drillUp` llegan en la fase C y `toSVGString`/`toPNG` con la exportación (v0.6). Prometerlos antes sería declarar lo que no existe.                                                                              |
+| Con `zoom={false}` los movimientos resuelven `{ completed: false }` y `getView` devuelve el encaje; **no lanzan**.  | Un mapa estático con un `ref` no debe romper al consumidor que llama a `zoomTo`. La vista de reserva se registra en el store desde un efecto de `Root` (no con una `ref` leída en el render: el linter lo impide con razón). |
+| `getView()` lee `zoomTransform(svg)`, la cámara **real**, no la confirmada.                                         | También es correcta a mitad de un vuelo.                                                                                                                                                                                     |
+| Una región inexistente: `completed: false` + aviso de consola en inglés (solo fuera de producción).                 | Un id mal escrito debe explicarse solo (principio de DX de `dd.md`), sin lanzar.                                                                                                                                             |
+| `initialView` solo cuenta **al montar**; `focusId` manda sobre él; cambiarlo después no mueve la cámara.            | Es una vista inicial, no un estado controlado. Para eso está `focusId`.                                                                                                                                                      |
+| `ZoomOptions` gana `padding` (por defecto 24) e `initialView`. `focusId` y `focusBounds` son props de primer nivel. | Siguen `dd.md §9.2` y §11.1.1.                                                                                                                                                                                               |
+| `silent` existe en `ZoomApi.zoomTo` pero **no** en el handle público ni en `CameraOptions`.                         | Es un detalle interno (colocar sin avisar); solo tiene sentido con `duration: 0`.                                                                                                                                            |
+
+## 26.5 Tests
+
+489 en verde (425 + 64 nuevos), `typecheck`, `lint`, `format:check`, `build` y `build-storybook` limpios; cobertura de
+`src/core` 100 % líneas / 97,6 % ramas.
+
+- **`core`:** `resolveZoomTarget` (región, `focusBounds`, `{ null }`, microestado, `{ bounds }`, `{ center, zoom }`, límites
+  de `k`, entradas inválidas), `projectBounds` (esquinas, paralelos curvos, **antimeridiano**), `getFocusExtent`
+  (incluido un anillo tipo Rusia), `DEFAULT_FOCUS_BOUNDS` (España incluye Canarias).
+- **Handle:** `zoomTo` a región, a otra región, `{ center, zoom }`, `{ bounds }`; `duration: 0` instantáneo; región inexistente;
+  **`constrain: contain` respetado en el destino**; `padding`; **interrupción por rueda**; `onViewChange` una vez por vuelo;
+  `zoom={false}`; `zoomBy`/`resetView`; **encadenar con `await`**; `useChoroplethApi`; `ref` también en el preset.
+- **`focusId` e `initialView`:** colocación inicial **sin volar ni avisar**; vuelo al cambiar; `null` vuelve al encaje; el
+  mismo valor no vuela otra vez; id inexistente; geografía asíncrona; `focusId` sobre `initialView`.
+- **Reduced-motion:** el orden exacto fundido-salida → **salto** → fundido-entrada; la cámara no se mueve hasta el salto;
+  un movimiento nuevo cancela el anterior; `duration: 0` sigue siendo instantáneo; desmontar cancela.
+- **Encuadres con geodatos reales (`world110m`):** **Francia** sin Guayana, **EE. UU.** sin Alaska, **España con
+  Canarias**, `{ ES: null }` y `focusBounds` propio, **Fiyi**, **Rusia**.
+- **Mutaciones hechas a mano y revertidas** (cada una rompe tests): quitar el tratamiento del antimeridiano (rompe el test
+  de `core` **y** el de Rusia con datos reales); España sin Canarias por defecto; no aplicar `constrain` al destino; avisar
+  a `onViewChange` en la colocación inicial; no cancelar el fundido anterior; volar aunque `focusId` no cambie; no
+  liberar el `fill: forwards` del fundido.
+
+Dos trampas, ambas de mis tests y documentadas en ellos: (1) el fixture `twoSquares` tiene el anillo en sentido
+antihorario, así que d3 lo lee como «el globo menos el cuadrado» y su mapa es el mundo entero (`invert(centro) = [0, 0]`
+era correcto): los tests de encuadre usan dos bloques propios con el sentido horario; (2) al re-renderizar un `Root`
+**sin** pasarle el `ref`, React desengancha el handle (correcto).
+
+## 26.6 Verificación visual: pendiente de ti \*
+
+`pnpm storybook` → **Zoom / FocusAndFlights** y **Zoom / ProblemCountries**:
+
+| Story                                          | Qué comprobar                                                                                                                                                                                                                                               |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `FocusAndFlights · Declarative`                | Elige un país: la cámara **vuela** (se aleja, viaja, se acerca) **sin saltos ni parpadeos** y con suavidad. Un viaje largo (España → Fiyi) debe leerse; uno corto, ser rápido. «(mundo entero)» vuelve al encaje.                                           |
+| `FocusAndFlights · ImperativeAndTour`          | «▶ Tour» encadena los 9 países con `await`. **Agarra el mapa a mitad**: el vuelo se corta y el tour se detiene («tour interrumpido en …»). «■ Parar» también.                                                                                               |
+| `ProblemCountries · Default`                   | Cada botón enmarca el **cuerpo principal**: **Francia** sin la Guayana, **EE. UU.** sin Alaska, **Rusia** sin Chukotka asomando por la izquierda, **Fiyi** una isla (no medio mundo), **España CON Canarias**. Las burbujas deben caer **dentro** del país. |
+| `ProblemCountries · SpainWithoutCanaryIslands` | España enmarca solo la península.                                                                                                                                                                                                                           |
+| Sistema con «reducir movimiento»               | Los vuelos y los botones **no se mueven**: hacen un fundido corto (a 0, salto, a 1). Nunca un corte seco.                                                                                                                                                   |
+| Cualquiera                                     | Con `controls` activos, `−` y `⟲` se habilitan al terminar el vuelo.                                                                                                                                                                                        |
+
+## 26.7 Antes de pasar al paso 27: ¿lo tienes claro?
+
+- ¿Por qué `zoomTo` aplica `constrain` a mano si `d3-zoom` ya lo tiene?
+- ¿Por qué `focusId` coloca la cámara sin volar en el primer render, y por qué sin avisar a `onViewChange`?
+- ¿Qué problema tiene Rusia con `path.bounds`, y cómo lo detecta `getFocusExtent`?
+- ¿Por qué el reduced-motion es un **fundido** y no un salto sin más?
+- ¿Por qué `forwardRef` y no `ref` como prop?
+- ¿Por qué el fixture `twoSquares` «funcionaba» en tests de render pero no en los de encuadre?
+
+## 26.8 Pregunta abierta
+
+`getAnchorPoint` (el ancla de las burbujas, paso 20) proyecta los vértices del polígono principal uno a uno. Para Rusia, cuyo
+anillo cruza el antimeridiano, ese anillo proyectado tiene un salto de borde a borde. Visualmente la burbuja de Rusia salió
+plausible en la comprobación del paso 22, pero **no está garantizado**. ¿Lo reviso con una prueba específica (ancla de Rusia
+dentro de su cuerpo principal) antes de seguir, o lo dejamos para el pulido?

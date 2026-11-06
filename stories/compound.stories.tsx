@@ -1,20 +1,21 @@
 // Nivel 2 (compound): mismas piezas que usará el preset, pero tú eliges cuáles y en qué orden.
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import type { Topology } from "topojson-specification";
-import countries110m from "world-atlas/countries-110m.json";
 import { toFeatureCollection } from "../src/core";
+import { world110m } from "../src/geo";
+import { seed } from "./seed";
 import { Choropleth } from "../src/react";
 
 type Row = { id: string; value: number | null };
 
-const world = countries110m as unknown as Topology;
+// Geodatos propios de la librería: ids ISO alpha-2 ("ES") y Kosovo incluido.
+const world = world110m;
 const ids = toFeatureCollection({ geography: world, objectName: "countries" }).features.flatMap(
   (f) => (f.id === undefined ? [] : [String(f.id)]),
 );
 // Datos SINTÉTICOS deterministas (ver la story headless).
 const data: Row[] = ids.map((id) => {
-  const n = Number(id);
+  const n = seed(id);
   if (n % 7 === 0) return { id, value: null };
   if (n % 11 === 0) return { id, value: 0 };
   return { id, value: Math.round((((n * 9301 + 49297) % 233280) / 233280) * 40 - 20) };
@@ -36,7 +37,7 @@ const CompoundMap = ({ variant, customTooltip, showCount }: Props) => {
         variant={variant}
         formatValue={(v) => `${v} %`}
         selectedId={selectedId}
-        onRegionClick={({ id }) => setSelectedId((cur) => (cur === id ? null : id))}
+        onItemClick={({ id }) => setSelectedId((cur) => (cur === id ? null : id))}
       >
         <Choropleth.Svg ariaLabel="Mapa del mundo con datos sintéticos" />
         {/* La leyenda es HTML: va fuera del <svg>, como hermana, y se posiciona con CSS. */}

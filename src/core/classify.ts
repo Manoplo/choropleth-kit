@@ -19,7 +19,9 @@ export const finiteValues = (values: readonly (number | null | undefined)[]): nu
 
 const assertValidClasses = (classes: number): void => {
   if (!Number.isInteger(classes) || classes < 1) {
-    throw new Error(`classify: "classes" debe ser un entero ≥ 1 (recibido: ${classes}).`);
+    throw new Error(
+      `[choropleth] classify: "classes" must be an integer ≥ 1 (received: ${classes}).`,
+    );
   }
 };
 
@@ -60,7 +62,7 @@ export const computeThresholds = ({
       );
       if (!ascending) {
         throw new Error(
-          `classify: "thresholds" debe ser una lista de números finitos en orden estrictamente ascendente (recibido: [${thresholds.join(", ")}]).`,
+          `[choropleth] classify: "thresholds" must be a list of finite numbers in strictly ascending order (received: [${thresholds.join(", ")}]).`,
         );
       }
       return [...thresholds];

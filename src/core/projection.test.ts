@@ -2,7 +2,12 @@ import { geoPath } from "d3-geo";
 import type { Topology } from "topojson-specification";
 import countries110m from "world-atlas/countries-110m.json";
 import { toFeatureCollection } from "./geography";
-import { createProjection, type ProjectionName } from "./projection";
+import {
+  computeAspectRatio,
+  createProjection,
+  DEFAULT_ASPECT_RATIO,
+  type ProjectionName,
+} from "./projection";
 
 const world = toFeatureCollection({
   geography: countries110m as unknown as Topology,
@@ -86,7 +91,7 @@ describe("createProjection", () => {
     [960, Infinity],
   ])("lanza un error con tamaño %s × %s", (width, height) => {
     expect(() => createProjection({ width, height, featureCollection: world })).toThrow(
-      /finitos > 0/,
+      /finite numbers > 0/,
     );
   });
 
@@ -99,5 +104,58 @@ describe("createProjection", () => {
       return d === null || d.includes("NaN");
     });
     expect(invalid).toEqual([]);
+  });
+});
+
+describe("computeAspectRatio", () => {
+  const only = (id: string) => ({
+    ...world,
+    features: world.features.filter((f) => f.id === id),
+  });
+
+  it("el mundo en Equal Earth es apaisado, cerca de 2:1", () => {
+    const ratio = computeAspectRatio({ featureCollection: world });
+
+    expect(ratio).toBeGreaterThan(1.8);
+    expect(ratio).toBeLessThan(2.2);
+  });
+
+  it("Chile es mucho más alto que ancho; Noruega, al revés", () => {
+    expect(computeAspectRatio({ name: "mercator", featureCollection: only("152") })).toBeLessThan(
+      1,
+    );
+    expect(
+      computeAspectRatio({ name: "mercator", featureCollection: only("578") }),
+    ).toBeGreaterThan(computeAspectRatio({ name: "mercator", featureCollection: only("152") }));
+  });
+
+  it("es consistente con lo que ocupa el mapa al ajustarlo a ese tamaño", () => {
+    const fc = only("152");
+    const ratio = computeAspectRatio({ name: "mercator", featureCollection: fc });
+    const { x0, y0, x1, y1 } = (() => {
+      const projection = createProjection({
+        name: "mercator",
+        width: 300,
+        height: 300 / ratio,
+        featureCollection: fc,
+      });
+      const [[a, b], [c, d]] = geoPath(projection).bounds(fc);
+      return { x0: a, y0: b, x1: c, y1: d };
+    })();
+
+    expect((x1 - x0) / (y1 - y0)).toBeCloseTo(ratio, 1);
+  });
+
+  it("sin features, o con geometría vacía, usa la proporción por defecto", () => {
+    expect(
+      computeAspectRatio({ featureCollection: { type: "FeatureCollection", features: [] } }),
+    ).toBe(DEFAULT_ASPECT_RATIO);
+    const empty: typeof world = {
+      type: "FeatureCollection",
+      features: [
+        { type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [] } },
+      ],
+    };
+    expect(computeAspectRatio({ featureCollection: empty })).toBe(DEFAULT_ASPECT_RATIO);
   });
 });

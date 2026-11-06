@@ -7,6 +7,23 @@ import type { Topology } from "topojson-specification";
 // el bundler (tsup) puede descartar el resto de topojson-client y el consumidor solo descarga lo que usamos.
 import { feature } from "topojson-client";
 
+/** Geometría ya cargada. */
+export type GeographyData = Topology | FeatureCollection;
+
+/**
+ * Lo que acepta la prop `geography` (dd.md §9.2): el dato, una promesa ya en vuelo, o una función
+ * que lo carga bajo demanda (`() => import("…/world-110m")`; vale el módulo entero con `default`).
+ */
+export type GeographyInput =
+  | GeographyData
+  | Promise<GeographyData | { default: GeographyData }>
+  | (() => Promise<GeographyData | { default: GeographyData }>);
+
+/** Un módulo ES (`import()`) trae la geometría en `default`. */
+export const unwrapGeography = (
+  value: GeographyData | { default: GeographyData },
+): GeographyData => ("default" in value ? value.default : value);
+
 export type ToFeatureCollectionOptions = {
   geography: Topology | FeatureCollection;
   /**
@@ -53,8 +70,8 @@ export const toFeatureCollection = ({
   // buscar objetos, para que el mensaje diga lo que realmente pasó.
   if (kind !== "Topology") {
     throw new Error(
-      `toFeatureCollection: formato no reconocido (type = ${JSON.stringify(kind)}). ` +
-        `Se esperaba un "Topology" (TopoJSON) o un "FeatureCollection" (GeoJSON).`,
+      `[choropleth] toFeatureCollection: unrecognized format (type = ${JSON.stringify(kind)}). ` +
+        `Expected a "Topology" (TopoJSON) or a "FeatureCollection" (GeoJSON).`,
     );
   }
 
@@ -72,8 +89,8 @@ export const toFeatureCollection = ({
   const object = name === undefined ? undefined : topology.objects[name];
   if (name === undefined || object === undefined) {
     throw new Error(
-      `toFeatureCollection: el objeto "${objectName ?? "(ninguno)"}" no existe en la topología. ` +
-        `Objetos disponibles: ${availableNames.length > 0 ? availableNames.join(", ") : "(ninguno)"}.`,
+      `[choropleth] toFeatureCollection: object "${objectName ?? "(none)"}" does not exist in the topology. ` +
+        `Available objects: ${availableNames.length > 0 ? availableNames.join(", ") : "(none)"}.`,
     );
   }
 

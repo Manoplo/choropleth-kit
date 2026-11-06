@@ -1,15 +1,10 @@
-import { useSyncExternalStore, type ReactNode } from "react";
-import type { RegionEvent } from "../use-choropleth";
+import type { ReactNode } from "react";
+import type { ItemContext } from "../map-item";
 import { useChoroplethContext } from "../choropleth-context";
+import { useMapStore } from "../map-store";
 
-export type TooltipContext<TDatum> = RegionEvent<TDatum> & {
-  /** Número, categoría (`categorical`) o `null` si no hay dato. */
-  value: number | string | null;
-  /** `value` formateado; cadena vacía si no hay valor. */
-  formattedValue: string;
-  /** Color con el que está pintada la región. */
-  color: string;
-};
+/** Lo que recibe el tooltip: el `MapItem` (región o punto) + valor, color y nombre. */
+export type TooltipContext<TDatum> = ItemContext<TDatum>;
 
 export type TooltipProps<TDatum> = {
   className?: string;
@@ -19,12 +14,15 @@ export type TooltipProps<TDatum> = {
 
 const OFFSET = 12;
 
-const DefaultContent = <TDatum,>({ feature, id, formattedValue }: TooltipContext<TDatum>) => {
-  const name = (feature.properties as { name?: unknown } | null)?.name;
+const DefaultContent = <TDatum,>({
+  label,
+  formattedValue,
+  noData,
+}: TooltipContext<TDatum> & { noData: string }) => {
   return (
     <>
-      <strong>{typeof name === "string" ? name : id}</strong>
-      <div>{formattedValue === "" ? "Sin dato" : formattedValue}</div>
+      <strong>{label}</strong>
+      <div>{formattedValue === "" ? noData : formattedValue}</div>
     </>
   );
 };
@@ -32,25 +30,17 @@ const DefaultContent = <TDatum,>({ feature, id, formattedValue }: TooltipContext
 /**
  * Tooltip HTML junto al cursor. La librería decide QUÉ (contexto tipado) y DÓNDE; tú, el aspecto.
  *
- * Se suscribe a la posición del cursor él solo (`useSyncExternalStore`): moverlo no re-renderiza
+ * Se suscribe él solo al hover y al cursor (`useMapStore`): moverlo no re-renderiza `Root` ni
  * las regiones. Sin medir su tamaño, se voltea hacia el otro lado del cursor en la mitad derecha
  * / inferior del mapa para no salirse del contenedor.
  */
 export const Tooltip = <TDatum,>({ className, children }: TooltipProps<TDatum>) => {
-  const { choropleth, pointer } = useChoroplethContext<TDatum>();
-  const point = useSyncExternalStore(pointer.subscribe, pointer.getSnapshot, () => null);
+  const { choropleth, store } = useChoroplethContext<TDatum>();
+  const point = useMapStore(store, (s) => s.pointer);
+  const hovered = useMapStore(store, (s) => s.hovered);
 
-  const region = choropleth.regions.find((r) => r.id === choropleth.hoveredId);
-  if (region === undefined || point === null) return null;
-
-  const context: TooltipContext<TDatum> = {
-    id: region.id,
-    feature: region.feature,
-    datum: region.datum,
-    value: region.value,
-    formattedValue: region.formattedValue,
-    color: region.fill,
-  };
+  const context = hovered === null ? undefined : choropleth.getItemContext(hovered);
+  if (context === undefined || point === null) return null;
 
   const flipX = point.x > choropleth.width / 2;
   const flipY = point.y > choropleth.height / 2;
@@ -74,7 +64,11 @@ export const Tooltip = <TDatum,>({ className, children }: TooltipProps<TDatum>) 
         pointerEvents: "none",
       }}
     >
-      {children === undefined ? <DefaultContent {...context} /> : children(context)}
+      {children === undefined ? (
+        <DefaultContent {...context} noData={choropleth.labels.noData} />
+      ) : (
+        children(context)
+      )}
     </div>
   );
 };

@@ -10,18 +10,29 @@ const RegionPath = memo(({ id, d, fill }: RegionPathProps) => (
   <path className="cm-region" data-region-id={id} d={d} style={{ fill }} />
 ));
 
+// Regiones sin id (Kosovo en world-atlas): se ven, pero no se pueden cruzar ni seleccionar.
+const AnonymousPath = memo(({ d, fill }: { d: string; fill: string }) => (
+  <path className="cm-region cm-region--anonymous" d={d} style={{ fill, cursor: "default" }} />
+));
+
 const regionIdFrom = (event: SyntheticEvent): string | null =>
   (event.target as Element).closest?.("[data-region-id]")?.getAttribute("data-region-id") ?? null;
 
 /**
  * Las regiones coloreadas. UN listener por tipo de evento en el `<g>` (delegación, dd.md §14)
  * en vez de uno por `<path>`: con cientos de regiones es menos trabajo y no se recrean closures.
+ * Pointer Events: el mismo código para ratón, lápiz y táctil.
  */
 export const Regions = () => {
-  const { choropleth } = useChoroplethContext();
-  const { regions, borders, hoveredId, clickable, getRegionProps } = choropleth;
+  const { choropleth, store } = useChoroplethContext();
+  const { regions, anonymousPaths, emptyFill, borders, clickable, hoverItem, clickItem } =
+    choropleth;
 
-  const byId = new Map(regions.map((region) => [region.id, region]));
+  const known = new Set(regions.map((region) => region.id));
+  const regionRef = (event: SyntheticEvent) => {
+    const id = regionIdFrom(event);
+    return id !== null && known.has(id) ? ({ kind: "region", id } as const) : null;
+  };
 
   // Con GeoJSON no hay `borders` (mesh): el CSS dibuja el contorno de cada región.
   const outlined = borders === null;
@@ -32,25 +43,28 @@ export const Regions = () => {
       data-outlined={outlined ? "" : undefined}
       style={clickable ? { cursor: "pointer" } : undefined}
       onClick={(event) => {
-        const region = byId.get(regionIdFrom(event) ?? "");
-        if (region !== undefined) getRegionProps(region).onClick(event);
+        const ref = regionRef(event);
+        if (ref !== null) clickItem(ref);
       }}
-      onMouseOver={(event) => {
-        const id = regionIdFrom(event);
-        const region = id === null ? undefined : byId.get(id);
-        if (region !== undefined) {
-          if (region.id !== hoveredId) getRegionProps(region).onMouseEnter(event);
-        } else if (hoveredId !== null) {
-          // Cursor sobre el océano (dentro del <g> pero fuera de toda región).
-          const previous = byId.get(hoveredId);
-          if (previous !== undefined) getRegionProps(previous).onMouseLeave(event);
+      onPointerOver={(event) => {
+        const ref = regionRef(event);
+        if (ref !== null) {
+          hoverItem(ref);
+        } else if (store.getState().hovered?.kind === "region") {
+          // Cursor sobre el océano (dentro del <g> pero fuera de toda región). Si el hover es de
+          // un punto, no es nuestro: lo gestionan las burbujas.
+          hoverItem(null);
         }
       }}
-      onMouseLeave={(event) => {
-        const previous = hoveredId === null ? undefined : byId.get(hoveredId);
-        if (previous !== undefined) getRegionProps(previous).onMouseLeave(event);
+      onPointerLeave={(event) => {
+        // En táctil el navegador manda «leave» al levantar el dedo: no es salir del mapa.
+        if (event.pointerType === "touch") return;
+        if (store.getState().hovered?.kind === "region") hoverItem(null);
       }}
     >
+      {anonymousPaths.map((d, index) => (
+        <AnonymousPath key={`anonymous-${index}`} d={d} fill={emptyFill} />
+      ))}
       {regions.map((region) => (
         <RegionPath key={region.id} id={region.id} d={region.path} fill={region.fill} />
       ))}

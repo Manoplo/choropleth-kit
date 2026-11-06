@@ -17,6 +17,14 @@
   --cm-hover-stroke-width: 1.5px;
   --cm-selected-stroke: #0b5fff;
   --cm-selected-stroke-width: 2px;
+  --cm-focus-ring: #0b5fff;
+  --cm-controls-bg: #ffffff;
+  --cm-controls-color: #111111;
+  --cm-controls-border: #cccccc;
+  --cm-hint-bg: rgb(17 24 39 / 0.85);
+  --cm-hint-color: #ffffff;
+  --cm-dim-opacity: 0.45;
+  --cm-skeleton-color: #e5e5e5;
   --cm-bubble-fill: #2563eb;
   --cm-bubble-stroke: #ffffff;
   --cm-bubble-opacity: 0.75;
@@ -51,15 +59,18 @@
 .cm-root:not([data-unstyled]) .cm-regions[data-outlined] .cm-region {
   stroke: var(--cm-border-color);
   stroke-width: var(--cm-border-width);
+  /* El trazo no engorda al hacer zoom (dd.md §11.1.6). */
+  vector-effect: non-scaling-stroke;
 }
 
 .cm-root:not([data-unstyled]) .cm-borders {
   fill: none;
   stroke: var(--cm-border-color);
   stroke-width: var(--cm-border-width);
+  vector-effect: non-scaling-stroke;
 }
 
-.cm-root:not([data-unstyled]) .cm-selection path {
+.cm-root:not([data-unstyled]) .cm-selection :is(path, circle) {
   fill: none;
   /* El trazo no engorda al hacer zoom. */
   vector-effect: non-scaling-stroke;
@@ -81,6 +92,172 @@
   transition:
     r var(--cm-transition-duration),
     fill var(--cm-transition-duration);
+}
+
+/* Puntos de respaldo (microestados): un punto con el color de su dato. */
+.cm-root:not([data-unstyled]) .cm-fallback-point {
+  stroke: var(--cm-bubble-stroke);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
+/* ── zoom y pan ───────────────────────────────────────────────────────────────────────────── */
+
+/*
+ * La cámara la mueve `d3-zoom` (atributo `transform` de `.cm-viewport`, `--cm-k` y estos `data-*`):
+ * React no participa durante el gesto, así que todo lo que cambia con el zoom se hace aquí.
+ */
+
+/* Solo hay algo que arrastrar si el mapa está ampliado: en el encaje el cursor no cambia. */
+.cm-root:not([data-unstyled])[data-zoomed] .cm-svg {
+  cursor: grab;
+}
+.cm-root:not([data-unstyled])[data-interacting] .cm-svg {
+  cursor: grabbing;
+}
+
+/*
+ * Durante un gesto no hay hover (dd.md §11.1.2): arrastrar sobre 200 países dispararía 200 hovers y
+ * el tooltip parpadearía detrás del cursor. Tampoco transiciones de color.
+ */
+.cm-root:not([data-unstyled])[data-interacting] :is(.cm-regions, .cm-bubbles, .cm-fallback-points) {
+  pointer-events: none;
+}
+.cm-root:not([data-unstyled])[data-interacting] .cm-region {
+  transition: none;
+}
+.cm-root:not([data-unstyled])[data-interacting] .cm-tooltip {
+  display: none;
+}
+
+/* Foco de teclado: siempre visible con teclado, nunca solo un cambio de relleno (dd.md §13). */
+.cm-root:not([data-unstyled]) .cm-svg:focus-visible {
+  outline: 2px solid var(--cm-focus-ring);
+  outline-offset: -2px;
+}
+
+/* ── controles y aviso de gesto ───────────────────────────────────────────────────────────── */
+
+.cm-root:not([data-unstyled]) .cm-zoom-controls {
+  display: flex;
+  flex-direction: column;
+  background: var(--cm-controls-bg);
+  border: 1px solid var(--cm-controls-border);
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.15);
+}
+.cm-root:not([data-unstyled]) .cm-zoom-button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--cm-controls-color);
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.cm-root:not([data-unstyled]) .cm-zoom-button + .cm-zoom-button {
+  border-top: 1px solid var(--cm-controls-border);
+}
+.cm-root:not([data-unstyled]) .cm-zoom-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--cm-controls-bg), #000000 8%);
+}
+.cm-root:not([data-unstyled]) .cm-zoom-button:focus-visible {
+  outline: 2px solid var(--cm-focus-ring);
+  outline-offset: -2px;
+}
+.cm-root:not([data-unstyled]) .cm-zoom-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Centrado sobre el mapa; no captura el ratón. Aparece y se va con un fundido. */
+.cm-root:not([data-unstyled]) .cm-gesture-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 8px 14px;
+  border-radius: 6px;
+  background: var(--cm-hint-bg);
+  color: var(--cm-hint-color);
+  pointer-events: none;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 200ms;
+}
+.cm-root:not([data-unstyled]) .cm-gesture-hint[data-visible] {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cm-root:not([data-unstyled]) .cm-gesture-hint {
+    transition: none;
+  }
+}
+
+/* ── atenuar el resto (dimOthers) ─────────────────────────────────────────────────────────── */
+
+/*
+ * Todo con atributos en contenedores: seleccionar o pasar el cursor NO cambia las props de las
+ * regiones. `Selection` pinta encima una copia a color completo de la resaltada.
+ */
+.cm-root:not([data-unstyled])[data-dim="selection"][data-has-selection] .cm-regions,
+.cm-root:not([data-unstyled])[data-dim="hover-and-selection"][data-has-selection] .cm-regions,
+.cm-root:not([data-unstyled])[data-dim="hover-and-selection"]
+  .cm-svg:has(path[data-selection="hover"])
+  .cm-regions {
+  opacity: var(--cm-dim-opacity);
+}
+.cm-root:not([data-unstyled]) .cm-regions {
+  transition: opacity var(--cm-transition-duration);
+}
+
+/* ── carga ────────────────────────────────────────────────────────────────────────────────── */
+
+/* Esqueleto mientras llega la geometría: ocupa el mismo espacio que tendrá el mapa. */
+.cm-root:not([data-unstyled]) .cm-skeleton {
+  width: 100%;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--cm-skeleton-color) 25%,
+    color-mix(in srgb, var(--cm-skeleton-color), #ffffff 55%) 50%,
+    var(--cm-skeleton-color) 75%
+  );
+  background-size: 200% 100%;
+  animation: cm-shimmer 1.5s linear infinite;
+}
+.cm-root:not([data-unstyled]) .cm-error {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  background: var(--cm-skeleton-color);
+  border-radius: 6px;
+}
+
+/* Datos en camino: el mapa «respira» sin vaciarse (se mantiene el último dato). */
+.cm-root:not([data-unstyled])[data-loading] .cm-regions {
+  animation: cm-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes cm-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes cm-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cm-root:not([data-unstyled]) .cm-skeleton,
+  .cm-root:not([data-unstyled])[data-loading] .cm-regions {
+    animation: none;
+  }
 }
 
 /* ── leyenda ──────────────────────────────────────────────────────────────────────────────── */

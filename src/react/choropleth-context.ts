@@ -1,10 +1,15 @@
-import { createContext, useContext } from "react";
-import type { PointerStore } from "./pointer-store";
+import { createContext, useContext, type RefObject } from "react";
+import type { ChoroplethMapHandle } from "./handle";
+import type { MapStore } from "./map-store";
 import type { UseChoroplethResult } from "./use-choropleth";
 
 export type ChoroplethContextValue = {
   choropleth: UseChoroplethResult<unknown>;
-  pointer: PointerStore;
+  store: MapStore;
+  /** La cámara: `<Choropleth.Viewport>` la rellena y `useZoom` (en `Svg`) la lee. */
+  viewportRef: RefObject<SVGGElement | null>;
+  /** El handle imperativo (el mismo que se obtiene con `ref`). */
+  api: ChoroplethMapHandle;
 };
 
 export const ChoroplethContext = createContext<ChoroplethContextValue | null>(null);
@@ -15,13 +20,26 @@ export const ChoroplethContext = createContext<ChoroplethContextValue | null>(nu
  */
 export const useChoroplethContext = <TDatum = unknown>(): {
   choropleth: UseChoroplethResult<TDatum>;
-  pointer: PointerStore;
+  store: MapStore;
+  viewportRef: RefObject<SVGGElement | null>;
+  api: ChoroplethMapHandle;
 } => {
   const value = useContext(ChoroplethContext);
   if (value === null) {
     throw new Error(
-      "Los componentes de Choropleth (Svg, Regions, Legend…) deben ir dentro de <Choropleth.Root>.",
+      "[choropleth] Choropleth components (Svg, Regions, Legend…) must be rendered inside <Choropleth.Root>.",
     );
   }
-  return value as unknown as { choropleth: UseChoroplethResult<TDatum>; pointer: PointerStore };
+  return value as unknown as {
+    choropleth: UseChoroplethResult<TDatum>;
+    store: MapStore;
+    viewportRef: RefObject<SVGGElement | null>;
+    api: ChoroplethMapHandle;
+  };
 };
+
+/**
+ * El handle imperativo desde DENTRO del compound (dd.md §9.5): un botón hijo de `<Choropleth.Root>`
+ * puede llamar a `zoomTo` sin necesitar un `ref`.
+ */
+export const useChoroplethApi = (): ChoroplethMapHandle => useChoroplethContext().api;
