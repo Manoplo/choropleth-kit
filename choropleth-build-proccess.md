@@ -18,20 +18,20 @@
 
 ## Estado actual y handoff (leer primero)
 
-> Actualizada tras el **paso 30** (sin efecto visual; **sin commitear**; el 28 ya está commiteado). Rama `master`. **643 tests** en verde; `typecheck`, `lint`,
+> Actualizada tras el **paso 31** (visual pendiente del humano; **sin commitear**; el 30 ya está commiteado). Rama `master`. **696 tests** en verde; `typecheck`, `lint`,
 > `format:check`, `build` y `build-storybook` limpios. Cobertura de `src/core` 100 % líneas.
 
 ### Dónde estamos
 
-| Fase                   | Pasos  | Estado                                                                                                                                                                                                                       |
-| ---------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| v0.1                   | 1-13   | ✅                                                                                                                                                                                                                           |
-| A · cimientos          | 14-22  | ✅ (revisión visual de «Foundations» pendiente del humano)                                                                                                                                                                   |
-| **B · cámara**         | 23-26  | ✅ código y tests. Revisión visual: el 24 la dio por buena el humano; **25 y 26 sin confirmar**                                                                                                                              |
-| B · cámara             | **27** | ✅ (revisión visual confirmada por el humano)                                                                                                                                                                                |
-| C · drill-down (v0.4)  | 28-33  | **28** ✅ reducer. **29** ✅ rebase. **30** ✅ estado de navegación (`useDrillDown`, tipos, LRU). **31 ⏳ SIGUIENTE**: la prop `drill` en el mapa: capas `active`/`context`, vuelo + rebase, revelado (tareas 17 resto y 18) |
-| D · pulido visual      | 34-37  | ⏳                                                                                                                                                                                                                           |
-| Accesibilidad completa | —      | ⏳ **al final, por decisión del humano** (`dd.md §13`)                                                                                                                                                                       |
+| Fase                   | Pasos  | Estado                                                                                                                                                                                                                                                                                                                                                              |
+| ---------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| v0.1                   | 1-13   | ✅                                                                                                                                                                                                                                                                                                                                                                  |
+| A · cimientos          | 14-22  | ✅ (revisión visual de «Foundations» pendiente del humano)                                                                                                                                                                                                                                                                                                          |
+| **B · cámara**         | 23-26  | ✅ código y tests. Revisión visual: el 24 la dio por buena el humano; **25 y 26 sin confirmar**                                                                                                                                                                                                                                                                     |
+| B · cámara             | **27** | ✅ (revisión visual confirmada por el humano)                                                                                                                                                                                                                                                                                                                       |
+| C · drill-down (v0.4)  | 28-34  | **28** ✅ reducer. **29** ✅ rebase. **30** ✅ estado (`useDrillDown`). **31** ✅ código y tests (`Hecho*`: visual pendiente) motor de niveles con cambio instantáneo. **32 ⏳ SIGUIENTE**: coreografía (reducer + vuelo a `R` + contexto gris + revelado + lateral). 33: breadcrumb + teclado + `aria-live`. 34: prefetch (`onDrillIntent`) + avisos de desarrollo |
+| D · pulido visual      | 35-38  | ⏳                                                                                                                                                                                                                                                                                                                                                                  |
+| Accesibilidad completa | —      | ⏳ **al final, por decisión del humano** (`dd.md §13`)                                                                                                                                                                                                                                                                                                              |
 
 ### Qué leer para el paso 27 (no más)
 
@@ -58,6 +58,7 @@ aplicado la vista se desplaza.
 - **Errores y avisos de consola en inglés**, con prefijo `[choropleth]`. Documentación y comentarios, en español.
 - **`dimOthers` por defecto `"selection"`**. Chipre del Norte y Somalilandia quedan en gris sin id (Legal).
 - Se puede **romper la API** antes de 1.0, sin alias de compatibilidad.
+- **Contexto del drill en gris** (sin color de dato del padre), por corrección cartográfica: lo confirmó el humano en el paso 31 (`dd.md §11.2.5`).
 
 ### Trampas aprendidas (cuestan tiempo si se repiten)
 
@@ -2683,3 +2684,101 @@ No aplica: no hay nada que ver hasta que el mapa use `drill` (paso 31).
 - ¿Qué pasa con `?path=ES.MD.X.Y` si solo hay tres niveles?
 - ¿Por qué la clave de caché de un nivel `"inherit"` es la de su padre?
 - ¿Por qué `DrillLevel` está en `react` y `validateLevels` en `core`?
+
+# Paso 31: la prop `drill` en el mapa (motor de niveles, cambio instantáneo)
+
+Archivos nuevos: `src/core/drill-chain.ts` (+ test), `src/react/use-drill-engine.ts`, `src/react/drill.test.tsx`,
+`stories/drill-down.stories.tsx`. Tocan: `use-choropleth.ts`, `core/projection.ts`, `components/regions.tsx`, `map-store.ts`, `use-zoom.ts`,
+`styles.css`, los índices. Parte «motor» de las tareas 17-18 de `dd.md §21`. **Sin commitear.**
+
+## 31.1 Qué se hizo y qué NO
+
+Hasta ahora `useChoropleth` era un motor de **un solo nivel**: una geometría, una proyección, un join. En lugar de reescribirlo, el
+drill lo usa tal cual: **un mapa con `drill` es un mapa de UN nivel (el que se muestra) con otras opciones**. `useDrillEngine` decide
+cuál es ese nivel, carga su geometría y entrega las opciones efectivas; el join, la escala, las burbujas y la leyenda no se enteran.
+
+Lo que **sí** hace este paso (todo con cambio de nivel **instantáneo**): `drill={levels}` (no controlado) o `drill={useDrillDown(...)}`
+(controlado); geometría por nivel con caché LRU; cadena de proyecciones con rebase; `data` como selector; clic que baja; `onDrill`,
+`onDrillEnd`, `onDrillError`; vuelta atrás si falla.
+
+Lo que **no** hace (paso 32): vuelo de cámara hasta `R`, capa de contexto gris, revelado, pulso de carga, navegación lateral animada. Por eso
+al bajar a un país el mapa **salta** (es lo esperado en este paso) y con niveles que no son `"inherit"` los vecinos desaparecen en lugar de
+quedar en gris.
+
+## 31.2 Cómo funciona
+
+```
+ drill (niveles | controlador) ──► useDrillEngine ──► opciones efectivas ──► useChoropleth (igual que siempre)
+                                        │  ├─ geometría de cada profundidad de la ruta (fija o por función; caché LRU)
+                                        │  ├─ ¿qué nivel se muestra? el destino, o el anterior mientras carga
+                                        │  └─ features por profundidad ──► buildProjectionChain ──► proyección del nivel
+```
+
+- **Qué se muestra.** El destino (`controller.path`) puede no estar listo (geometría o datos). Se sigue mostrando el nivel **anterior con SUS
+  datos** hasta que llegan las dos cosas: nunca datos nuevos sobre geometría vieja (mapa gris y avisos de «sin cruzar» falsos).
+  `data` `undefined` = «cargando» (dd.md §11.2.6). Se implementa con un ajuste de estado durante el render (`setShown`), sin parpadeo.
+- **Cadena de proyecciones** (`core/drill-chain.ts`, pura): la raíz se ajusta al mundo y cada nivel es `rebaseProjection` del padre sobre el
+  cuerpo principal de la región elegida (`getFocusGeometry`). `focusBounds` (España con Canarias) manda como caja de 8 puntos.
+- **`"inherit"`.** Un nivel `"inherit"` dibuja la geometría de su padre (la clave de caché también es la del padre). Es el caso de las
+  tiendas: mismas regiones, otra proyección encuadrada y burbujas con `getCoordinates`.
+- **Clic.** Un item navegable **baja** (no se selecciona; `onItemClick` se llama igualmente); uno que no lo es, **selecciona**. La ruta se
+  arma sobre lo que se está MOSTRANDO (`[...shownPath, id]`): si el nivel nuevo aún carga, un segundo clic redirige en vez de apilar.
+- **`isDrillable`/`data-drillable`.** El cursor `zoom-in` solo aparece donde de verdad se puede bajar (`canDrill`, último nivel).
+- **Cámara.** Al cambiar de nivel vuelve al encaje, **antes de pintar** (`useLayoutEffect`; con un efecto normal se vería un fotograma con la
+  cámara vieja sobre la geometría nueva), sin animar ni avisar a `onViewChange` (`resetView({ duration: 0, silent: true })`).
+- **Errores.** Geometría que falla, o nivel con 0 regiones (`[choropleth] drill level "region" has 0 features for "AD". Hint: return false
+from canDrill for it.`): `onDrillError({ error, ctx })` (o `console.error` en inglés si no hay) y **vuelta atrás** con `drillTo(shownPath)`.
+- **`status`** del controlador: `"loading"` mientras el destino no se muestra, `"idle"` después. El resto de fases (`flying`, `revealing`) las
+  escribirá el reducer en el paso 32.
+- **Proporción `"auto"`**: se mide en la geometría **raíz**; si no, el alto del mapa cambiaría al bajar (los hijos tienen otra forma).
+- **Selección**: se limpia al cambiar de nivel (es de un nivel).
+
+## 31.3 Decisiones y desviaciones respecto a `dd.md`
+
+- **`geography` pasa a ser opcional** en las props (con `drill` sale de los niveles). Sin `geography` ni `drill`, error en inglés que dice qué pasar.
+- **`data` admite un selector** `({ depth, parentId }) => rows`. Sin `drill`, se resuelve con el contexto de la raíz.
+- **Cachés de features por identidad** (`WeakMap`): `toFeatureCollection` de un TopoJSON devuelve un objeto nuevo en cada llamada y un filtro, un
+  array nuevo; sin ellas cada render recalcularía todas las rutas. La caché de **geometrías** (LRU de 8) es **por mapa**, no global: dos mapas con
+  los mismos ids de nivel y datos distintos no deben compartirla.
+- **El filtro del mapa (`filterFeatures`) solo vale para la geometría raíz** (Antártida…); cada nivel filtra además con SU `filterFeatures(f, ctx)`.
+- **`projection` por nivel distinta de `"inherit"` NO está soportada todavía** (no es afín: pide fundido de 250 ms, `dd.md §11.2.4`). Hoy se ignora.
+- **Antimeridiano:** la cadena aplica la misma regla que `getFocusExtent`: si el cuerpo principal (o unos `focusBounds`) cruza ±180°, se encuadra
+  la mitad más ancha. Lo demostró un test: sin ello Rusia sale con la caja del mundo.
+- **Limitación conocida:** las islas del otro lado del antimeridiano (parte de Fiyi, Chukotka) quedan fuera de la vista, como en `zoomTo`.
+- **Un mutante «de mentira» me engañó:** mi primera mutación del antimeridiano no se aplicó (Prettier había reformateado la línea) y concluí que
+  «no hacía nada». Regla nueva: **comprobar que la mutación se aplicó** (`assert mut != orig`) antes de fiarse del resultado.
+
+## 31.4 Tests
+
+696 en verde (643 + 53 nuevos); `typecheck`, `lint`, `format:check`, `build`, `build-storybook` limpios.
+
+- **`core/drill-chain`:** raíz, un y dos niveles, afinidad con el padre, `focusBounds`, región ausente/sin geometría (no rompe, `missing`), tamaño
+  inválido, proyección con nombre, **Rusia/Fiyi** (antimeridiano) y límites que lo cruzan.
+- **`react/drill` (32 + geodatos reales):** raíz y `data-drillable`; `canDrill` booleano/función; bajar (hijas con sus datos, rutas dentro del
+  lienzo, el hijo llena la vista, cámara al encaje, selección limpia); `data` como selector (contexto correcto, lista fija, sin `drill`);
+  carga entre niveles (se mantiene el anterior, datos `undefined`, sin avisos); subir y `status`; controlado (avisa, URL al montar, el padre
+  rechaza); `onDrill`/`onDrillEnd` (orden, dirección, item, sin eventos al montar, `up` sin item); errores (carga, 0 regiones, consola, reintento);
+  `encoding` e `inherit`; proporción `"auto"` estable; el hover no re-renderiza; **ES, FR, US, RU, FJ, NO, BR con `world110m`**.
+- **Mutaciones (todas rompen tests):** datos nuevos sobre geometría vieja; commit sin esperar datos; sin vuelta atrás; sin `onDrill`/`onDrillEnd`/item;
+  vacío no es error; sin reinicio de cámara; sin cadena de proyecciones; sin limpiar selección; clic siempre baja / nunca baja; aspecto del nivel; sin
+  antimeridiano. Un código sobrante (limpiar el error antes de reintentar) no tenía efecto observable y se **eliminó**.
+
+## 31.5 Verificación visual: pendiente de ti \*
+
+`pnpm storybook` → **DrillDown / Engine** (datos sintéticos; **ojo: el cambio de nivel es instantáneo, sin vuelo**):
+
+| Story           | Qué comprobar                                                                                                                                                                                                                                                                          |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Uncontrolled`  | Solo 12 países (ES, FR, DE, IT, GB, US, BR, JP, AU, ZA, IN, MX) tienen cursor `zoom-in`. Un clic en uno **salta** a ese país encuadrado con sus tiendas (burbujas); los demás países quedan en gris. El resto de países **solo seleccionan**. El log muestra `onDrill` y `onDrillEnd`. |
+| `Uncontrolled`  | España se encuadra **con Canarias**; EE. UU. y Francia, su cuerpo principal. Con el zoom de rueda se puede acercar dentro del nivel; al cambiar de nivel la cámara vuelve al encaje.                                                                                                   |
+| `ControlledUrl` | La ruta vive en `?path=…`. Bajar muestra «cargando datos…» ~0,9 s: **el nivel anterior se queda tal cual** (con sus colores) y cambia de golpe cuando llegan los datos. «← Subir», «Raíz» y «Saltar a España» funcionan.                                                               |
+| `Errors`        | **España**: la carga falla; **Francia**: 0 regiones. En ambos casos el mapa **se queda donde estaba** y el log dice por qué. Otro país carga bien.                                                                                                                                     |
+| Todas           | Sin parpadeos al cambiar de nivel (un solo fotograma con la geometría nueva y la cámara en el encaje).                                                                                                                                                                                 |
+
+## 31.6 Antes de pasar al paso 32: ¿lo tienes claro?
+
+- ¿Por qué `useChoropleth` no se reescribe para el drill, y qué ve de diferente cuando hay `drill`?
+- ¿Por qué se sigue mostrando el nivel anterior con SUS datos mientras carga el nuevo? ¿Qué se vería si no?
+- ¿Por qué un nivel `"inherit"` tiene la clave de caché de su padre, y qué dibuja?
+- ¿Por qué la cámara se reinicia con `useLayoutEffect` y no con `useEffect`?
+- ¿Por qué la caché de geometrías es por mapa y no global?

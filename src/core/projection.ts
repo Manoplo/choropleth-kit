@@ -33,6 +33,11 @@ const PROJECTIONS = {
 
 export type ProjectionName = keyof typeof PROJECTIONS;
 
+/** La fábrica de una proyección por nombre (cada llamada, una instancia nueva). */
+export const projectionFactory = (
+  name: ProjectionName = DEFAULT_PROJECTION,
+): (() => GeoProjection) => PROJECTIONS[name];
+
 export const DEFAULT_PROJECTION: ProjectionName = "equalEarth";
 
 export type CreateProjectionOptions = {

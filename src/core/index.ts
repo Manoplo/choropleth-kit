@@ -69,6 +69,7 @@ export {
   createProjection,
   DEFAULT_ASPECT_RATIO,
   DEFAULT_PROJECTION,
+  projectionFactory,
   rebaseProjection,
   relativeTransform,
 } from "./projection";
@@ -149,3 +150,5 @@ export {
   validateLevels,
 } from "./drill-levels";
 export type { DrillContext, DrillCrumb, LevelShape, LruCache } from "./drill-levels";
+export { buildProjectionChain } from "./drill-chain";
+export type { BuildProjectionChainParams, ChainLevel, ProjectionChain } from "./drill-chain";

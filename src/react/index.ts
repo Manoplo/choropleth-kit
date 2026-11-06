@@ -11,6 +11,8 @@ export type {
 } from "./use-choropleth";
 export { buildDrillEvent, defineDrillLevels, isDrillable } from "./drill-levels";
 export type { DrillEvent, DrillLevel } from "./drill-levels";
+export { useDrillEngine } from "./use-drill-engine";
+export type { DrillEngine, DrillEngineParams } from "./use-drill-engine";
 export { createDrillBridge, DRILL_BRIDGE, isDrillController, useDrillDown } from "./use-drill-down";
 export type {
   DrillBreadcrumb,

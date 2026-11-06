@@ -372,9 +372,11 @@ export const useZoom = ({
         animate(duration, (t) => behavior.scaleBy(t as typeof selection, factor), {
           ease: easeCubicOut,
         }),
-      resetView: ({ duration } = {}) => {
+      resetView: ({ duration, silent } = {}) => {
         const length = duration ?? flightDuration({ from: current(), to: FIT_TRANSFORM, size });
-        return animate(length, (t) => behavior.transform(t as typeof selection, zoomIdentity));
+        return animate(length, (t) => behavior.transform(t as typeof selection, zoomIdentity), {
+          silent,
+        });
       },
       getView: () =>
         toViewState({

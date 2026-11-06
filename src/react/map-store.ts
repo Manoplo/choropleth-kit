@@ -25,8 +25,8 @@ export type ZoomApi = {
   ) => Promise<TransitionResult>;
   /** Multiplica el zoom actual (×2 acerca, ×0,5 aleja) centrado en la vista. */
   zoomBy: (factor: number, options?: { duration?: number }) => Promise<TransitionResult>;
-  /** Vuelo al encaje del nivel. */
-  resetView: (options?: { duration?: number }) => Promise<TransitionResult>;
+  /** Vuelo al encaje del nivel. `silent` (solo con `duration: 0`) no avisa a `onViewChange`. */
+  resetView: (options?: { duration?: number; silent?: boolean }) => Promise<TransitionResult>;
   /** La vista actual (la real, también a mitad de un vuelo). */
   getView: () => ViewState;
 };
