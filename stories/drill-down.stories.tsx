@@ -1,5 +1,5 @@
-// Fase C (v0.4), paso 31: la prop `drill`. El cambio de nivel es INSTANTÁNEO: el vuelo, el contexto gris y
-// el revelado llegan en el paso siguiente. Datos SINTÉTICOS deterministas.
+// Fase C (v0.4), pasos 31-32: la prop `drill` y su coreografía (vuelo a R, contexto gris, revelado
+// escalonado, subir a la cámara de antes, navegación lateral). Datos SINTÉTICOS deterministas.
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect, useState } from "react";
 import { geoBounds, geoCentroid } from "d3-geo";
@@ -19,7 +19,8 @@ type Row = {
 };
 
 const features = toFeatureCollection({ geography: world110m, objectName: "countries" }).features;
-const ids = features.flatMap((f) => (f.id === undefined ? [] : [String(f.id)]));
+// Sin la Antártida: el nivel raíz la filtra y sus datos darían un aviso de «sin cruzar».
+const ids = features.flatMap((f) => (f.id === undefined || f.id === "AQ" ? [] : [String(f.id)]));
 
 /** Países con tiendas (los demás no son navegables: un clic los selecciona). */
 const WITH_STORES = ["ES", "FR", "DE", "IT", "GB", "US", "BR", "JP", "AU", "ZA", "IN", "MX"];
@@ -103,6 +104,8 @@ const describe = (e: DrillEvent<Row>) =>
 const Uncontrolled = () => {
   const [lines, setLines] = useState<string[]>([]);
   const push = (line: string) => setLines((prev) => [...prev.slice(-5), line]);
+  // Ejemplo A de dd.md §11.2.2 tal cual: `drill={levels}` y listo. Las migas, «←», Escape y Retroceso vienen
+  // incluidos en el preset.
   return (
     <div style={{ maxWidth: 1100, font: "13px sans-serif" }}>
       <ChoroplethMap<Row>
@@ -218,7 +221,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Mundo → país → tiendas, no controlado. Solo los 12 países con tiendas tienen cursor `zoom-in`. */
+/**
+ * Mundo → país → tiendas, no controlado. Solo los 12 países con tiendas tienen cursor `zoom-in`. Al pulsar: el
+ * resto se atenúa, la cámara VUELA al país y las tiendas aparecen en abanico desde el centro. Los demás países
+ * quedan en gris (contexto) y los 12 con tiendas son pulsables (navegación lateral). Subir vuelve a la cámara
+ * de antes de bajar. Migas arriba a la izquierda; «←», Escape y Retroceso suben.
+ */
 export const UncontrolledStory: Story = { name: "Uncontrolled", render: () => <Uncontrolled /> };
 
 /** Ruta en el «URL», `useDrillDown` controlado y latencia artificial: mientras llegan los datos se mantiene el nivel anterior. */

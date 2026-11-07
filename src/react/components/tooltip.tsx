@@ -17,12 +17,16 @@ const OFFSET = 12;
 const DefaultContent = <TDatum,>({
   label,
   formattedValue,
+  drillable,
   noData,
-}: TooltipContext<TDatum> & { noData: string }) => {
+  drillHint,
+}: TooltipContext<TDatum> & { noData: string; drillHint: string }) => {
   return (
     <>
       <strong>{label}</strong>
       <div>{formattedValue === "" ? noData : formattedValue}</div>
+      {/* Solo se promete lo que es verdad: el pie aparece únicamente si se puede bajar desde aquí. */}
+      {drillable && <div className="cm-tooltip__hint">{drillHint}</div>}
     </>
   );
 };
@@ -65,7 +69,11 @@ export const Tooltip = <TDatum,>({ className, children }: TooltipProps<TDatum>) 
       }}
     >
       {children === undefined ? (
-        <DefaultContent {...context} noData={choropleth.labels.noData} />
+        <DefaultContent
+          {...context}
+          noData={choropleth.labels.noData}
+          drillHint={choropleth.labels.drillHint}
+        />
       ) : (
         children(context)
       )}

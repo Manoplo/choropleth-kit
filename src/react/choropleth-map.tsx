@@ -7,6 +7,7 @@ import {
   type Ref,
 } from "react";
 import { resolveControls, resolveLabels } from "../core";
+import { Breadcrumb } from "./components/breadcrumb";
 import { GestureHint } from "./components/gesture-hint";
 import { Legend } from "./components/legend";
 import { Root } from "./components/root";
@@ -28,6 +29,8 @@ export type LegendOptions = {
 export type ChoroplethMapProps<TDatum> = UseChoroplethOptions<TDatum> & {
   /** `false` oculta la leyenda. */
   legend?: LegendOptions | false;
+  /** Migas del drill (solo con `drill`). `false` las oculta; por defecto arriba a la izquierda. */
+  breadcrumb?: { position?: LegendPosition } | false;
   /** Contenido del tooltip. Sin esto: nombre de la región y valor formateado. */
   renderTooltip?: (context: TooltipContext<TDatum>) => ReactNode;
   className?: string;
@@ -51,6 +54,7 @@ const CORNERS: Record<LegendPosition, CSSProperties> = {
 const ChoroplethMapInner = <TDatum,>(
   {
     legend,
+    breadcrumb,
     renderTooltip,
     className,
     style,
@@ -79,6 +83,9 @@ const ChoroplethMapInner = <TDatum,>(
         <div style={{ position: "absolute", ...CORNERS[legendOptions.position ?? "bottom-left"] }}>
           <Legend title={legendOptions.title} showCount={legendOptions.showCount} />
         </div>
+      )}
+      {options.drill !== undefined && breadcrumb !== false && (
+        <Breadcrumb position={breadcrumb?.position ?? "top-left"} />
       )}
       {controls !== null && <ZoomControls position={controls.position} reset={controls.reset} />}
       <GestureHint />

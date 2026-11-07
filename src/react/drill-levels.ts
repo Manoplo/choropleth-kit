@@ -100,3 +100,17 @@ export const isDrillable = <TDatum>(
   if (canDrill === undefined) return true;
   return typeof canDrill === "function" ? canDrill(item) : canDrill;
 };
+
+/**
+ * Profundidad cuya geometría se dibuja a `depth`: un nivel `"inherit"` dibuja la de su padre, así que
+ * sube hasta el primero que no hereda. Dos profundidades con la misma fuente dibujan las mismas regiones
+ * (tiendas sobre un país), y no hace falta una capa de contexto aparte.
+ */
+export const sourceDepth = <TDatum>(
+  levels: readonly DrillLevel<TDatum>[],
+  depth: number,
+): number => {
+  let source = Math.min(depth, levels.length - 1);
+  while (source > 0 && levels[source]?.geography === "inherit") source--;
+  return source;
+};

@@ -3,14 +3,18 @@ export type {
   DimOthers,
   FallbackPoint,
   JoinReport,
+  DrillLayerView,
+  DrillNav,
+  DrillNavItem,
   Region,
   PointProps,
   RegionProps,
   UseChoroplethOptions,
   UseChoroplethResult,
 } from "./use-choropleth";
-export { buildDrillEvent, defineDrillLevels, isDrillable } from "./drill-levels";
+export { buildDrillEvent, defineDrillLevels, isDrillable, sourceDepth } from "./drill-levels";
 export type { DrillEvent, DrillLevel } from "./drill-levels";
+export { REVEAL_MS, useDrillChoreography } from "./use-drill-choreography";
 export { useDrillEngine } from "./use-drill-engine";
 export type { DrillEngine, DrillEngineParams } from "./use-drill-engine";
 export { createDrillBridge, DRILL_BRIDGE, isDrillController, useDrillDown } from "./use-drill-down";
@@ -42,7 +46,10 @@ export { useContainerSize } from "./use-container-size";
 export type { ContainerSize, UseContainerSizeOptions } from "./use-container-size";
 export { Choropleth } from "./choropleth";
 export { Borders } from "./components/borders";
+export { Breadcrumb } from "./components/breadcrumb";
+export type { BreadcrumbProps, BreadcrumbRenderContext } from "./components/breadcrumb";
 export { Bubbles } from "./components/bubbles";
+export { DrillLayers } from "./components/drill-layers";
 export { FallbackPoints } from "./components/fallback-points";
 export { Legend } from "./components/legend";
 export type { LegendProps, LegendRenderContext } from "./components/legend";

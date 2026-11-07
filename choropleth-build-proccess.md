@@ -18,43 +18,38 @@
 
 ## Estado actual y handoff (leer primero)
 
-> Actualizada tras el **paso 31** (visual pendiente del humano; **sin commitear**; el 30 ya está commiteado). Rama `master`. **696 tests** en verde; `typecheck`, `lint`,
+> Actualizada tras el **paso 33** (visual confirmada por el humano; commiteado; 27-32 también). Rama `feat/choreography-and-breadcrumbs`. **752 tests** en verde; `typecheck`, `lint`,
 > `format:check`, `build` y `build-storybook` limpios. Cobertura de `src/core` 100 % líneas.
 
 ### Dónde estamos
 
-| Fase                   | Pasos  | Estado                                                                                                                                                                                                                                                                                                                                                              |
-| ---------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| v0.1                   | 1-13   | ✅                                                                                                                                                                                                                                                                                                                                                                  |
-| A · cimientos          | 14-22  | ✅ (revisión visual de «Foundations» pendiente del humano)                                                                                                                                                                                                                                                                                                          |
-| **B · cámara**         | 23-26  | ✅ código y tests. Revisión visual: el 24 la dio por buena el humano; **25 y 26 sin confirmar**                                                                                                                                                                                                                                                                     |
-| B · cámara             | **27** | ✅ (revisión visual confirmada por el humano)                                                                                                                                                                                                                                                                                                                       |
-| C · drill-down (v0.4)  | 28-34  | **28** ✅ reducer. **29** ✅ rebase. **30** ✅ estado (`useDrillDown`). **31** ✅ código y tests (`Hecho*`: visual pendiente) motor de niveles con cambio instantáneo. **32 ⏳ SIGUIENTE**: coreografía (reducer + vuelo a `R` + contexto gris + revelado + lateral). 33: breadcrumb + teclado + `aria-live`. 34: prefetch (`onDrillIntent`) + avisos de desarrollo |
-| D · pulido visual      | 35-38  | ⏳                                                                                                                                                                                                                                                                                                                                                                  |
-| Accesibilidad completa | —      | ⏳ **al final, por decisión del humano** (`dd.md §13`)                                                                                                                                                                                                                                                                                                              |
+| Fase                   | Pasos  | Estado                                                                                                                                                                                                                                                                                                                                                      |
+| ---------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| v0.1                   | 1-13   | ✅                                                                                                                                                                                                                                                                                                                                                          |
+| A · cimientos          | 14-22  | ✅ (revisión visual de «Foundations» pendiente del humano)                                                                                                                                                                                                                                                                                                  |
+| **B · cámara**         | 23-26  | ✅ código y tests. Revisión visual: el 24 la dio por buena el humano; **25 y 26 sin confirmar**                                                                                                                                                                                                                                                             |
+| B · cámara             | **27** | ✅ (revisión visual confirmada por el humano)                                                                                                                                                                                                                                                                                                               |
+| C · drill-down (v0.4)  | 28-33  | ✅ **28-33** commiteados y confirmados por el humano (el 32 con la capa saliente en color; el 33 tras corregir el bug del clic, ver 33.2 bis). Queda el cierre del drill, que es el paso 34                                                                                                                                                                 |
+| **MVP básico**         | 34-37  | **34 ⏳ SIGUIENTE** cierre del drill (`onDrillIntent`, handle `drillDown/Up/To`, avisos de desarrollo) · **35** theming mínimo · **36** leyenda `bar` + `Defs` con ids por instancia · **37** higiene de publicación (`useCamera`, `size-limit`, story de rendimiento, README, `Zoom/Cooperative`). Alcance y orden en «Plan hasta el MVP básico», al final |
+| Post-MVP               | —      | ⏳ motion ⭐, capas decorativas (`Labels`, `Marker`, `Sphere`, `Graticule`), tween de conteos, accesibilidad completa, exportación y lo aplazado del drill. Lista en «Post-MVP», al final                                                                                                                                                                   |
+| Accesibilidad completa | —      | ⏳ **al final, por decisión del humano** (`dd.md §13`); es post-MVP                                                                                                                                                                                                                                                                                         |
 
-### Qué leer para el paso 27 (no más)
+### Qué leer para el paso 34 (no más)
 
 1. `AGENTS.md` (reglas; **la primera: commit y push solo bajo petición explícita**).
-2. Este «Estado actual» y el **paso 26** del diario (estilo de la entrada y último código).
-3. `dd.md §11.1.3` (punto 2, resize sin salto), `§11.1.4` (inercia) y `§11.1.6` (contraescalado), líneas
-   ~1142-1345 de `coropleth-library.md`. `§21` tarea 14 resume el alcance.
-4. El código que se toca: `src/react/use-zoom.ts`, `src/core/camera.ts` (`inertiaOffset`, `preserveView`
-   ya existen y están probadas), `src/react/styles.css` (burbujas).
-
-**Alcance del 27** (ya hecho en `core`, falta conectarlo): `bubbleScaling: "sqrt" | "screen" | "geo"` con UNA
-variable CSS (`--cm-bubble-scale`: `1/√k`, `1/k` o `1`; el CSS aplica `transform: scale(...)` con
-`transform-box: fill-box`); inercia al soltar un arrastre (falta la **velocidad de suelta**: muestras de los
-últimos ≤ 100 ms, umbral 0,3 px/ms, `inertiaOffset`, se cancela con `pointerdown`); y **resize sin salto**
-(`preserveView` al cambiar el tamaño). Hoy: las burbujas **crecen** con el zoom y al redimensionar con zoom
-aplicado la vista se desplaza.
+2. Este «Estado actual», el **paso 33** (sobre todo **33.2 bis**: el bug del clic y la trampa de `pointer-events`) y el **paso 32** (la coreografía).
+3. `dd.md §11.2.2` (props `onDrillIntent`, handle), `§11.2.3` (fila del prefetch y la máquina de estados) y `§9.5` (el handle:
+   `drillDown`/`drillUp` devuelven `Promise<TransitionResult>`). `§21` tarea 20 resume el alcance.
+4. El código que se toca: `src/react/use-drill-engine.ts` (eventos y fase), `src/react/handle.ts` y `map-store.ts` (el handle consulta el store),
+   `src/react/use-drill-down.ts` (el controlador), `src/react/components/regions.tsx` (hover → intención).
+5. Para comprobar interacciones de ratón: `scripts/cdp-story.mjs` (Chrome real por CDP). **Un `click` en jsdom no demuestra nada** sobre `pointer-events`.
 
 ### Decisiones del humano que se desvían de `dd.md` (vigentes)
 
 - **Rueda:** `wheel` por defecto `"always"` (con el ratón encima, la rueda hace zoom); `"cooperative"` es opt-in.
 - **Controles de zoom:** opt-in (`zoom={{ controls: true }}`). El aviso de gesto solo sale en `cooperative`.
 - **España** se encuadra **con Canarias** (`DEFAULT_FOCUS_BOUNDS`); `focusBounds={{ ES: null }}` la quita.
-- **Accesibilidad al final**, no repartida (flechas, `role="img"` del `<svg>`, tabla alternativa, `aria-live`…).
+- **Accesibilidad al final**, no repartida (flechas, `role="img"` del `<svg>`, tabla alternativa, `aria-live`…). En el paso 33 se hizo lo estructural del breadcrumb (`<nav>`, `<ol>`, `aria-current`, `<button>`) y Escape/Retroceso; el anuncio `aria-live` del drill y `Enter` sobre una región enfocada quedan para esa fase.
 - **Errores y avisos de consola en inglés**, con prefijo `[choropleth]`. Documentación y comentarios, en español.
 - **`dimOthers` por defecto `"selection"`**. Chipre del Norte y Somalilandia quedan en gris sin id (Legal).
 - Se puede **romper la API** antes de 1.0, sin alias de compatibilidad.
@@ -77,6 +72,8 @@ aplicado la vista se desplaza.
   se pasa a algo que corre en el render). Si hace falta, registrar en el store desde un efecto.
 - **`pnpm test <ruta1> <ruta2>`** puede dar recuentos engañosos; para un solo archivo usar
   `pnpm vitest run <archivo>`.
+- **jsdom no ve `pointer-events` ni layout.** Un `click` disparado sobre el `<path>` siempre «funciona»; en un navegador el CSS puede desviarlo al `<svg>`
+  (paso 33.2 bis). Las interacciones de ratón se comprueban también con `scripts/cdp-story.mjs`.
 - **Hover/zoom no deben re-renderizar `Root`.** Se comprueba contando llamadas a `getId` (el join la llama una vez por
   fila en cada render). Cualquier cambio en `Root`, el hook o el store debe mantener esos tests en verde.
 
@@ -84,11 +81,12 @@ aplicado la vista se desplaza.
 
 1. Leer lo que gobierna el paso → diseñar → `core` puro con tests **antes** que React → componentes → story.
 2. **Comprobar que los tests sirven con mutaciones a mano** (romper una línea clave, ver que algún test falla,
-   revertir). Ya ha cazado errores propios.
+   revertir). Ya ha cazado errores propios. **Comprobar que la mutación se aplicó** (`assert mutado != original`):
+   Prettier reformatea líneas y un `replace` que no encuentra nada da un falso «sobrevive».
 3. Documentar el paso en el diario con la estructura de siempre: qué, por qué, orden interno, decisiones y
    desviaciones respecto a `dd.md`, tests, verificación visual **pendiente del humano**, preguntas de comprobación.
-4. **No hay navegador en la sesión del agente**: lo visual (Storybook) lo revisa el humano. Un paso con efecto visible
-   se marca `✅ Hecho*` hasta que lo confirma.
+4. **El agente PUEDE manejar un Chrome real** (`scripts/cdp-story.mjs`, por CDP, sin dependencias; hace falta Chrome instalado) para comprobar
+   interacciones y leer el DOM; lo que sigue sin poder hacer es _juzgar_ cómo se ve. Un paso con efecto visible se marca `✅ Hecho*` hasta que el humano lo confirma.
 5. Ante una duda de diseño que `dd.md §21` marca como «preguntar al humano», **preguntar**, no suponer.
 6. Ver `git status` antes de empezar y **no commitear sin que lo pida**.
 
@@ -102,10 +100,12 @@ aplicado la vista se desplaza.
 
 ### Prompt de arranque para una sesión nueva
 
-> Lee `AGENTS.md` y la sección «Estado actual y handoff» de `choropleth-build-proccess.md`, y el paso 26 de ese
-> diario. Sigue con el **paso 27** (contraescalado de burbujas, inercia y resize sin salto), leyendo solo
-> `coropleth-library.md` §11.1.3 (punto 2), §11.1.4 y §11.1.6 y el código que se toca. Un paso cada vez; no
-> commitees ni hagas push sin que te lo pida; la revisión visual la hago yo.
+> Lee `AGENTS.md` y la sección «Estado actual y handoff» de `choropleth-build-proccess.md`, y los pasos 32 y 33 de ese
+> diario. Sigue con el **paso 34** (cierre del drill: `onDrillIntent`, `drillDown`/`drillUp`/`drillTo` en el handle y
+> avisos de desarrollo), leyendo solo `coropleth-library.md` §11.2.2, §11.2.3 y §9.5 y el código que se toca. Después
+> vienen 35, 36 y 37 (ver «Plan hasta el MVP básico», al final del diario). Un paso cada vez; no commitees ni hagas
+> push sin que te lo pida; la revisión visual la hago yo, pero puedes comprobar interacciones en Chrome real con
+> `scripts/cdp-story.mjs`.
 
 ## Índice de pasos
 
@@ -142,16 +142,36 @@ aplicado la vista se desplaza.
 
 **Fase B, cámara (v0.3)**: zoom y pan (tareas 10-14 de `dd.md §21`).
 
-| Paso | Título                                                                                                   | Estado       |
-| ---- | -------------------------------------------------------------------------------------------------------- | ------------ |
-| 23   | `core/camera.ts` y `boundsToTransform`: la matemática de la cámara, solo con tests                       | ✅ Hecho     |
-| 24   | `use-zoom.ts` + `Viewport`: `d3-zoom` escribe el transform en el DOM; rueda cooperativa, clic ≠ arrastre | ✅ Hecho\*   |
-| 25   | `ZoomControls`, `GestureHint` y teclado de zoom                                                          | ✅ Hecho\*   |
-| 26   | Vuelos: `focusId`, handle `zoomTo` / `zoomBy` / `resetView` con `Promise`, reduced-motion                | ✅ Hecho\*   |
-| 27   | Contraescalado de burbujas, inercia y resize sin salto                                                   | ⏳ Pendiente |
+| Paso | Título                                                                                                   | Estado     |
+| ---- | -------------------------------------------------------------------------------------------------------- | ---------- |
+| 23   | `core/camera.ts` y `boundsToTransform`: la matemática de la cámara, solo con tests                       | ✅ Hecho   |
+| 24   | `use-zoom.ts` + `Viewport`: `d3-zoom` escribe el transform en el DOM; rueda cooperativa, clic ≠ arrastre | ✅ Hecho\* |
+| 25   | `ZoomControls`, `GestureHint` y teclado de zoom                                                          | ✅ Hecho\* |
+| 26   | Vuelos: `focusId`, handle `zoomTo` / `zoomBy` / `resetView` con `Promise`, reduced-motion                | ✅ Hecho\* |
+| 27   | Contraescalado de burbujas, inercia y resize sin salto                                                   | ✅ Hecho   |
 
-**Fase C, drill-down (v0.4)** · **Fase D, pulido visual (v0.5)**: pasos 28-37, en el orden exacto de las
-tareas 15-24 de `dd.md §21`. Cada uno se añade a esta tabla al empezarlo.
+**Fase C, drill-down (v0.4)** (tareas 15-20 de `dd.md §21`):
+
+| Paso | Título                                                                                          | Estado   |
+| ---- | ----------------------------------------------------------------------------------------------- | -------- |
+| 28   | `core/drill.ts`: la máquina de estados (reducer puro) de la coreografía                         | ✅ Hecho |
+| 29   | `rebaseProjection` y `relativeTransform`: continuidad al cambiar de proyección                  | ✅ Hecho |
+| 30   | `useDrillDown`, `defineDrillLevels`, caché LRU: el estado de navegación                         | ✅ Hecho |
+| 31   | La prop `drill` en el mapa: motor de niveles, cadena de proyecciones, `data` como selector      | ✅ Hecho |
+| 32   | Coreografía: vuelo a `R`, contexto gris, revelado, subir y lateral                              | ✅ Hecho |
+| 33   | Breadcrumb, Escape/Retroceso, pista del tooltip (+ el bug del clic en navegador real, 33.2 bis) | ✅ Hecho |
+
+**MVP básico** (plan acordado; alcance en «Plan hasta el MVP básico», al final del diario):
+
+| Paso | Título                                                                                                       | Estado       |
+| ---- | ------------------------------------------------------------------------------------------------------------ | ------------ |
+| 34   | Cierre del drill: `onDrillIntent`, handle `drillDown`/`drillUp`/`drillTo`, avisos de desarrollo (¿+ táctil?) | ⏳ Siguiente |
+| 35   | Theming mínimo: `theme`, `themeToCssVars`, `classNames`, contrato `data-*`                                   | ⏳ Pendiente |
+| 36   | Leyenda `bar` + resaltado, y `Defs` con ids por instancia                                                    | ⏳ Pendiente |
+| 37   | Higiene de publicación: `useCamera`, `size-limit`, story de rendimiento, README, `Zoom/Cooperative`          | ⏳ Pendiente |
+
+**Post-MVP:** motion ⭐, capas decorativas (`Labels`, `Marker`, `Sphere`, `Graticule`), tween de conteos, accesibilidad completa, exportación y
+lo aplazado del drill (ver «Post-MVP», al final del diario). Cada paso se detalla en su propia entrada al empezarlo.
 
 ---
 
@@ -2782,3 +2802,249 @@ from canDrill for it.`): `onDrillError({ error, ctx })` (o `console.error` en in
 - ¿Por qué un nivel `"inherit"` tiene la clave de caché de su padre, y qué dibuja?
 - ¿Por qué la cámara se reinicia con `useLayoutEffect` y no con `useEffect`?
 - ¿Por qué la caché de geometrías es por mapa y no global?
+
+# Paso 32: la coreografía del drill-down (vuelo a `R`, contexto gris, revelado, subir y lateral)
+
+Archivos nuevos: `src/react/use-drill-choreography.ts`, `components/drill-layers.tsx`, `drill-choreography.test.tsx`. Tocan:
+`use-drill-engine.ts` (reescrito sobre `drillReducer`), `use-choropleth.ts`, `use-zoom.ts` + `map-store.ts` (`flyTo`), `drill-levels.ts`
+(`sourceDepth`), `regions.tsx`, `root.tsx`, `svg.tsx`, `styles.css`, `stories/drill-down.stories.tsx`. Tareas 17 (resto) y 18 de `dd.md §21`. **Sin commitear.**
+
+## 32.1 Qué se hizo
+
+Antes (paso 31) el nivel nuevo aparecía de golpe. Ahora la secuencia de `dd.md §11.2.3` se ejecuta de verdad, gobernada por el reducer del paso 28:
+
+| Momento                    | Qué ocurre                                                                                                                                                                    |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Clic (0 ms)                | La ruta cambia ya (optimista) y se avisa `onDrill`. El resto del mapa se atenúa (`opacity .35`); la región elegida conserva su color.                                         |
+| 350-1200 ms                | La cámara **vuela a `R`** (la afín entre la proyección del nivel y la del destino). La geometría y los datos del hijo cargan en paralelo.                                     |
+| Fin del vuelo + hijo listo | **Rebase**: se cambia a la proyección hija con cámara identidad, **los mismos píxeles**. El padre pasa a capa de contexto en gris. Fase `revealing`.                          |
+| Revelado (≤ 450 ms)        | Las regiones nuevas entran con fundido de 200 ms, escalonadas por la distancia al centro («explosión», `--cm-wave`). Al acabar: reposo + `onDrillEnd`.                        |
+| Si la carga tarda          | Fase `loading`: el nivel viejo se mantiene y la región elegida «respira» (opacidad .55 ↔ 1). Nunca un spinner a pantalla completa.                                            |
+| Si falla (o 0 regiones)    | Espera al fin del vuelo, **vuela de vuelta** a la cámara de antes y avisa `onDrillError` una vez. El controlador recupera la ruta anterior.                                   |
+| Subir                      | El nivel de arriba vuelve **al instante** con sus colores; el hijo sale desvaneciéndose; la cámara arranca en `R` (lo que se veía) y vuela a **la cámara de antes de bajar**. |
+| Lateral (clic en contexto) | Un vuelo en el espacio actual al hermano, rebase, revelado. Las regiones navegables del contexto tienen cursor `zoom-in` y se pueden pulsar.                                  |
+
+## 32.2 Cómo encaja
+
+```
+ useDrillEngine ── eventos ──► drillReducer (core, puro) ◄── FLIGHT_END / REVEAL_END ── useDrillChoreography
+   (carga, listo/error, ruta)        │  phase · layers · savedCameras · returnCamera          (necesita tamaño y proyecciones)
+                                     ▼
+                 shownPath = phase === "revealing" ? path : settledPath
+                                     ▼
+        useChoropleth: proyección del nivel mostrado + capas context/exiting (rutas cacheadas + transform R)
+```
+
+- **`R` es exacta.** `flyTo(camera)` (nuevo en `ZoomApi`) va por `behavior.transform`, que **no** aplica `constrain`: si se aplicara, una región
+  junto al borde del mundo acabaría el vuelo desplazada y el rebase se vería como un salto.
+- **Capas sin recálculo.** La capa de contexto reutiliza las rutas del nivel superior (`geoPath(proj_k)`) dentro de un `<g transform="R">`;
+  `R = relativeTransform(proj_k, proj_activa)`, válido entre cualquier par de la cadena. El contorno de la región en que se entró se quita
+  (`data-focus`) para no ver doble borde bajo sus hijas.
+- **Subir = cambiar de proyección sin que se note.** Se pasa a la proyección del padre con la cámara `R(padre → hijo)`, que pinta lo mismo que
+  antes, y desde ahí se vuela a la cámara guardada al bajar (`savedCameras`, del reducer).
+- **Qué espera y qué no.** Bajar y lateral empiezan YA (el vuelo y la carga van en paralelo). Subir y saltar esperan a tener geometría **y datos**
+  del destino (suele ser inmediato); si no, un padre sin datos se pintaría gris. Volver al origen mientras se baja cancela al instante.
+- **El controlador manda sobre la ruta.** Si la máquina deshace una bajada (error, gesto que corta el vuelo), el motor llama a
+  `controller.drillTo(machine.path)` para que `useDrillDown` y el `onPathChange` del consumidor se enteren.
+
+## 32.3 Decisiones y desviaciones respecto a `dd.md`
+
+- **Contexto en gris, sin color de dato** (decisión del humano, ya vigente en el diario y en `dd.md §11.2.5`).
+- **La capa que sale se desvanece CON su color** (decisión del humano: un estado extra y un render no son un problema de rendimiento). Tras cada
+  commit se anotan los `fill` de lo que se muestra (`rememberFills`); al cambiar de nivel pasan a `previous.fills` y la capa `exiting` los pinta en
+  línea. El contexto, en cambio, sigue en gris.
+- **Sin tooltip en las regiones de contexto** (la spec pide «tooltip con nombre y pista»): solo resalte y cursor. Se hará con el tooltip de drill (paso 33-34).
+- **`lateral` es por la capa de contexto.** Al pulsar un hermano de un nivel superior que no es el inmediato, `classifyDrill` lo trata como `jump`
+  (sin vuelo). Es coherente con el reducer.
+- **El revelado escalonado parte del centro de la vista**, donde queda la región elegida tras el rebase, no del punto exacto del clic.
+- **`reducir movimiento`:** el vuelo ya es un fundido (paso 26), el revelado dura 0 ms y la capa saliente no se pinta. Todo por CSS + `prefersReducedMotion()`.
+- **Un fallo latente corregido al reescribir:** la clave de caché de la geometría se calculaba con la ruta _destino_ también para la ruta _mostrada_;
+  habría fallado al subir y en lateral. Ahora `keyAt(depth, path)` recibe la ruta.
+- **Otro: el error de «0 regiones»** se construía en cada render, así que se avisaba varias veces; ahora se memoiza por destino.
+
+## 32.4 Tests
+
+719 en verde (696 + 23 nuevos de coreografía); `typecheck`, `lint`, `format:check`, `build`, `build-storybook` limpios.
+
+- **`drill-choreography.test.tsx` (23, con vuelos REALES de d3, temporizadores reales):** orden de fases (vuelo → revelado → reposo), el nivel viejo no se
+  sustituye a mitad, atenuación (`data-drill-target`), `--cm-wave`, **el rebase no se nota** (la cámara con la que acaba el vuelo == el `transform` de la
+  capa de contexto), contexto gris (sin `style` de dato, `data-focus`, `context: "none"`, `"inherit"` no duplica), subir (colores de vuelta, capa saliente,
+  cámara de arranque `R` y no el encaje, termina en reposo, **vuelve a la cámara exacta de antes**, espera a los datos), lateral (vuelo, contexto que
+  sigue, no navegables), carga lenta (`loading` + respiración), fallo (vuelta atrás y un solo aviso), interrupción por gesto, redirección, subir antes de
+  llegar, `onDrill`/`onDrillEnd`, sin zoom, reducir movimiento.
+- **`drill.test.tsx` (40):** adaptado. Los vuelos de d3 **no avanzan con los temporizadores falsos de Vitest** (su reloj de fotogramas usa el
+  `requestAnimationFrame` real, enlazado al cargar el módulo), así que ahí se simula «reducir movimiento» (vuelo = salto, revelado 0 ms) y `until()`
+  avanza el reloj; la coreografía real se prueba aparte.
+- **Mutaciones (todas rompen tests; cada una comprobada como aplicada):** vuelo a `FIT` en vez de `R`; subir sin cámara guardada; sin `REVEAL_END` (14 fallan);
+  entrada al subir con el encaje; sin foco de drill; sin devolver la ruta al controlador; **subir sin esperar a estar listo** (la primera vez sobrevivió:
+  faltaba un test de «el padre sin datos», añadido).
+
+## 32.5 Verificación visual: pendiente de ti \*
+
+`pnpm storybook` → **DrillDown / Engine → Uncontrolled** (hay un botón «← Subir»; Escape y breadcrumb llegan en el 33):
+
+| Qué comprobar                                                                                                                                                                    |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Clic en un país con tiendas: el resto del mapa **se atenúa**, la cámara **vuela** (se aleja, viaja, se acerca) y al llegar **no hay ningún salto** al aparecer las tiendas.      |
+| Las tiendas **entran en abanico** desde el centro (no todas a la vez). El resto de países queda en **gris** y los 12 con tiendas tienen cursor `zoom-in`.                        |
+| Pulsa otro país del contexto: vuelo **lateral** directo, sin pasar por el mundo.                                                                                                 |
+| «← Subir»: el mundo **vuelve con sus colores** al instante, el país se desvanece y la cámara vuela a donde estabas (si habías hecho zoom antes de bajar, **vuelve a ese zoom**). |
+| Agarra el mapa a mitad de un vuelo de bajada: **se cancela** y vuelves al mundo (no sigue contra la mano). Un segundo clic a mitad de vuelo **redirige**.                        |
+| Con el sistema en «reducir movimiento»: sin vuelo ni abanico; el nivel aparece con un fundido corto.                                                                             |
+| **ControlledUrl**: igual, con `?path=` y la espera de datos (el nivel viejo se mantiene). **Errors**: España falla y Francia viene vacía → vuelo de vuelta y mensaje en el log.  |
+
+## 32.6 Antes de pasar al paso 33: ¿lo tienes claro?
+
+- ¿Por qué el vuelo termina en `R` y no en `boundsToTransform`, y por qué `flyTo` no aplica `constrain`?
+- ¿Qué cámara hay al empezar a subir y por qué no es el encaje?
+- ¿Por qué bajar empieza ya pero subir espera a tener los datos?
+- ¿Qué pasa con la ruta del controlador si un gesto corta el vuelo de bajada? ¿Quién la deshace?
+- ¿Por qué las capas de contexto no recalculan rutas?
+
+## 32.7 Pregunta abierta
+
+Resuelta: la capa que sale conserva su color (ver 32.3).
+
+# Paso 33: breadcrumb, teclado del drill y pista del tooltip
+
+Archivos nuevos: `src/react/components/breadcrumb.tsx`, `drill-nav.test.tsx`. Tocan: `core/labels.ts`, `use-choropleth.ts` (`drillNav`), `components/svg.tsx`,
+`tooltip.tsx`, `choropleth-map.tsx`, `choropleth.ts`, `index.ts`, `styles.css`, `stories/drill-down.stories.tsx`. Primera mitad de la tarea 19 de `dd.md §21`.
+Además, en este mismo paso se cerró la pregunta abierta del 32: **la capa que sale conserva su color** (`rememberFills`). **Sin commitear.**
+
+## 33.1 Qué se hizo
+
+| Pieza                     | Comportamiento                                                                                                                                                                                      |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `<Choropleth.Breadcrumb>` | `<nav aria-label>` + `<ol>`; raíz con la `label` del primer nivel (o `labels.breadcrumbRoot`); la última miga es `aria-current="page"`; «←» si se puede subir. Cada miga anterior sube a ese nivel. |
+| Render prop               | `{({ items, canDrillUp, drillTo, drillUp }) => …}` para pintarlo con tu sistema de diseño.                                                                                                          |
+| Nombres de las migas      | El `properties.name` real de la región (se busca en el nivel de arriba, ya cargado); el `getLabel` del consumidor manda; si no hay nombre, el id.                                                   |
+| Preset                    | `ChoroplethMap` con `drill` lo incluye arriba a la izquierda; `breadcrumb={false}` lo quita, `breadcrumb={{ position }}` lo mueve.                                                                  |
+| Teclado                   | Con el `<svg>` enfocado, **Escape** y **Retroceso** suben un nivel. Ignoran Ctrl/⌘/Alt. En la raíz no hacen nada y **no cancelan** la tecla.                                                        |
+| Pista del tooltip         | Pie «Click to see regions» (`labels.drillHint`) solo si la región es navegable. Con `renderTooltip` propio no se añade nada: recibes `drillable` y decides.                                         |
+| `labels`                  | `breadcrumb`, `breadcrumbRoot`, `drillUp`, `drillHint` (en y es).                                                                                                                                   |
+
+## 33.2 Decisiones
+
+- **Las migas reflejan la ruta PEDIDA**, no la mostrada: en cuanto haces clic ya está la miga nueva (mientras vuela la cámara). Es lo que se espera de un
+  breadcrumb optimista y coincide con `controller.path`.
+- **Lo estructural de la accesibilidad sí; el resto al final.** Por decisión del humano la accesibilidad completa va al final. Aquí solo lo que sale gratis
+  de hacerlo bien (HTML semántico, `aria-current`, botones reales, el separador `›` por CSS para que no lo lea un lector). **Queda para esa fase:** el
+  anuncio `aria-live` («España, 17 regiones»), `Enter` sobre una región enfocada (exige navegar regiones con flechas) y la navegación completa por teclado.
+- **El teclado del drill es independiente del de zoom.** Con `zoom={{ keyboard: false }}` o `zoom={false}` Escape sigue funcionando (el `<svg>` es enfocable
+  si hay `drill`). Sin `drill` y sin teclado de zoom, no se añade un tab stop vacío (un test lo vigila).
+- **Retroceso sube**, pero solo si `canDrillUp` (si no, no se cancela y el navegador hace lo suyo).
+- **Sin tooltip en el contexto ni modo táctil de dos toques todavía** (pendientes, ver abajo).
+
+## 33.2 bis · Bug encontrado en la revisión visual: el clic no llegaba a las regiones
+
+**Síntoma (lo vio el humano en Storybook, dos veces):** con la pista «Click to see regions» y el cursor `zoom-in` visibles, ni un clic ni un doble clic
+bajaban de nivel. La primera vez (el doble clic parecía «solo hacer zoom») diagnostiqué mal; la segunda («no pasa nada») obligó a mirar en un
+navegador de verdad.
+
+**Causa principal (anterior al drill, desde el paso 24):** d3-zoom emite `start` en el `mousedown`, y `use-zoom` marcaba `interacting: true` ahí. El CSS
+pone `pointer-events: none` en las regiones mientras `data-interacting` está activo (para que no haya hover durante un arrastre). Resultado: el `mouseup`
+aterrizaba en el `<svg>` y el navegador mandaba el `click` al `<svg>`, **no a la región**. La secuencia medida en Chrome era
+`pointerdown:ES → mousedown:ES → pointerup:svg → click:svg`. **Ningún clic sobre una región funcionaba en un navegador real**, ni el de drill ni el de
+selección. En jsdom no se ve: sus tests disparan `click` directamente sobre el `<path>` y no hay `pointer-events` ni layout.
+
+**Causas secundarias (también reales, descubiertas por el camino):**
+
+1. `doubleClick: "auto"` no contaba el drill como «el clic ya hace algo» → un doble clic acababa en zoom ×2 (`dd.md §11.1.2` ya pedía desactivarlo).
+2. d3-zoom interrumpe cualquier vuelo en el `mousedown`; el segundo clic de un doble clic cancelaba y reiniciaba el drill (`onDrill`: `down, up, down`).
+
+**Arreglos:**
+
+- `interacting` ya no se marca en el `mousedown`: se marca en cuanto el gesto se **mueve de verdad** (> 4 px, el `clickDistance`), o hay rueda o cambio de
+  `k`. Un clic (con o sin temblor) nunca lo marca. Se guarda el estado del gesto (`gesture`) en `start` y se decide en `zoom`.
+- `clickIsBusy` incluye `engine.active` → con `drill` el doble clic ya no hace zoom ×2.
+- El filtro de d3-zoom ignora `mousedown`/`touchstart` sobre la región **a la que se vuela** (`isPressOnDrillTarget`); rueda, arrastre en otro sitio o pulsar
+  otra región siguen cortando el vuelo. Matiz aceptado: no se puede empezar un arrastre justo encima del destino durante el vuelo.
+
+**Verificado en Chrome real** (script nuevo `scripts/cdp-story.mjs`, ver abajo): un clic → `pointerup:ES, click:ES`, fases `flying → revealing → idle`, miga
+«World › Spain», 11 burbujas, cámara `k = 1`; doble clic → acaba en el nivel de tiendas; `ControlledUrl` igual; **Escape** vuelve al mundo con la cámara de antes;
+**arrastrar** hace pan (`data-interacting` durante el arrastre, fuera al soltar).
+
+**Tests:** el test de `zoom.test.tsx` que afirmaba `data-interacting` nada más pulsar fijaba justo el comportamiento erróneo; se reescribió (pulsar no lo marca;
+3 px de temblor tampoco; un arrastre de verdad sí; la rueda sí) y se añadieron 4 de clic/doble clic en `drill-choreography.test.tsx`.
+
+**Lección:** una verificación de interacción hecha solo en jsdom da falsos positivos cuando el CSS toca `pointer-events`. **Toda interacción de ratón se
+comprueba también en un Chrome real** con `scripts/cdp-story.mjs`.
+
+## 33.3 Tests
+
+745 en verde (719 + 1 de colores de la capa saliente + 25 nuevos); `typecheck`, `lint`, `format:check`, `build`, `build-storybook` limpios.
+
+- **`drill-nav.test.tsx` (25):** raíz (nav, `aria-label`, sin «←»), `label` del primer nivel, nombre real al bajar y miga actual, miga optimista, subir por miga
+  (3 niveles) y por «←», `getLabel` manda, i18n, render prop, sin `drill`, `position`; preset (incluido, `false`, `position`, sin `drill`); teclado (Escape, Retroceso
+  con `preventDefault`, raíz sin cancelar, modificadores, con teclado de zoom desactivado y `zoom={false}`, `+` sigue funcionando, sin tab stop vacío); tooltip
+  (promete solo si navegable, `canDrill: false`, último nivel, i18n, render prop).
+- **Mutaciones (todas rompen tests, comprobadas como aplicadas):** Escape no sube; Retroceso no sube; sin comprobar modificadores; `tabindex` solo con zoom; pista
+  siempre; miga sin `aria-current`; la miga no sube; miga sin nombre de región; capa saliente sin color.
+
+## 33.4 Verificación visual: confirmada por el humano
+
+`pnpm storybook` → **DrillDown / Engine → Uncontrolled** (ahora es literalmente `drill={levels}`):
+
+| Qué comprobar                                                                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Migas arriba a la izquierda: «World». Al bajar a un país: «World › Spain» (nombre real); la miga aparece **en el clic**, no al terminar el vuelo. |
+| Pulsar «World» o «←» sube; **Escape** y **Retroceso** (con el mapa enfocado: haz clic y pulsa Tab, o Tab hasta él) también.                       |
+| Al subir, la capa que sale **se desvanece con su color** (no en gris).                                                                            |
+| Tooltip de un país con tiendas: «Click to see regions» al pie; en un país sin tiendas, no.                                                        |
+| `ControlledUrl`: las migas siguen la ruta del «URL»; los botones propios y las migas conviven.                                                    |
+
+## 33.5 Antes de pasar al paso 34: ¿lo tienes claro?
+
+- ¿Por qué las migas leen la ruta pedida y no la mostrada?
+- ¿Por qué el teclado del drill no depende de `zoom.keyboard`?
+- ¿Por qué Retroceso/Escape en la raíz no llaman a `preventDefault`?
+- ¿De dónde sale el nombre de una miga y por qué se busca en el nivel de arriba?
+- ¿Qué parte de la accesibilidad del drill se hizo ya y cuál se aplazó, y por qué?
+
+# Plan hasta el MVP básico (pasos 34-37) y post-MVP
+
+> Orden acordado con el humano (tras el paso 33). El criterio: primero lo que falta de la fase C (`dd.md §17`, «v0.4 Navegación entre niveles»),
+> después lo mínimo del pulido de v0.5 que un consumidor necesita para adoptar la librería, y por último la higiene para poder dársela a alguien.
+> Un paso cada vez; cada uno con su entrada en el diario.
+
+## MVP básico
+
+| Paso   | Título                     | Alcance                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Fuente (`dd.md`)                                         |
+| ------ | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| **34** | **Cierre del drill**       | `onDrillIntent` (hover sostenido 150 ms o foco → el consumidor precarga datos; la geometría hija se precarga en la caché del motor). `drillDown(id)`, `drillUp(steps)` y `drillTo(path)` en el **handle** (`ref` y `useChoroplethApi`), con `Promise<TransitionResult>` que resuelve al volver a reposo (`completed: false` si se cancela). **Avisos de desarrollo** del drill en inglés: id que no existe en el nivel, `drillTo` a una región con `canDrill: false`, datos de otro nivel sobre la geometría actual, `getFeatureId` que no cruza. | §11.2.2, §11.2.3 (fila del prefetch), §9.5, §21 tarea 20 |
+| **35** | **Theming mínimo**         | `theme` (objeto + `light` / `dark` / `minimal` / `contrast`), `defineTheme`, `themeToCssVars`, prop `classNames` y el contrato `data-*` documentado, `getRegionStyle`. Story `Styling/Themes` (los cuatro lado a lado + uno propio) y `Styling/Tailwind-like`.                                                                                                                                                                                                                                                                                    | §12 (estilado), §21 tarea 21                             |
+| **36** | **Leyenda `bar` y `Defs`** | `Defs` con ids únicos por instancia (`useId`): **dos mapas en la misma página no comparten tramas ni filtros** (criterio global sin cubrir). Variante `bar` de la leyenda y resaltado por `data-highlight-class` (pasar el ratón por un tramo atenúa el resto).                                                                                                                                                                                                                                                                                   | §12, §21 tarea 22 (sin el tween de conteos)              |
+| **37** | **Higiene de publicación** | `useCamera(selector)` (§11.1.7). **`size-limit`** con presupuesto < 50 KB gzip, anotado en el diario. Story `Performance/AdminLevel` (miles de regiones + 1.000 burbujas) con **Profiler** y tests de «hover/zoom/pan no re-renderizan `Root`». `README` con el ejemplo de 10 líneas, instalación y enlace al glosario. Story `Zoom/Cooperative` completa (aviso Ctrl/⌘, pinch, inercia, controles).                                                                                                                                              | §11.1.7, §14.2, §21 criterios globales                   |
+
+**Qué significa «MVP básico cerrado»:** v0.4 completo y revisado; un consumidor puede cambiar el aspecto sin tocar el CSS interno; dos mapas conviven en una página;
+el peso está medido y dentro del presupuesto; hay README y las stories obligatorias de zoom, drill, estilado y rendimiento.
+
+### Decisiones pendientes del humano (antes de empezar el paso indicado)
+
+- **Paso 34 · táctil:** ¿entra el modo de dos toques del drill (primer toque = vista previa con tooltip, segundo = bajar; `labels.tapAgainHint`)? Es lo único
+  del drill aplazado que importa si el mapa va a móvil. Recomendación: **sí, dentro del 34** (es una pieza pequeña sobre el `hovered` del store).
+- **Capas `Labels` (nombres de países):** ¿entran en el MVP? Son lo que más se echa en falta en un mapa, pero llevan anti-colisión y halo. Recomendación: **fuera
+  del MVP** (primera pieza post-MVP).
+
+## Post-MVP
+
+Ordenado por valor aproximado; ninguno bloquea el MVP.
+
+| Bloque                           | Contenido                                                                                                                                                                                                                                                                                                                    | Cuándo (`dd.md §17`) |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| **Capas decorativas**            | `Labels` (anti-colisión + halo, visibilidad por `data-zoom-bucket`), `Marker` (HTML que sigue al mapa), `Sphere`, `Graticule`. Tarea 24.                                                                                                                                                                                     | v0.5                 |
+| **Motion ⭐**                    | Tokens, `use-motion`, prop `animation`, catálogo §12.4.4 (ola, entrada escalonada, explosión, selección que se dibuja, burbujas pop/FLIP, tooltip líquido, lift). Stories `Motion/Showcase` y `Motion/ReducedMotion`. Decidir antes si `hoverEffect: "lift"` y `animation.reveal: "stagger"` son default u opt-in. Tarea 23. | v0.5                 |
+| **Leyenda (resto)**              | Tween de los conteos de la leyenda al cambiar de nivel o de indicador.                                                                                                                                                                                                                                                       | v0.5                 |
+| **Accesibilidad completa**       | `role`/`aria` del `<svg>`, `DataTable` (tabla alternativa), navegación espacial por **flechas** entre regiones, `Enter` sobre una región enfocada, **`aria-live`** (anuncios de drill y de selección), foco visible en capas. Por decisión del humano, al final.                                                             | v0.6                 |
+| **Exportación y calidad**        | `toSVGString` / `toPNG` en el handle, pruebas visuales con Playwright.                                                                                                                                                                                                                                                       | v0.6                 |
+| **Drill: lo aplazado**           | Tooltip y hover en el **contexto**; `projection` **distinta por nivel** (fundido de 250 ms, no es afín); `skipSingleChild`; `exitLevelOnZoomOut`; zoom semántico automático; **permitir arrastrar sobre la región de destino durante el vuelo** (hoy el filtro ignora esa pulsación).                                        | v0.5+                |
+| **Zoom: extras**                 | LOD por zoom (geometría de más detalle al acercar, con fundido de 150 ms).                                                                                                                                                                                                                                                   | v0.5+                |
+| **Producción y v1.0**            | Docs y Storybook públicos, changesets, **revisión legal de geodatos y fronteras disputadas**, inventario de licencias, licencia (MIT/Apache-2.0, a confirmar con OSPO).                                                                                                                                                      | v0.6 / v1.0          |
+| **Futuro**                       | Globo (`geoOrthographic`), `heatmap` (Canvas), clustering (`supercluster`), API vanilla, small multiples, `useTimeline`.                                                                                                                                                                                                     | —                    |
+| **Preguntas abiertas heredadas** | Ancla de las burbujas de Rusia (¿prueba específica?); aviso de `scroll-jacking` con `wheel: "always"` (¿aviso en desarrollo o solo documentación?); fronteras disputadas y política de Chipre del Norte / Somalilandia (Legal, no técnica).                                                                                  | —                    |
+
+**Deuda técnica conocida (no es una feature):**
+
+- La suite tarda más de 120 s (hay ~28 tests con vuelos reales de d3, que no avanzan con los temporizadores falsos de Vitest). Lanzar `pnpm test` en
+  segundo plano. Si molesta, valorar un `vitest` aparte para los tests de coreografía real.
+- `scripts/cdp-story.mjs` no está enlazado a `package.json` ni forma parte de CI; es una herramienta de comprobación manual.

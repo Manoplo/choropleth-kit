@@ -16,6 +16,11 @@ export type ChoroplethLabels = {
   gestureHintWheel: string;
   gestureHintWheelMac: string;
   gestureHintTouch: string;
+  /** Drill-down: `aria-label` del `<nav>` de las migas, su raíz (si el primer nivel no tiene `label`), el botón «←» y la pista del tooltip. */
+  breadcrumb: string;
+  breadcrumbRoot: string;
+  drillUp: string;
+  drillHint: string;
 };
 
 export const en: ChoroplethLabels = {
@@ -27,6 +32,10 @@ export const en: ChoroplethLabels = {
   gestureHintWheel: "Use Ctrl + scroll to zoom",
   gestureHintWheelMac: "Use ⌘ + scroll to zoom",
   gestureHintTouch: "Use two fingers to move the map",
+  breadcrumb: "Breadcrumb",
+  breadcrumbRoot: "All",
+  drillUp: "Up one level",
+  drillHint: "Click to see regions",
 };
 
 export const es: ChoroplethLabels = {
@@ -38,6 +47,10 @@ export const es: ChoroplethLabels = {
   gestureHintWheel: "Usa Ctrl + rueda para hacer zoom",
   gestureHintWheelMac: "Usa ⌘ + rueda para hacer zoom",
   gestureHintTouch: "Usa dos dedos para mover el mapa",
+  breadcrumb: "Ruta de navegación",
+  breadcrumbRoot: "Todo",
+  drillUp: "Subir un nivel",
+  drillHint: "Clic para ver regiones",
 };
 
 /** Completa los textos que falte con los de inglés. */

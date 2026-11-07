@@ -2,6 +2,7 @@ import { useRef, type KeyboardEvent, type ReactNode } from "react";
 import { useChoroplethContext } from "../choropleth-context";
 import { Borders } from "./borders";
 import { Bubbles } from "./bubbles";
+import { DrillLayers } from "./drill-layers";
 import { FallbackPoints } from "./fallback-points";
 import { Regions } from "./regions";
 import { Selection } from "./selection";
@@ -75,8 +76,22 @@ export const Svg = ({ children, className, ariaLabel }: SvgProps) => {
   }
 
   // Atajos de teclado con el mapa enfocado. `tabIndex` solo si hay atajos: no se añade un tab stop vacío.
-  const keyboard = zoom !== null && zoom.keyboard;
+  // El teclado del drill (Escape / Retroceso suben) es independiente del de zoom.
+  const { drillNav } = choropleth;
+  const keyboard = (zoom !== null && zoom.keyboard) || drillNav !== null;
   const handleKeyDown = (event: KeyboardEvent<SVGSVGElement>) => {
+    if (
+      drillNav?.canDrillUp === true &&
+      (event.key === "Escape" || event.key === "Backspace") &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey
+    ) {
+      event.preventDefault();
+      drillNav.drillUp();
+      return;
+    }
+    if (zoom === null || !zoom.keyboard) return;
     const action = zoomKeyAction(event);
     if (action === null) return;
     event.preventDefault();
@@ -98,11 +113,13 @@ export const Svg = ({ children, className, ariaLabel }: SvgProps) => {
     >
       {children ?? (
         <Viewport>
+          <DrillLayers role="context" />
           <Regions />
           <Borders />
           <Bubbles />
           <FallbackPoints />
           <Selection />
+          <DrillLayers role="exiting" />
         </Viewport>
       )}
     </svg>
