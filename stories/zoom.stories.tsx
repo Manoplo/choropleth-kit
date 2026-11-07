@@ -1,4 +1,4 @@
-// Fase B (v0.3), paso 24: zoom y pan con d3-zoom. Datos SINTÉTICOS deterministas.
+// Phase B (v0.3), step 24: zoom and pan with d3-zoom. Deterministic SYNTHETIC data.
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { toFeatureCollection, type ViewState } from "../src/core";
@@ -59,13 +59,13 @@ const ZoomDemo = ({
           pinch,
           doubleClick: doubleClick === "auto" ? "auto" : doubleClick === "on",
           keyboard,
-          // Opt-in: sin `controls` no hay botones.
+          // Opt-in: without `controls` there are no buttons.
           controls: controls ? { position: controlsPosition } : false,
           onViewChange: setView,
         }}
       />
       <p>
-        <b>onViewChange</b> (solo al terminar el gesto):{" "}
+        <b>onViewChange</b> (only when the gesture ends):{" "}
         {view === null
           ? "—"
           : `zoom ${view.zoom.toFixed(2)} · centro [${view.center.map((n) => n.toFixed(1)).join(", ")}] · lon ${view.bounds[0][0].toFixed(0)}…${view.bounds[1][0].toFixed(0)}`}
@@ -103,25 +103,25 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** La rueda hace zoom con el ratón encima, arrastrar desplaza, doble clic = ×2. */
+/** The wheel zooms with the mouse over the map, dragging pans, double click = ×2. */
 export const Default: Story = {};
 
 /**
- * Botones `+` / `−` / `⟲` (opt-in: `zoom={{ controls: true }}`) y teclado: haz clic en el mapa (o
- * tabula hasta él: anillo de foco) y usa `+`, `−`, `0`. `−` y `⟲` están deshabilitados en el encaje.
+ * `+` / `−` / `⟲` buttons (opt-in: `zoom={{ controls: true }}`) and keyboard: click on the map (or
+ * tab to it: focus ring) and use `+`, `−`, `0`. `−` and `⟲` are disabled at the fit.
  */
 export const WithControlsAndKeyboard: Story = { args: { controls: true } };
 
 /**
- * `wheel: "cooperative"`: la rueda sin Ctrl/⌘ NO hace zoom y la página sigue haciendo scroll (hay
- * contenido debajo para comprobarlo). Con Ctrl/⌘ + rueda, sí. Al intentarlo sin tecla aparece 1,5 s el aviso «Usa Ctrl + rueda…» (⌘ en macOS).
+ * `wheel: "cooperative"`: the wheel without Ctrl/⌘ does NOT zoom and the page keeps scrolling (there is
+ * content below to check). With Ctrl/⌘ + wheel, it does. Trying it without the key shows the "Use Ctrl + scroll…" hint for 1.5 s (⌘ on macOS).
  */
 export const CooperativeInAScrollablePage: Story = {
   args: { wheel: "cooperative", controls: true },
   render: (args) => (
     <div>
       <p style={{ font: "13px sans-serif" }}>
-        ↓ Haz scroll con la rueda sobre el mapa: la página debe moverse.
+        ↓ Scroll with the wheel over the map: the page must move.
       </p>
       <ZoomDemo {...args} />
       <div style={{ height: 900, background: "linear-gradient(#fff, #e5e7eb)" }} />
@@ -130,8 +130,8 @@ export const CooperativeInAScrollablePage: Story = {
 };
 
 /**
- * Clic ≠ arrastre. Con `onItemClick` (y selección) el doble clic no hace zoom. Prueba: un clic con un
- * pequeño temblor SELECCIONA; arrastrar de verdad no selecciona nada al soltar.
+ * Click ≠ drag. With `onItemClick` (and selection) the double click does not zoom. Test: a click with a
+ * slight tremor SELECTS; really dragging selects nothing on release.
  */
 export const ClickVersusDrag: Story = { args: { clickSelects: true } };
 

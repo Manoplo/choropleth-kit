@@ -5,20 +5,20 @@ const make = (values: (string | null)[], extra = {}) =>
   createCategoricalScale({ values, emptyFill: "#ddd", ...extra });
 
 describe("createCategoricalScale", () => {
-  it("categorías automáticas en orden ALFABÉTICO, no de aparición", () => {
+  it("automatic categories in ALPHABETICAL order, not order of appearance", () => {
     const a = make(["b", "a", "c"]);
     const b = make(["c", "b", "a"]);
 
     expect(a.categories.map((c) => c.id)).toEqual(["a", "b", "c"]);
-    expect(a.getColor("a")).toBe(b.getColor("a")); // el color no depende del orden de los datos
+    expect(a.getColor("a")).toBe(b.getColor("a")); // the color does not depend on the order of the data
   });
 
-  it("usa la paleta por posición y se puede cambiar", () => {
+  it("uses the palette by position and it can be changed", () => {
     expect(make(["x"]).getColor("x")).toBe(CATEGORICAL_PALETTES.tableau10[0]);
     expect(make(["x"], { palette: "set2" }).getColor("x")).toBe(CATEGORICAL_PALETTES.set2[0]);
   });
 
-  it("categories fija orden, etiquetas y colores; sin color usa la paleta por posición", () => {
+  it("categories fixes order, labels and colors; without a color it uses the palette by position", () => {
     const scale = make(["x"], {
       categories: [{ id: "eu", label: "Europa", color: "#123456" }, { id: "as" }],
     });
@@ -29,7 +29,7 @@ describe("createCategoricalScale", () => {
     expect(scale.getLabel("as")).toBe("as");
   });
 
-  it("null, undefined y categorías desconocidas → emptyFill", () => {
+  it("null, undefined and unknown categories → emptyFill", () => {
     const scale = make(["a"], { categories: [{ id: "a" }] });
 
     expect(scale.getColor(null)).toBe("#ddd");
@@ -39,7 +39,7 @@ describe("createCategoricalScale", () => {
     expect(scale.getLabel("zzz")).toBe("zzz");
   });
 
-  it("con más categorías que colores, los colores se repiten", () => {
+  it("with more categories than colors, the colors repeat", () => {
     const ids = Array.from({ length: 12 }, (_, i) => `c${String(i).padStart(2, "0")}`);
     const scale = make(ids);
 
@@ -48,7 +48,7 @@ describe("createCategoricalScale", () => {
 });
 
 describe("buildCategoricalLegend", () => {
-  it("un item por categoría con su conteo, y «sin dato» opcional", () => {
+  it("one item per category with its count, and an optional no data item", () => {
     const values = ["a", "a", "b", null, "zzz"];
     const scale = make(values, { categories: [{ id: "a", label: "Alfa" }, { id: "b" }] });
     const items = buildCategoricalLegend({ scale, values, emptyLabel: "Sin dato" });

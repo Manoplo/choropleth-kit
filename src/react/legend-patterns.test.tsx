@@ -5,8 +5,8 @@ import { ChoroplethMap, type ChoroplethMapProps } from "./choropleth-map";
 import { useDefId } from "./choropleth-context";
 import type { RootProps } from "./components/root";
 
-// Paso 36: leyenda `bar` e interactiva, y `Defs` / `Patterns` con ids por instancia. jsdom no ve el CSS: aquí se
-// prueba lo que la librería ESCRIBE (atributos, ids, `<pattern>`); que el resaltado se vea, en un navegador.
+// Step 36: `bar` and interactive legend, and `Defs` / `Patterns` with per-instance ids. jsdom does not see the CSS: what the
+// library WRITES is tested here (attributes, ids, `<pattern>`); that the highlight shows, in a browser.
 
 type Row = { code: string; v: number | null; cat?: string };
 const data: Row[] = [
@@ -31,7 +31,7 @@ const region = (c: HTMLElement, id: string) =>
   c.querySelector(`.cm-regions [data-region-id="${id}"]`) as Element;
 
 describe("leyenda interactiva", () => {
-  it("cada región lleva `data-class` (índice de clase) y las sin valor, `empty`", () => {
+  it("each region carries `data-class` (class index) and those without a value, `empty`", () => {
     const { container } = preset({
       data: [
         { code: "A", v: 1 },
@@ -45,7 +45,7 @@ describe("leyenda interactiva", () => {
     expect(region(sparse.container, "B").getAttribute("data-class")).toBe("empty");
   });
 
-  it("pasar el ratón por una clase escribe `data-highlight-class` en el root; salir lo quita", () => {
+  it("hovering a class writes `data-highlight-class` on the root; leaving removes it", () => {
     const { container } = preset();
     const items = container.querySelectorAll(".cm-legend__item");
     expect(items[0]?.getAttribute("data-class")).toBe("0");
@@ -56,7 +56,7 @@ describe("leyenda interactiva", () => {
     expect(rootOf(container).hasAttribute("data-highlight-class")).toBe(false);
   });
 
-  it("el item de «sin dato» se resalta como `empty`", () => {
+  it("the no-data item is highlighted as `empty`", () => {
     const { container } = preset({ data: [{ code: "A", v: 1 }] });
     const empty = container.querySelector('.cm-legend__item[data-class="empty"]') as Element;
     expect(empty).not.toBeNull();
@@ -64,7 +64,7 @@ describe("leyenda interactiva", () => {
     expect(rootOf(container).getAttribute("data-highlight-class")).toBe("empty");
   });
 
-  it("el índice del item coincide con el `data-class` de las regiones de su color", () => {
+  it("the item's index matches the `data-class` of the regions of its color", () => {
     const { container } = preset();
     const items = [...container.querySelectorAll(".cm-legend__item")];
     for (const id of ["A", "B"]) {
@@ -75,7 +75,7 @@ describe("leyenda interactiva", () => {
     }
   });
 
-  it("no re-renderiza el mapa: resaltar no vuelve a llamar a `getId`", () => {
+  it("does not re-render the map: highlighting does not call `getId` again", () => {
     const getId = vi.fn<(r: Row) => string>((r) => r.code);
     const { container } = preset({ getId });
     const before = getId.mock.calls.length;
@@ -85,16 +85,16 @@ describe("leyenda interactiva", () => {
     expect(getId.mock.calls.length).toBe(before);
   });
 
-  it("`interactive: false` no pone atributos ni manejadores", () => {
+  it("`interactive: false` sets no attributes or handlers", () => {
     const { container } = preset({ legend: { interactive: false } });
     expect(container.querySelector(".cm-legend [data-class]")).toBeNull();
   });
 
-  it("con escala continua o `bubble` no hay nada que resaltar", () => {
+  it("with a continuous scale or `bubble` there is nothing to highlight", () => {
     const linear = preset({ classification: { method: "linear" } });
     expect(linear.container.querySelector(".cm-legend [data-class]")).toBeNull();
     linear.unmount();
-    // `bubble` con segunda métrica: la leyenda TIENE clases, pero el color va en las burbujas, no en las regiones.
+    // `bubble` with a second metric: the legend HAS classes, but the color is in the bubbles, not in the regions.
     const bubble = preset({
       variant: "bubble",
       getColorValue: (r: Row) => (r.v === null ? null : r.v - 5),
@@ -103,7 +103,7 @@ describe("leyenda interactiva", () => {
     expect(bubble.container.querySelector(".cm-legend [data-class]")).toBeNull();
   });
 
-  it("al desmontar la leyenda se suelta el resaltado", () => {
+  it("on unmounting the legend the highlight is released", () => {
     const { container, rerender } = preset();
     fireEvent.pointerEnter(container.querySelector(".cm-legend__item") as Element);
     expect(rootOf(container).hasAttribute("data-highlight-class")).toBe(true);
@@ -114,7 +114,7 @@ describe("leyenda interactiva", () => {
     expect(root.hasAttribute("data-highlight-class")).toBe(false);
   });
 
-  it("las categorías también se resaltan", () => {
+  it("categories are highlighted too", () => {
     const { container } = preset({
       variant: "categorical",
       getCategory: (r: Row) => r.cat ?? null,
@@ -129,7 +129,7 @@ describe("leyenda `bar`", () => {
   const bar = (props: Partial<ChoroplethMapProps<Row>> = {}) =>
     preset({ legend: { variant: "bar" }, formatValue: (v: number) => `${v}u`, ...props });
 
-  it("un tramo por clase, con su color, y los cortes debajo (inicio de cada clase y final de la última)", () => {
+  it("one segment per class, with its color, and the breaks underneath (start of each class and end of the last)", () => {
     const { container } = bar();
     const segments = [...container.querySelectorAll(".cm-legend__segment")] as HTMLElement[];
     const ticks = [...container.querySelectorAll(".cm-legend__tick")].map((t) => t.textContent);
@@ -142,7 +142,7 @@ describe("leyenda `bar`", () => {
     expect(container.querySelector(".cm-legend__items")).toBeNull();
   });
 
-  it("los tramos se resaltan igual que las filas", () => {
+  it("the segments highlight just like the rows", () => {
     const { container } = bar();
     const segment = container.querySelectorAll(".cm-legend__segment")[1] as Element;
     expect(segment.getAttribute("data-class")).toBe("1");
@@ -150,7 +150,7 @@ describe("leyenda `bar`", () => {
     expect(rootOf(container).getAttribute("data-highlight-class")).toBe("1");
   });
 
-  it("«sin dato» va aparte, tras la barra, y cuenta si pides `showCount`", () => {
+  it("no data goes apart, after the bar, and counts if you ask for `showCount`", () => {
     const { container } = bar({
       data: [{ code: "A", v: 1 }],
       legend: { variant: "bar", showCount: true },
@@ -161,12 +161,12 @@ describe("leyenda `bar`", () => {
     expect(empty.getAttribute("data-class")).toBe("empty");
   });
 
-  it("el tramo informa de su rango y su conteo (`title`)", () => {
+  it("the segment reports its range and its count (`title`)", () => {
     const { container } = bar();
     expect(container.querySelector(".cm-legend__segment")?.getAttribute("title")).toMatch(/\(1\)$/);
   });
 
-  it("con categorías, `bar` no tiene cortes que poner: se dibuja como filas", () => {
+  it("with categories, `bar` has no breaks to put: it is drawn as rows", () => {
     const { container } = bar({
       variant: "categorical",
       getCategory: (r: Row) => r.cat ?? null,
@@ -175,64 +175,64 @@ describe("leyenda `bar`", () => {
     expect(container.querySelector(".cm-legend__items")).not.toBeNull();
   });
 
-  it("con escala continua sigue siendo el degradado", () => {
+  it("with a continuous scale it is still the gradient", () => {
     const { container } = bar({ classification: { method: "linear" } });
     expect(container.querySelector(".cm-legend__bar")).toBeNull();
     expect(container.querySelector("[data-legend-gradient]")).not.toBeNull();
   });
 
-  it("por defecto es la lista de siempre", () => {
+  it("by default it is the usual list", () => {
     const { container } = preset();
     expect(container.querySelector(".cm-legend__bar")).toBeNull();
     expect(container.querySelectorAll(".cm-legend__item").length).toBeGreaterThan(1);
   });
 
-  it("`classNames.legendItem` llega a los tramos", () => {
+  it("`classNames.legendItem` reaches the segments", () => {
     const { container } = bar({ classNames: { legendItem: "mine" } });
     expect(container.querySelector(".cm-legend__segment")?.classList.contains("mine")).toBe(true);
   });
 });
 
-describe("Defs y Patterns", () => {
+describe("Defs and Patterns", () => {
   const patternPaths = (c: HTMLElement) => [...c.querySelectorAll(".cm-patterns path")];
   const idOfUrl = (fill: string | null) => /url\(#(.+)\)/.exec(fill ?? "")?.[1];
 
-  it("`getRegionStyle().pattern` dibuja la trama ENCIMA del color, que se conserva", () => {
+  it("`getRegionStyle().pattern` draws the pattern ON TOP of the color, which is kept", () => {
     const { container } = preset({
       getRegionStyle: (r) => (r.id === "B" ? { pattern: "hatch" } : undefined),
     });
     const marks = patternPaths(container);
     expect(marks).toHaveLength(1);
     expect(marks[0]?.getAttribute("d")).toBe(region(container, "B").getAttribute("d"));
-    // El color de la escala sigue ahí, debajo.
+    // The scale's color is still there, underneath.
     expect((region(container, "B") as SVGElement).style.fill).not.toBe("");
-    // La trama apunta a un `<pattern>` que existe.
+    // The pattern points to a `<pattern>` that exists.
     const id = idOfUrl(marks[0]?.getAttribute("fill") ?? null) as string;
     expect(container.querySelector(`pattern[id="${id}"]`)).not.toBeNull();
   });
 
-  it("incluye `hatch` y `dots`, y `dots` también se dibuja", () => {
+  it("includes `hatch` and `dots`, and `dots` is drawn too", () => {
     const { container } = preset({ getRegionStyle: () => ({ pattern: "dots" }) });
     const id = idOfUrl(patternPaths(container)[0]?.getAttribute("fill") ?? null) as string;
     expect(id.endsWith("-dots")).toBe(true);
     expect(container.querySelector(`pattern[id="${id}"] circle`)).not.toBeNull();
   });
 
-  it("las tramas no capturan el ratón ni se anuncian", () => {
+  it("patterns do not capture the mouse and are not announced", () => {
     const { container } = preset({ getRegionStyle: () => ({ pattern: "hatch" }) });
     const layer = container.querySelector(".cm-patterns") as Element;
     expect(layer.getAttribute("pointer-events")).toBe("none");
     expect(layer.getAttribute("aria-hidden")).toBe("true");
   });
 
-  it("`emptyPattern` rellena solo las regiones sin dato", () => {
+  it("`emptyPattern` fills only the regions without data", () => {
     const { container } = preset({ data: [{ code: "A", v: 1 }], emptyPattern: "hatch" });
     const marks = patternPaths(container);
     expect(marks).toHaveLength(1);
     expect(marks[0]?.getAttribute("d")).toBe(region(container, "B").getAttribute("d"));
   });
 
-  it("el tema `contrast` rayará «sin dato»; `emptyPattern` manda sobre el tema", () => {
+  it("the `contrast` theme will hatch no data; `emptyPattern` wins over the theme", () => {
     const withTheme = preset({ data: [{ code: "A", v: 1 }], theme: "contrast" });
     expect(patternPaths(withTheme.container)).toHaveLength(1);
     withTheme.unmount();
@@ -245,7 +245,7 @@ describe("Defs y Patterns", () => {
     expect(patternPaths(light.container)).toHaveLength(0);
   });
 
-  it("el swatch de «sin dato» de la leyenda lleva la misma trama", () => {
+  it("the legend's no-data swatch carries the same pattern", () => {
     const { container } = preset({ data: [{ code: "A", v: 1 }], emptyPattern: "dots" });
     const swatch = container.querySelector(
       '.cm-legend__item[data-class="empty"] .cm-legend__swatch',
@@ -253,7 +253,7 @@ describe("Defs y Patterns", () => {
     expect(swatch?.getAttribute("data-pattern")).toBe("dots");
   });
 
-  it("DOS mapas en la página no comparten ids: cada uno referencia SUS definiciones", () => {
+  it("TWO maps on the page do not share ids: each one references ITS definitions", () => {
     const { container } = render(
       <>
         <ChoroplethMap<Row>
@@ -278,17 +278,17 @@ describe("Defs y Patterns", () => {
       patternPaths(root).map((m) => idOfUrl(m.getAttribute("fill"))),
     );
 
-    expect(new Set([...defined[0]!, ...defined[1]!]).size).toBe(4); // 2 tramas × 2 mapas, todas distintas
+    expect(new Set([...defined[0]!, ...defined[1]!]).size).toBe(4); // 2 patterns × 2 maps, all different
     for (let i = 0; i < 2; i++) {
       for (const id of used[i]!) expect(defined[i]).toContain(id);
     }
     expect(used[0]?.[0]).not.toBe(used[1]?.[0]);
-    // Y ningún id del documento está repetido.
+    // And no id in the document is repeated.
     const all = [...container.querySelectorAll("[id]")].map((e) => e.getAttribute("id"));
     expect(new Set(all).size).toBe(all.length);
   });
 
-  it("una trama tuya: se define en `<Choropleth.Defs>` con `useDefId` y se pide por su nombre", () => {
+  it("your own pattern: defined in `<Choropleth.Defs>` with `useDefId` and requested by its name", () => {
     const Stripes = () => (
       <pattern id={useDefId("stripes")} width="4" height="4" patternUnits="userSpaceOnUse">
         <rect width="2" height="4" fill="red" />
@@ -318,17 +318,17 @@ describe("Defs y Patterns", () => {
     expect(container.querySelector(`pattern[id="${id}"] rect`)).not.toBeNull();
   });
 
-  it("los ids son válidos en `url(#…)` (sin los `:` de `useId`)", () => {
+  it("the ids are valid in `url(#…)` (without useId's `:`)", () => {
     const { container } = preset({ getRegionStyle: () => ({ pattern: "hatch" }) });
     expect(idOfUrl(patternPaths(container)[0]?.getAttribute("fill") ?? null)).toMatch(/^[\w-]+$/);
   });
 
-  it("sin patrones no se pinta la capa", () => {
+  it("without patterns the layer is not painted", () => {
     const { container } = preset();
     expect(container.querySelector(".cm-patterns")).toBeNull();
   });
 
-  it("`getRegionStyle().pattern` ya no avisa de que se ignora", () => {
+  it("`getRegionStyle().pattern` no longer warns that it is ignored", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     preset({ getRegionStyle: () => ({ pattern: "hatch" }) });
     expect(warn.mock.calls.map((c) => String(c[0])).filter((m) => m.includes("pattern"))).toEqual(

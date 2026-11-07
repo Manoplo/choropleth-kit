@@ -1,9 +1,9 @@
 import { useChoroplethContext } from "../choropleth-context";
 
 /**
- * Microestados que la geometría no dibuja (Andorra, Mónaco, Singapur en 1:110m), pintados como un
- * punto con el color de su dato (`fallbackPoints`, dd.md §11.2.7). Son items `point`: tienen su
- * propio hover, clic y tooltip. En `bubble` no se usa: ahí son burbujas.
+ * Microstates the geometry does not draw (Andorra, Monaco, Singapore at 1:110m), painted as a dot with
+ * their datum's color (`fallbackPoints`, dd.md §11.2.7). They are `point` items: they have their own
+ * hover, click and tooltip. Not used in `bubble`: there they are bubbles.
  */
 export const FallbackPoints = () => {
   const { choropleth } = useChoroplethContext();

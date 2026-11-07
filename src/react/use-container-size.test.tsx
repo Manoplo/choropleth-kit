@@ -21,7 +21,7 @@ afterEach(() => vi.unstubAllGlobals());
 const render = (options?: Parameters<typeof useContainerSize>[0]) => {
   const hook = renderHook(() => {
     const value = useContainerSize(options);
-    // asignar la ref antes del efecto no es posible en renderHook; lo hacemos en el primer render
+    // assigning the ref before the effect is not possible in renderHook; we do it on first render
     value.ref.current ??= document.createElement("div");
     return value;
   });
@@ -34,11 +34,11 @@ const resize = (width: number, height: number) =>
   );
 
 describe("useContainerSize", () => {
-  it("antes de medir, el alto sale de la proporción (también con `auto`)", () => {
+  it("before measuring, the height comes from the ratio (also with `auto`)", () => {
     expect(render({ aspectRatio: 3 }).result.current).toMatchObject({ width: 960, height: 320 });
   });
 
-  it("si cambia la proporción, el alto se corrige sin otra medida", () => {
+  it("if the ratio changes, the height is corrected without another measurement", () => {
     let aspectRatio = 2;
     const { result, rerender } = renderHook(() => {
       const value = useContainerSize({ aspectRatio });
@@ -53,42 +53,42 @@ describe("useContainerSize", () => {
     expect(result.current).toMatchObject({ width: 400, height: 800 });
   });
 
-  it("tamaño inicial razonable antes de medir", () => {
+  it("reasonable initial size before measuring", () => {
     expect(render().result.current).toMatchObject({ width: 960, height: 500 });
     expect(render({ initial: { width: 300, height: 100 } }).result.current.width).toBe(300);
   });
 });
 
-describe("useContainerSize · medición", () => {
-  it("el alto se deriva del ancho por defecto", () => {
+describe("useContainerSize · measurement", () => {
+  it("the height is derived from the width by default", () => {
     const { result } = render({ aspectRatio: 2 });
     resize(400, 999);
 
     expect(result.current).toMatchObject({ width: 400, height: 200 });
   });
 
-  it("useContainerHeight usa el alto real del contenedor", () => {
+  it("useContainerHeight uses the container's real height", () => {
     const { result } = render({ useContainerHeight: true });
     resize(400, 300);
 
     expect(result.current).toMatchObject({ width: 400, height: 300 });
   });
 
-  it("useContainerHeight con alto 0 recurre a la proporción", () => {
+  it("useContainerHeight with height 0 falls back to the ratio", () => {
     const { result } = render({ useContainerHeight: true, aspectRatio: 2 });
     resize(400, 0);
 
     expect(result.current.height).toBe(200);
   });
 
-  it("ignora medidas con ancho 0 (contenedor oculto)", () => {
+  it("ignores measurements with width 0 (hidden container)", () => {
     const { result } = render();
     resize(0, 0);
 
     expect(result.current.width).toBe(960);
   });
 
-  it("no cambia el estado si la medida es la misma", () => {
+  it("does not change state if the measurement is the same", () => {
     const { result } = render({ aspectRatio: 2 });
     resize(400, 0);
     const before = result.current;
@@ -97,14 +97,14 @@ describe("useContainerSize · medición", () => {
     expect(result.current.width).toBe(before.width);
   });
 
-  it("desconecta el observer al desmontar", () => {
+  it("disconnects the observer on unmount", () => {
     const { unmount } = render();
     unmount();
 
     expect(disconnect).toHaveBeenCalled();
   });
 
-  it("sin ResizeObserver (SSR/jsdom) no falla", () => {
+  it("without ResizeObserver (SSR/jsdom) it does not fail", () => {
     vi.unstubAllGlobals();
     expect(() => render()).not.toThrow();
   });

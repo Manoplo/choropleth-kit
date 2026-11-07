@@ -2,8 +2,8 @@ import type { Feature, Polygon } from "geojson";
 import { geoNaturalEarth1, geoPath } from "d3-geo";
 import { getAnchorPoint, getFocusExtent, getFocusGeometry, projectBounds } from "./bounds";
 
-// Anillo en sentido HORARIO: es lo que espera d3-geo (RFC 7946 pide antihorario; ver dd.md §2.9).
-// Con el sentido contrario d3 interpretaría «todo el globo menos el cuadrado».
+// Ring in CLOCKWISE order: it is what d3-geo expects (RFC 7946 asks for counterclockwise; see dd.md §2.9).
+// With the opposite order d3 would interpret "the whole globe minus the square".
 const square = (lon0: number, lat0: number, lon1: number, lat1: number): Polygon["coordinates"] => [
   [
     [lon0, lat0],
@@ -24,35 +24,35 @@ const path = geoPath(geoNaturalEarth1());
 
 describe("getFocusGeometry", () => {
   const mainland = square(0, 40, 10, 50);
-  const corsica = square(10.5, 44, 11.5, 45); // cerca del cuerpo principal
-  const guiana = square(-55, 3, -52, 5); // lejísimos
+  const corsica = square(10.5, 44, 11.5, 45); // near the main body
+  const guiana = square(-55, 3, -52, 5); // very far away
 
-  it("conserva el cuerpo principal y lo cercano, y descarta los territorios lejanos", () => {
+  it("keeps the main body and what is near it, and discards the distant territories", () => {
     const focus = getFocusGeometry({ feature: multi(mainland, corsica, guiana), path });
 
     expect(focus).toEqual({ type: "MultiPolygon", coordinates: [mainland, corsica] });
   });
 
-  it("no depende del orden de los polígonos", () => {
+  it("does not depend on the order of the polygons", () => {
     const focus = getFocusGeometry({ feature: multi(guiana, corsica, mainland), path });
 
     expect(focus).toEqual({ type: "MultiPolygon", coordinates: [corsica, mainland] });
   });
 
-  it("si solo sobrevive uno, devuelve un Polygon", () => {
+  it("if only one survives, it returns a Polygon", () => {
     const focus = getFocusGeometry({ feature: multi(mainland, guiana), path });
 
     expect(focus).toEqual({ type: "Polygon", coordinates: mainland });
   });
 
-  it("`near` ajusta cuánto se considera cerca", () => {
+  it("`near` adjusts how close counts as near", () => {
     const feature = multi(mainland, corsica);
 
     expect(getFocusGeometry({ feature, path, near: 0.01 })?.type).toBe("Polygon");
     expect(getFocusGeometry({ feature, path, near: 5 })?.type).toBe("MultiPolygon");
   });
 
-  it("devuelve tal cual lo que no es un MultiPolygon, y null si no hay geometría", () => {
+  it("returns as is whatever is not a MultiPolygon, and null if there is no geometry", () => {
     const polygon: Feature = {
       type: "Feature",
       properties: {},
@@ -70,7 +70,7 @@ describe("getFocusGeometry", () => {
     expect(getFocusGeometry({ feature: { ...polygon, geometry: null as never }, path })).toBeNull();
   });
 
-  it("si nada se puede medir, devuelve la geometría entera en vez de fallar", () => {
+  it("if nothing can be measured, it returns the whole geometry instead of failing", () => {
     const nothingMeasurable = {
       area: () => NaN,
       bounds: () => [
@@ -86,7 +86,7 @@ describe("getFocusGeometry", () => {
 
 describe("getAnchorPoint", () => {
   const identity = (p: readonly [number, number]) => p;
-  // Una «U»: su centroide cae en el hueco, FUERA del polígono.
+  // A "U": its centroid falls in the gap, OUTSIDE the polygon.
   const u: Polygon = {
     type: "Polygon",
     coordinates: [
@@ -106,9 +106,9 @@ describe("getAnchorPoint", () => {
   const insideU = ([x, y]: readonly [number, number]) =>
     x >= 0 && x <= 10 && y >= 0 && y <= 10 && !(x > 3 && x < 7 && y > 3);
 
-  it("cae dentro del polígono aunque el centroide caiga fuera", () => {
+  it("falls inside the polygon even when the centroid falls outside", () => {
     const geoCentroid = geoPath(geoNaturalEarth1()).centroid;
-    expect(geoCentroid).toBeTypeOf("function"); // referencia: el método que se sustituye
+    expect(geoCentroid).toBeTypeOf("function"); // reference: the method being replaced
 
     const anchor = getAnchorPoint({ geometry: u, project: identity, precision: 0.1 });
 
@@ -116,7 +116,7 @@ describe("getAnchorPoint", () => {
     expect(insideU(anchor as [number, number])).toBe(true);
   });
 
-  it("elige el polígono proyectado más grande de un MultiPolygon", () => {
+  it("picks the largest projected polygon of a MultiPolygon", () => {
     const geometry = {
       type: "MultiPolygon" as const,
       coordinates: [square(0, 0, 1, 1), square(100, 100, 120, 120)],
@@ -128,7 +128,7 @@ describe("getAnchorPoint", () => {
     expect(y).toBeGreaterThan(100);
   });
 
-  it("ignora vértices que no se pueden proyectar, y devuelve null si no queda nada", () => {
+  it("ignores vertices that cannot be projected, and returns null if nothing remains", () => {
     const polygon: Polygon = { type: "Polygon", coordinates: square(0, 0, 10, 10) };
 
     const partial = getAnchorPoint({
@@ -141,7 +141,7 @@ describe("getAnchorPoint", () => {
     expect(getAnchorPoint({ geometry: polygon, project: () => null })).toBeNull();
   });
 
-  it("null sin geometría o con una que no es un polígono", () => {
+  it("null without geometry or with one that is not a polygon", () => {
     expect(getAnchorPoint({ geometry: null, project: identity })).toBeNull();
     expect(
       getAnchorPoint({ geometry: { type: "Point", coordinates: [0, 0] }, project: identity }),
@@ -162,7 +162,7 @@ describe("projectBounds", () => {
     return at === null ? null : ([at[0], at[1]] as [number, number]);
   };
 
-  it("contiene todos los puntos del rectángulo geográfico (también las esquinas)", () => {
+  it("contains all the points of the geographic rectangle (corners too)", () => {
     const extent = projectBounds(
       [
         [-10, 35],
@@ -188,7 +188,7 @@ describe("projectBounds", () => {
     }
   });
 
-  it("los paralelos se curvan: la caja es algo más grande que la de las cuatro esquinas", () => {
+  it("parallels curve: the box is somewhat larger than the four corners' one", () => {
     const extent = projectBounds(
       [
         [-80, -50],
@@ -208,7 +208,7 @@ describe("projectBounds", () => {
     expect(extent[1][1]).toBeGreaterThanOrEqual(Math.max(...cornerYs));
   });
 
-  it("si lonE < lonO cruza el antimeridiano: se encuadra la mitad más ancha (Fiyi)", () => {
+  it("if lonE < lonW it crosses the antimeridian: the wider half is framed (Fiji)", () => {
     const fiji = projectBounds(
       [
         [175, -20],
@@ -224,12 +224,12 @@ describe("projectBounds", () => {
       project,
     ) as [[number, number], [number, number]];
 
-    // Fiyi son 7° de ancho repartidos en los dos bordes del mapa: se queda con la mitad mayor (175 → 180),
-    // en lugar de una caja del ancho del mundo. La «normal» −178 → 175 sí abarca casi todo el mundo.
+    // Fiji is 7° wide spread over both edges of the map: it keeps the larger half (175 → 180),
+    // instead of a box as wide as the world. The "normal" −178 → 175 does span almost the whole world.
     expect(fiji[1][0] - fiji[0][0]).toBeLessThan(80);
-    expect(fiji[0][0]).toBeGreaterThan(800); // en el borde derecho
+    expect(fiji[0][0]).toBeGreaterThan(800); // on the right edge
     expect(wide[1][0] - wide[0][0]).toBeGreaterThan(800);
-    // y si la mitad mayor es la occidental, se elige esa
+    // and if the larger half is the western one, that one is chosen
     const flipped = projectBounds(
       [
         [179, -20],
@@ -237,10 +237,10 @@ describe("projectBounds", () => {
       ],
       project,
     ) as [[number, number], [number, number]];
-    expect(flipped[1][0]).toBeLessThan(160); // borde izquierdo
+    expect(flipped[1][0]).toBeLessThan(160); // left edge
   });
 
-  it("ignora los puntos que no proyectan y devuelve null si ninguno proyecta", () => {
+  it("ignores the points that do not project and returns null if none project", () => {
     const partial = projectBounds(
       [
         [0, 0],
@@ -280,7 +280,7 @@ describe("getFocusExtent", () => {
     geometry: { type: "Polygon", coordinates: [ring] },
   });
 
-  it("un polígono normal: sus límites exactos en píxeles", () => {
+  it("a normal polygon: its exact bounds in pixels", () => {
     const feature = polygonFeature([
       [0, 40],
       [0, 50],
@@ -293,7 +293,7 @@ describe("getFocusExtent", () => {
     expect(extent).toEqual(focusPath.bounds(feature.geometry as never));
   });
 
-  it("ignora los territorios lejanos (igual que getFocusGeometry)", () => {
+  it("ignores the distant territories (same as getFocusGeometry)", () => {
     const fr = multi(square(0, 40, 10, 50), square(-55, 3, -52, 5));
     const extent = getFocusExtent({ feature: fr, path: focusPath, project }) as [
       [number, number],
@@ -301,11 +301,11 @@ describe("getFocusExtent", () => {
     ];
 
     const guiana = project([-54, 4]) as [number, number];
-    expect(extent[0][0]).toBeGreaterThan(guiana[0]); // la Guayana queda fuera
+    expect(extent[0][0]).toBeGreaterThan(guiana[0]); // Guiana is left out
   });
 
-  it("cruzando el antimeridiano (Rusia): encuadra la mitad mayor, NO el mapa de borde a borde", () => {
-    // Un anillo de 160° a −170° (30° de ancho): 20° al este de la línea, 10° al oeste.
+  it("crossing the antimeridian (Russia): frames the larger half, NOT the map from edge to edge", () => {
+    // A ring from 160° to −170° (30° wide): 20° east of the line, 10° west.
     const russiaLike = polygonFeature([
       [160, 60],
       [160, 70],
@@ -319,14 +319,14 @@ describe("getFocusExtent", () => {
       [number, number],
     ];
 
-    // `path.bounds` mide las dos mitades: abarca casi todo el ancho del mapa…
+    // `path.bounds` measures both halves: it spans almost the whole width of the map…
     expect(naive[1][0] - naive[0][0]).toBeGreaterThan(700);
-    // …y el encuadre se queda con la mitad oriental (160° → 180°), en el borde derecho
+    // …and the framing keeps the eastern half (160° → 180°), on the right edge
     expect(extent[1][0] - extent[0][0]).toBeLessThan(200);
     expect(extent[0][0]).toBeGreaterThan(700);
   });
 
-  it("sin geometría o con límites no finitos, devuelve null", () => {
+  it("without geometry or with non-finite bounds, it returns null", () => {
     const empty: Feature = { type: "Feature", properties: {}, geometry: null as never };
     expect(getFocusExtent({ feature: empty, path: focusPath, project })).toBeNull();
 

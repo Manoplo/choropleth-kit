@@ -2,7 +2,7 @@ export type JoinDiagnosticsInput = {
   unmatchedData: readonly string[];
   featuresWithoutData: readonly string[];
   duplicateDataIds: readonly string[];
-  /** Nº de filas de datos. Con 0 (aún cargando) no hay nada que diagnosticar. */
+  /** Number of data rows. With 0 (still loading) there is nothing to diagnose. */
   dataCount: number;
 };
 
@@ -23,7 +23,7 @@ const styleOf = (id: string): IdStyle => {
   return "other";
 };
 
-/** Devuelve el estilo común de todos los ids, o `null` si están mezclados o no son reconocibles. */
+/** Returns the style common to all ids, or `null` if they are mixed or not recognizable. */
 const commonStyle = (ids: readonly string[]): IdStyle | null => {
   const first = ids[0];
   if (first === undefined) return null;
@@ -39,22 +39,22 @@ const STYLE_NAMES: Record<IdStyle, string> = {
 };
 
 /**
- * Pista para el error n.º 1: el dato y la geometría usan sistemas de ids distintos. Solo se da
- * cuando es clara (todos los ids huérfanos con el mismo estilo y todos los de las regiones sin dato
- * con otro), porque una pista equivocada es peor que ninguna.
+ * Hint for error #1: the data and the geometry use different id systems. It is only given when it
+ * is clear (all orphan ids with the same style and all those of regions without data with another),
+ * because a wrong hint is worse than none.
  */
 const hintFor = (
   unmatched: readonly string[],
   featuresWithoutData: readonly string[],
 ): string | null => {
-  // Ceros a la izquierda: "4" en los datos y "004" en la geometría (típico de Excel/CSV).
+  // Leading zeros: "4" in the data and "004" in the geometry (typical of Excel/CSV).
   const features = new Set(featuresWithoutData);
   const padded = unmatched.find((id) => /^\d{1,2}$/.test(id) && features.has(id.padStart(3, "0")));
   if (padded !== undefined) {
     return `Hint: ${JSON.stringify(padded)} does not match ${JSON.stringify(padded.padStart(3, "0"))}. Leading zeros matter (a spreadsheet may have dropped them).`;
   }
 
-  // Mayúsculas/minúsculas: "es" frente a "ES".
+  // Upper/lower case: "es" versus "ES".
   const upper = new Set(featuresWithoutData.map((id) => id.toUpperCase()));
   const lowered = unmatched.find((id) => id !== id.toUpperCase() && upper.has(id.toUpperCase()));
   if (lowered !== undefined) {
@@ -70,8 +70,8 @@ const hintFor = (
 };
 
 /**
- * Convierte el resultado de `joinData` en el texto del aviso para el desarrollador (dd.md §9.6),
- * o `null` si no hay nada que avisar. Pura: no escribe en consola, así se testea sin simularla.
+ * Turns the result of `joinData` into the warning text for the developer (dd.md §9.6), or `null` if
+ * there is nothing to warn about. Pure: it does not write to the console, so it is tested without mocking it.
  */
 export const formatJoinDiagnostics = ({
   unmatchedData,

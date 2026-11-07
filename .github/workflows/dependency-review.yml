@@ -1,0 +1,23 @@
+name: Dependency review
+
+# Blocks a PR that adds dependencies with known vulnerabilities or with licenses we do not accept.
+on:
+  pull_request:
+    branches: [develop, master]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: moderate
+          # The library is MIT: avoid strong copyleft licenses in anything that could end up shipped.
+          deny-licenses: AGPL-3.0-only, AGPL-3.0-or-later, GPL-2.0-only, GPL-2.0-or-later, GPL-3.0-only, GPL-3.0-or-later
+          comment-summary-in-pr: on-failure

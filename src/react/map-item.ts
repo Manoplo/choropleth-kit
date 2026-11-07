@@ -1,29 +1,29 @@
 import type { Feature } from "geojson";
 import type { Point } from "../core";
 
-/** Nivel del drill-down al que pertenece un item (dd.md §11.2). Sin drill: siempre la raíz. */
+/** Drill-down level an item belongs to (dd.md §11.2). Without drill: always the root. */
 export type DrillLevelInfo = { id: string; depth: number };
 
-/** Nivel por defecto mientras no exista el drill-down. */
+/** Default level while the drill-down does not exist. */
 export const ROOT_LEVEL: DrillLevelInfo = { id: "root", depth: 0 };
 
 export type RegionItem<TDatum> = {
   kind: "region";
   id: string;
   feature: Feature;
-  /** `undefined` = región sin dato. */
+  /** `undefined` = region without data. */
   datum: TDatum | undefined;
   level: DrillLevelInfo;
-  /** Hay un nivel por debajo para esta región. */
+  /** There is a level below for this region. */
   drillable: boolean;
 };
 
 export type PointItem<TDatum> = {
   kind: "point";
   id: string;
-  /** [lon, lat] del dato. */
+  /** The datum's [lon, lat]. */
   coordinates: Point;
-  /** La región de debajo, si el id del dato cruza con alguna. */
+  /** The region underneath, if the datum's id joins with one. */
   feature: Feature | undefined;
   datum: TDatum;
   level: DrillLevelInfo;
@@ -31,25 +31,25 @@ export type PointItem<TDatum> = {
 };
 
 /**
- * UN tipo para todo lo interactivo (dd.md §9.2 y §12.1). `kind` discrimina: una tienda no es una
- * región, pero el consumidor quiere un solo handler y un solo tooltip.
+ * ONE type for everything interactive (dd.md §9.2 and §12.1). `kind` discriminates: a store is not a
+ * region, but the consumer wants a single handler and a single tooltip.
  */
 export type MapItem<TDatum> = RegionItem<TDatum> | PointItem<TDatum>;
 
-/** Qué item es, sin cargar con sus datos: lo que guarda el `map-store`. */
+/** Which item it is, without carrying its data: what the `map-store` keeps. */
 export type ItemRef = { kind: MapItem<unknown>["kind"]; id: string };
 
 export const isSameItem = (a: ItemRef | null, b: ItemRef | null): boolean =>
   a === b || (a !== null && b !== null && a.kind === b.kind && a.id === b.id);
 
-/** `MapItem` + lo que el tooltip necesita para pintarse. */
+/** `MapItem` + what the tooltip needs to render. */
 export type ItemContext<TDatum> = MapItem<TDatum> & {
-  /** Número, categoría (`categorical`) o `null` si no hay dato. */
+  /** Number, category (`categorical`) or `null` if there is no datum. */
   value: number | string | null;
-  /** `value` formateado; cadena vacía si no hay valor. */
+  /** `value` formatted; empty string if there is no value. */
   formattedValue: string;
-  /** Color con el que está pintado el item. */
+  /** Color the item is painted with. */
   color: string;
-  /** Nombre legible: `properties.name` de la región, o el id. */
+  /** Readable name: the region's `properties.name`, or the id. */
   label: string;
 };

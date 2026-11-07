@@ -1,12 +1,12 @@
 import { classifyDrill, type DrillDirection } from "./drill";
 
 /**
- * Piezas puras del drill-down que no dependen de React ni del DOM (dd.md §11.2.2): el contexto de una
- * ruta, las migas, la clave de caché de la geometría, la caché LRU y la validación de niveles.
+ * Pure drill-down pieces that depend on neither React nor the DOM (dd.md §11.2.2): a route's
+ * context, the breadcrumbs, the geometry cache key, the LRU cache and level validation.
  */
 
 export type DrillContext = {
-  /** Ids desde la raíz: [] = mundo, ["ES"] = España, ["ES", "ES-MD"] = Madrid. */
+  /** Ids from the root: [] = world, ["ES"] = Spain, ["ES", "ES-MD"] = Madrid. */
   path: readonly string[];
   /** `path.at(-1) ?? null`. */
   parentId: string | null;
@@ -20,19 +20,19 @@ export const contextOf = (path: readonly string[]): DrillContext => ({
   depth: path.length,
 });
 
-/** Lo mínimo que se necesita de un nivel para estas funciones (así se prueban sin React). */
+/** The minimum needed from a level for these functions (so they can be tested without React). */
 export type LevelShape = {
   id: string;
   label?: string;
-  /** Solo importa si es `"inherit"` o una función; el resto es la geometría en sí. */
+  /** Only whether it is `"inherit"` or a function matters; the rest is the geometry itself. */
   geography: unknown;
   geographyKey?: (ctx: DrillContext) => string;
 };
 
 /**
- * Comprueba la lista de niveles al definirla. Los errores explican qué tocar (principio de DX de
- * dd.md): una lista vacía, ids repetidos (el id del nivel se usa de clave) o un primer nivel que
- * «hereda» la geometría de un padre que no existe.
+ * Validates the list of levels when it is defined. Errors explain what to change (DX principle from
+ * dd.md): an empty list, repeated ids (the level id is used as a key) or a first level that
+ * "inherits" geometry from a parent that does not exist.
  */
 export const validateLevels = (levels: readonly LevelShape[]): void => {
   if (levels.length === 0) {
@@ -57,8 +57,8 @@ export const validateLevels = (levels: readonly LevelShape[]): void => {
 };
 
 /**
- * Recorta una ruta a la profundidad que permiten los niveles: con N niveles, el path más largo tiene
- * N − 1 ids (el último nivel no se puede perforar más). `clamped` avisa de que hubo recorte.
+ * Trims a route to the depth the levels allow: with N levels, the longest path has N − 1 ids (the
+ * last level cannot be drilled into any further). `clamped` signals that trimming happened.
  */
 export const clampPath = (
   path: readonly string[],
@@ -72,14 +72,14 @@ export const clampPath = (
 
 export type DrillCrumb = {
   depth: number;
-  /** `null` en la raíz. */
+  /** `null` at the root. */
   id: string | null;
   label: string;
 };
 
 /**
- * Migas de la ruta: la raíz (con la etiqueta del primer nivel o `rootLabel`) y un paso por id.
- * `getLabel` pone nombre a cada paso (por defecto, el id).
+ * Breadcrumbs of the route: the root (with the first level's label or `rootLabel`) and one step per id.
+ * `getLabel` names each step (the id by default).
  */
 export const buildBreadcrumbs = ({
   path,
@@ -99,10 +99,10 @@ export const buildBreadcrumbs = ({
 ];
 
 /**
- * Clave de caché de la geometría del nivel de `path.length` (dd.md §11.2.2): la del consumidor
- * (`geographyKey`), o `${id}:${parentId}` si la geometría depende del padre (es una función), o solo
- * el id. Con `"inherit"` la geometría es la del padre, así que la clave también (tiendas sobre un país
- * comparten la geometría del país).
+ * Cache key of the geometry of the level at `path.length` (dd.md §11.2.2): the consumer's
+ * (`geographyKey`), or `${id}:${parentId}` if the geometry depends on the parent (it is a function),
+ * or just the id. With `"inherit"` the geometry is the parent's, so the key is too (stores over a
+ * country share the country's geometry).
  */
 export const geographyKeyFor = (levels: readonly LevelShape[], path: readonly string[]): string => {
   for (let depth = Math.min(path.length, levels.length - 1); depth >= 0; depth--) {
@@ -110,22 +110,22 @@ export const geographyKeyFor = (levels: readonly LevelShape[], path: readonly st
     if (level === undefined) continue;
     const ctx = contextOf(path.slice(0, depth));
     if (level.geographyKey !== undefined) return level.geographyKey(ctx);
-    if (level.geography === "inherit" && depth > 0) continue; // la del padre
+    if (level.geography === "inherit" && depth > 0) continue; // the parent's
     return typeof level.geography === "function" ? `${level.id}:${ctx.parentId}` : level.id;
   }
   return "";
 };
 
 /**
- * `data` como lista o como selector del nivel actual. `undefined` significa «cargando» y se
- * respeta (dd.md §11.2.6): el mapa mantiene la capa anterior, sin avisos.
+ * `data` as a list or as a selector for the current level. `undefined` means "loading" and is
+ * respected (dd.md §11.2.6): the map keeps the previous layer, with no warnings.
  */
 export const resolveDrillData = <TDatum>(
   data: readonly TDatum[] | undefined | ((ctx: DrillContext) => readonly TDatum[] | undefined),
   ctx: DrillContext,
 ): readonly TDatum[] | undefined => (typeof data === "function" ? data(ctx) : data);
 
-/** Qué evento de drill es un cambio de ruta; `null` si no cambia. */
+/** Which drill event is a route change; `null` if it does not change. */
 export const drillDirectionBetween = (
   from: readonly string[],
   to: readonly string[],
@@ -134,21 +134,21 @@ export const drillDirectionBetween = (
   return direction === "equal" ? null : direction;
 };
 
-// ── caché LRU ──────────────────────────────────────────────────────────────────────────────────────
+// ── LRU cache ───────────────────────────────────────────────────────────────────────────────────
 
 export type LruCache<V> = {
-  /** Devuelve el valor y lo marca como el más reciente. */
+  /** Returns the value and marks it as the most recent. */
   get: (key: string) => V | undefined;
-  /** No lo marca como reciente (para comprobar sin alterar el orden). */
+  /** Does not mark it as recent (to check without altering the order). */
   has: (key: string) => boolean;
-  /** Inserta; si se supera la capacidad, expulsa el menos reciente. */
+  /** Inserts; if capacity is exceeded, evicts the least recent. */
   set: (key: string, value: V) => void;
   delete: (key: string) => void;
   clear: () => void;
   readonly size: number;
 };
 
-/** Caché de los niveles ya calculados (dd.md §11.2.4: 8 entradas). Subir no recalcula nada. */
+/** Cache of the levels already computed (dd.md §11.2.4: 8 entries). Going up recomputes nothing. */
 export const DEFAULT_LEVEL_CACHE_SIZE = 8;
 
 export const createLruCache = <V>(capacity: number = DEFAULT_LEVEL_CACHE_SIZE): LruCache<V> => {
@@ -157,7 +157,7 @@ export const createLruCache = <V>(capacity: number = DEFAULT_LEVEL_CACHE_SIZE): 
       `[choropleth] createLruCache: capacity must be an integer ≥ 1 (received: ${capacity}).`,
     );
   }
-  // Un `Map` recuerda el orden de inserción: el primero es el menos reciente.
+  // A `Map` remembers insertion order: the first is the least recent.
   const entries = new Map<string, V>();
   return {
     get: (key) => {

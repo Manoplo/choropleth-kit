@@ -4,24 +4,24 @@ import { feature as toFeature, mesh } from "topojson-client";
 
 export type CreateBordersOptions = {
   geography: Topology | FeatureCollection;
-  /** Mismo `objectName` que se pasó a `toFeatureCollection`, para que ambas lean el mismo objeto. */
+  /** Same `objectName` that was passed to `toFeatureCollection`, so both read the same object. */
   objectName?: string;
   /**
-   * El mismo filtro que se aplicó a las regiones: una frontera solo se dibuja si AMBOS lados se
-   * conservan (si no, quedaría la línea de un país que ya no está).
+   * The same filter applied to the regions: a border is only drawn if BOTH sides are kept (otherwise
+   * the line of a country that is no longer there would remain).
    */
   filterFeatures?: (feature: Feature) => boolean;
 };
 
 /**
- * Fronteras INTERIORES como una sola línea (una frontera compartida se dibuja una vez).
+ * INTERIOR borders as a single line (a shared border is drawn once).
  *
- * Solo es posible con TopoJSON: sabe qué arcos comparten dos países. Con GeoJSON cada polígono
- * lleva su propio contorno y no hay forma fiable de saber cuáles se tocan, así que devuelve `null`
- * y el consumidor debe usar `stroke` en cada región.
+ * Only possible with TopoJSON: it knows which arcs two countries share. With GeoJSON each polygon
+ * carries its own outline and there is no reliable way to know which ones touch, so it returns `null`
+ * and the consumer must use `stroke` on each region.
  *
- * `a !== b` descarta los arcos del contorno exterior (costas): el borde del país con el mar
- * no es una frontera y duplicaría el trazo de la silueta.
+ * `a !== b` discards the arcs of the outer outline (coasts): a country's border with the sea is not
+ * a border and would duplicate the stroke of the silhouette.
  */
 export const createBorders = ({
   geography,
@@ -39,8 +39,8 @@ export const createBorders = ({
     return mesh(topology, object as Parameters<typeof mesh>[1], (a, b) => a !== b);
   }
 
-  // `mesh` pregunta por cada arco con las geometrías de sus dos lados; se convierten a Feature una
-  // sola vez (caché) porque el filtro del usuario trabaja con Features.
+  // `mesh` asks for every arc with the geometries on its two sides; they are converted to a Feature
+  // only once (cached) because the user's filter works with Features.
   const kept = new Map<unknown, boolean>();
   const keep = (geometry: unknown): boolean => {
     let result = kept.get(geometry);

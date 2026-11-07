@@ -15,7 +15,7 @@ import {
 describe("resolveZoomOptions", () => {
   const idle = { clickIsBusy: false };
 
-  it("por defecto: zoom activo, rueda siempre, pellizco y arrastre, límites [1, 12]", () => {
+  it("by default: zoom on, wheel always, pinch and drag, limits [1, 12]", () => {
     expect(resolveZoomOptions(undefined, idle)).toEqual({
       min: 1,
       max: 12,
@@ -32,11 +32,11 @@ describe("resolveZoomOptions", () => {
     expect(resolveZoomOptions(true, idle)).toEqual(resolveZoomOptions(undefined, idle));
   });
 
-  it("zoom={false} lo desactiva (null)", () => {
+  it("zoom={false} disables it (null)", () => {
     expect(resolveZoomOptions(false, idle)).toBeNull();
   });
 
-  it("un objeto parcial se completa con los valores por defecto", () => {
+  it("a partial object is completed with the defaults", () => {
     expect(resolveZoomOptions({ max: 20, wheel: "cooperative" }, idle)).toMatchObject({
       min: 1,
       max: 20,
@@ -45,12 +45,12 @@ describe("resolveZoomOptions", () => {
     });
   });
 
-  it("doubleClick «auto» se desactiva si el clic ya tiene otro significado", () => {
+  it("doubleClick auto is disabled if the click already has another meaning", () => {
     expect(resolveZoomOptions({}, { clickIsBusy: true })?.doubleClick).toBe(false);
     expect(resolveZoomOptions({ doubleClick: "auto" }, idle)?.doubleClick).toBe(true);
   });
 
-  it("doubleClick explícito se respeta aunque el clic esté ocupado", () => {
+  it("an explicit doubleClick is respected even if the click is busy", () => {
     expect(resolveZoomOptions({ doubleClick: true }, { clickIsBusy: true })?.doubleClick).toBe(
       true,
     );
@@ -75,7 +75,7 @@ describe("createZoomFilter", () => {
   const touches = (n: number) => ({ type: "touchstart", touches: { length: n } });
 
   describe("rueda", () => {
-    it("always: la rueda hace zoom sin modificador", () => {
+    it("always: the wheel zooms without a modifier", () => {
       expect(filter({})({ type: "wheel" })).toBe(true);
     });
 
@@ -86,7 +86,7 @@ describe("createZoomFilter", () => {
       expect(f({ type: "wheel", ctrlKey: true })).toBe(false);
     });
 
-    it("cooperative: solo con Ctrl o ⌘; sin modificador enseña el aviso y no hace zoom", () => {
+    it("cooperative: only with Ctrl or ⌘; without a modifier it shows the hint and does not zoom", () => {
       const onGestureHint = vi.fn<(kind: "wheel" | "touch") => void>();
       const f = filter({ wheel: "cooperative", onGestureHint });
 
@@ -98,13 +98,13 @@ describe("createZoomFilter", () => {
       expect(onGestureHint).toHaveBeenCalledExactlyOnceWith("wheel");
     });
 
-    it("cooperative sin onGestureHint no falla", () => {
+    it("cooperative without onGestureHint does not fail", () => {
       expect(filter({ wheel: "cooperative" })({ type: "wheel" })).toBe(false);
     });
   });
 
-  describe("táctil", () => {
-    it("cooperative: un dedo = scroll de la página (con aviso); dos dedos = mapa", () => {
+  describe("touch", () => {
+    it("cooperative: one finger = page scroll (with a hint); two fingers = map", () => {
       const onGestureHint = vi.fn<(kind: "wheel" | "touch") => void>();
       const f = filter({ wheel: "cooperative", onGestureHint });
 
@@ -113,45 +113,45 @@ describe("createZoomFilter", () => {
       expect(f(touches(2))).toBe(true);
     });
 
-    it("always: un dedo arrastra el mapa", () => {
+    it("always: one finger drags the map", () => {
       expect(filter({})(touches(1))).toBe(true);
     });
 
-    it("pan = false: un dedo no arrastra; dos dedos sí pellizcan", () => {
+    it("pan = false: one finger does not drag; two fingers do pinch", () => {
       const f = filter({ pan: false });
 
       expect(f(touches(1))).toBe(false);
       expect(f(touches(2))).toBe(true);
     });
 
-    it("pinch = false: dos dedos siguen desplazando si pan está activo; sin ninguno, no", () => {
+    it("pinch = false: two fingers still pan if pan is on; with neither, no", () => {
       expect(filter({ pinch: false })(touches(2))).toBe(true);
       expect(filter({ pinch: false, pan: false })(touches(2))).toBe(false);
     });
 
-    it("un evento sin lista de toques se trata como un dedo", () => {
+    it("an event without a touch list is treated as one finger", () => {
       expect(filter({ wheel: "cooperative" })({ type: "touchstart" })).toBe(false);
     });
   });
 
-  describe("ratón y doble clic", () => {
-    it("arrastrar solo con el botón principal", () => {
+  describe("mouse and double click", () => {
+    it("drag only with the primary button", () => {
       const f = filter({});
 
       expect(f({ type: "mousedown", button: 0 })).toBe(true);
       expect(f({ type: "mousedown", button: 2 })).toBe(false);
     });
 
-    it("pan = false: el ratón no arrastra", () => {
+    it("pan = false: the mouse does not drag", () => {
       expect(filter({ pan: false })({ type: "mousedown", button: 0 })).toBe(false);
     });
 
-    it("el clic derecho no inicia nada en otros eventos", () => {
+    it("a right click starts nothing in other events", () => {
       expect(filter({})({ type: "mouseup", button: 0 })).toBe(true);
       expect(filter({})({ type: "mouseup", button: 2 })).toBe(false);
     });
 
-    it("doble clic según la opción", () => {
+    it("double click according to the option", () => {
       expect(filter({ doubleClick: true })({ type: "dblclick" })).toBe(true);
       expect(filter({ doubleClick: false })({ type: "dblclick" })).toBe(false);
     });
@@ -159,14 +159,14 @@ describe("createZoomFilter", () => {
 });
 
 describe("resolveZoomOptions · keyboard", () => {
-  it("el teclado está activo por defecto y se puede desactivar", () => {
+  it("the keyboard is on by default and can be disabled", () => {
     expect(resolveZoomOptions({}, { clickIsBusy: false })?.keyboard).toBe(true);
     expect(resolveZoomOptions({ keyboard: false }, { clickIsBusy: false })?.keyboard).toBe(false);
   });
 });
 
 describe("resolveControls (opt-in)", () => {
-  it("sin controles por defecto: sin zoom, con zoom booleano o con un objeto sin `controls`", () => {
+  it("no controls by default: without zoom, with boolean zoom or with an object without `controls`", () => {
     expect(resolveControls(undefined)).toBeNull();
     expect(resolveControls(true)).toBeNull();
     expect(resolveControls(false)).toBeNull();
@@ -174,11 +174,11 @@ describe("resolveControls (opt-in)", () => {
     expect(resolveControls({ controls: false })).toBeNull();
   });
 
-  it("`controls: true` da la esquina y el reset por defecto", () => {
+  it("`controls: true` gives the default corner and reset", () => {
     expect(resolveControls({ controls: true })).toEqual({ position: "bottom-right", reset: true });
   });
 
-  it("un objeto parcial se completa", () => {
+  it("a partial object is completed", () => {
     expect(resolveControls({ controls: { position: "top-left" } })).toEqual({
       position: "top-left",
       reset: true,
@@ -197,17 +197,17 @@ describe("zoomKeyAction", () => {
     ["-", "out"],
     ["_", "out"],
     ["0", "reset"],
-  ] as const)("«%s» → %s", (key, action) => {
+  ] as const)("%s → %s", (key, action) => {
     expect(zoomKeyAction({ key })).toBe(action);
   });
 
-  it("otras teclas no hacen nada", () => {
+  it("other keys do nothing", () => {
     for (const key of ["a", "Enter", "ArrowUp", "1", " ", "Escape"]) {
       expect(zoomKeyAction({ key })).toBeNull();
     }
   });
 
-  it("con Ctrl, ⌘ o Alt NO se intercepta: es el zoom de la página del navegador", () => {
+  it("with Ctrl, ⌘ or Alt it is NOT intercepted: it is the browser's page zoom", () => {
     expect(zoomKeyAction({ key: "+", ctrlKey: true })).toBeNull();
     expect(zoomKeyAction({ key: "-", metaKey: true })).toBeNull();
     expect(zoomKeyAction({ key: "0", altKey: true })).toBeNull();
@@ -215,7 +215,7 @@ describe("zoomKeyAction", () => {
 });
 
 describe("resolveZoomOptions · padding e initialView", () => {
-  it("padding 24 por defecto; padding e initialView se respetan", () => {
+  it("padding 24 by default; padding and initialView are respected", () => {
     expect(resolveZoomOptions({}, { clickIsBusy: false })).toMatchObject({
       padding: 24,
       initialView: undefined,
@@ -227,14 +227,14 @@ describe("resolveZoomOptions · padding e initialView", () => {
 });
 
 describe("DEFAULT_FOCUS_BOUNDS", () => {
-  it("España incluye Canarias (decisión de negocio, no geométrica)", () => {
+  it("Spain includes the Canary Islands (a business decision, not a geometric one)", () => {
     const [[west, south], [east, north]] = DEFAULT_FOCUS_BOUNDS["ES"] ?? [
       [0, 0],
       [0, 0],
     ];
 
-    expect(west).toBeLessThan(-17.5); // El Hierro está en −18,2
-    expect(south).toBeLessThan(28); // La Gomera, Hierro: ~27,7
+    expect(west).toBeLessThan(-17.5); // El Hierro is at −18.2
+    expect(south).toBeLessThan(28); // La Gomera, El Hierro: ~27.7
     expect(east).toBeGreaterThan(3.3); // Menorca
     expect(north).toBeGreaterThan(43.7); // Estaca de Bares
   });
@@ -270,7 +270,7 @@ describe("resolveZoomTarget", () => {
       ...over,
     });
 
-  it("un id de región encuadra su extensión y la deja centrada", () => {
+  it("a region id frames its extent and leaves it centered", () => {
     const t = resolve({});
 
     expect(t).not.toBeNull();
@@ -280,11 +280,11 @@ describe("resolveZoomTarget", () => {
     expect(t?.k).toBeCloseTo(Math.min((960 - 40) / 100, (500 - 40) / 60));
   });
 
-  it("una región que no existe da null", () => {
+  it("a region that does not exist gives null", () => {
     expect(resolve({ target: "ZZ" })).toBeNull();
   });
 
-  it("un encuadre explícito (`focusBounds`) manda sobre la geometría", () => {
+  it("an explicit framing (`focusBounds`) wins over the geometry", () => {
     const geometric = resolve({ target: "XX" });
     const override = resolve({
       target: "XX",
@@ -300,11 +300,11 @@ describe("resolveZoomTarget", () => {
     expect(override?.k).not.toBeCloseTo(geometric?.k ?? 0);
   });
 
-  it("`focusBounds: { XX: null }` vuelve al encuadre geométrico", () => {
+  it("`focusBounds: { XX: null }` returns to the geometric framing", () => {
     expect(resolve({ focusBounds: { XX: null } })).toEqual(resolve({}));
   });
 
-  it("un encuadre explícito vale aunque la región no exista en la geometría (microestado)", () => {
+  it("an explicit framing holds even if the region does not exist in the geometry (microstate)", () => {
     const t = resolve({
       target: "AD",
       focusBounds: {
@@ -318,7 +318,7 @@ describe("resolveZoomTarget", () => {
     expect(t).not.toBeNull();
   });
 
-  it("{ bounds } encuadra unos límites geográficos", () => {
+  it("{ bounds } frames some geographic bounds", () => {
     const t = resolve({
       target: {
         bounds: [
@@ -331,13 +331,13 @@ describe("resolveZoomTarget", () => {
     expect(t).not.toBeNull();
     expect(t?.k).toBeGreaterThan(1);
     const [px, py] = project([-2.5, 40]) as [number, number];
-    // el centro de los límites queda cerca del centro de la vista
+    // the center of the bounds stays close to the center of the view
     const [sx, sy] = applyTransform(t as never, [px, py]);
     expect(Math.abs(sx - 480)).toBeLessThan(40);
     expect(Math.abs(sy - 250)).toBeLessThan(40);
   });
 
-  it("{ center, zoom } pone ese punto en el centro con esa escala (relativa al encaje)", () => {
+  it("{ center, zoom } puts that point at the center with that scale (relative to the fit)", () => {
     const t = resolve({ target: { center: [-3.7, 40.4], zoom: 4 } });
 
     expect(t?.k).toBe(4);
@@ -347,14 +347,14 @@ describe("resolveZoomTarget", () => {
     expect(sy).toBeCloseTo(250);
   });
 
-  it("{ center, zoom } respeta scaleExtent y rechaza lo que no se puede resolver", () => {
+  it("{ center, zoom } respects scaleExtent and rejects what cannot be resolved", () => {
     expect(resolve({ target: { center: [0, 0], zoom: 99 } })?.k).toBe(12);
     expect(resolve({ target: { center: [0, 0], zoom: 0.1 } })?.k).toBe(1);
     expect(resolve({ target: { center: [0, 0], zoom: NaN } })).toBeNull();
     expect(resolve({ target: { center: [0, 0], zoom: 2 }, project: () => null })).toBeNull();
   });
 
-  it("unos límites que no proyectan dan null", () => {
+  it("bounds that do not project give null", () => {
     expect(
       resolve({
         target: {

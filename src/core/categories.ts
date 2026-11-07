@@ -8,14 +8,14 @@ import {
 export type CategorySpec = {
   id: string;
   label?: string;
-  /** Color fijo. Si falta, se toma de la paleta según la posición de la categoría. */
+  /** Fixed color. If missing, it is taken from the palette according to the category's position. */
   color?: string;
 };
 
 export type ResolvedCategory = { id: string; label: string; color: string };
 
 export type CategoricalScale = {
-  /** Categoría → color. `null`/`undefined` y categorías desconocidas → `emptyFill`. */
+  /** Category → color. `null`/`undefined` and unknown categories → `emptyFill`. */
   getColor: (category: string | null | undefined) => string;
   getLabel: (category: string | null | undefined) => string;
   categories: readonly ResolvedCategory[];
@@ -24,21 +24,21 @@ export type CategoricalScale = {
 
 export type CreateCategoricalScaleOptions = {
   values: readonly (string | null | undefined)[];
-  /** Orden y colores fijos. Sin esto, las categorías salen de los datos, ordenadas alfabéticamente. */
+  /** Fixed order and colors. Without this, categories come from the data, sorted alphabetically. */
   categories?: readonly CategorySpec[];
   palette?: CategoricalPaletteName;
   emptyFill: string;
 };
 
 /**
- * Asigna un color a cada categoría.
+ * Assigns a color to each category.
  *
- * Sin `categories`, el orden es ALFABÉTICO y no el de aparición: si dependiera del orden de los
- * datos, una recarga con las filas en otro orden cambiaría el color de cada categoría. Para
- * colores estables entre pantallas (p. ej. «Europa» siempre azul) hay que pasar `categories`.
+ * Without `categories`, the order is ALPHABETICAL and not order of appearance: if it depended on
+ * the data order, a reload with the rows in another order would change each category's color. For
+ * stable colors across screens (e.g. "Europe" always blue) pass `categories`.
  *
- * Con más categorías que colores en la paleta, los colores se repiten (d3 hace lo mismo): dos
- * categorías con el mismo color son indistinguibles, mejor pasar `categories` con `color`.
+ * With more categories than colors in the palette, colors repeat (d3 does the same): two categories
+ * with the same color are indistinguishable, so better pass `categories` with `color`.
  */
 export const createCategoricalScale = ({
   values,
@@ -56,7 +56,7 @@ export const createCategoricalScale = ({
   const resolved: ResolvedCategory[] = specs.map((spec, index) => ({
     id: spec.id,
     label: spec.label ?? spec.id,
-    // `as string`: el módulo nunca da undefined porque `colors` tiene longitud ≥ 1.
+    // `as string`: the modulo never gives undefined because `colors` has length ≥ 1.
     color: spec.color ?? (colors[index % colors.length] as string),
   }));
   const byId = new Map(resolved.map((c) => [c.id, c]));
@@ -70,7 +70,7 @@ export const createCategoricalScale = ({
   };
 };
 
-/** Un item por categoría (en el orden de la escala) con su nº de regiones; «sin dato» opcional. */
+/** One item per category (in the scale's order) with its number of regions; optional "no data". */
 export const buildCategoricalLegend = ({
   scale,
   values,

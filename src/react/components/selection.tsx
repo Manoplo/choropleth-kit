@@ -3,11 +3,11 @@ import { useChoroplethContext } from "../choropleth-context";
 import { useMapStore } from "../map-store";
 
 /**
- * Resalta el item con hover y la región seleccionada, ENCIMA de las fronteras: si se pintara su
- * borde en `Regions`, los vecinos (pintados después) lo taparían a medias. `pointerEvents: none`
- * para que esta capa no robe el ratón a lo que tiene debajo.
+ * Highlights the hovered item and the selected region, ON TOP of the borders: if their outline were
+ * painted in `Regions`, the neighbors (painted later) would half-cover it. `pointerEvents: none` so
+ * this layer does not steal the mouse from what is underneath.
  *
- * Una región se resalta con una copia de su contorno; un punto, con un anillo sobre su burbuja.
+ * A region is highlighted with a copy of its outline; a point, with a ring around its bubble.
  */
 export const Selection = () => {
   const { choropleth, store, classNames } = useChoroplethContext();
@@ -21,12 +21,12 @@ export const Selection = () => {
       ? (bubbles.find((b) => b.coordinates !== null && b.id === hovered.id) ??
         fallbackPoints.find((p) => p.id === hovered.id))
       : undefined;
-  // La seleccionada va la última: si coincide con el hover, gana el azul de selección.
+  // The selected one goes last: if it coincides with the hover, the selection blue wins.
   const selectedRegion = selectedId === null ? undefined : regions.find((r) => r.id === selectedId);
 
   return (
     <g className={cx("cm-selection", classNames.selection)} pointerEvents="none">
-      {/* Las copias llevan el color de la región: con `dimOthers` el resto se atenúa y ellas no. */}
+      {/* The copies carry the region's color: with `dimOthers` the rest dims and they do not. */}
       {hoveredRegion !== undefined && (
         <path data-selection="hover" d={hoveredRegion.path} style={{ fill: hoveredRegion.fill }} />
       )}

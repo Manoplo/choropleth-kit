@@ -4,8 +4,8 @@ import type { ViewState, ZoomOptions } from "../core";
 import { Choropleth } from "./choropleth";
 import type { RootProps } from "./components/root";
 
-// Paso 24: zoom y pan con d3-zoom. jsdom no tiene layout, pero d3-zoom solo necesita eventos y el
-// tamaño que le damos (`extent`), así que los gestos se pueden simular con fidelidad suficiente.
+// Step 24: zoom and pan with d3-zoom. jsdom has no layout, but d3-zoom only needs events and the
+// size we give it (`extent`), so gestures can be simulated with enough fidelity.
 
 type Row = { code: string; v: number | null };
 const rows: Row[] = [
@@ -45,7 +45,7 @@ const setup = (props: Partial<RootProps<Row>> = {}) => {
   };
 };
 
-/** `{ k, x, y }` del atributo `transform` que escribe d3-zoom. */
+/** `{ k, x, y }` from the `transform` attribute d3-zoom writes. */
 const cameraOf = (viewport: Element) => {
   const match = /translate\(([-\d.e]+),([-\d.e]+)\) scale\(([-\d.e]+)\)/.exec(
     viewport.getAttribute("transform") ?? "",
@@ -55,17 +55,17 @@ const cameraOf = (viewport: Element) => {
   return { x: Number(match[1]), y: Number(match[2]), k: Number(match[3]) };
 };
 
-/** d3-zoom guarda su estado en `svg.__zoom`: la identidad del objeto delata si se reinstaló. */
+/** d3-zoom keeps its state in `svg.__zoom`: the object's identity reveals whether it was reinstalled. */
 const zoomStateOf = (svg: Element) => (svg as unknown as { __zoom: unknown }).__zoom;
 
 const wheel = (svg: Element, init: WheelEventInit = {}) =>
   fireEvent.wheel(svg, { deltaY: -300, clientX: 100, clientY: 50, ...init });
 
-/** La rueda de d3-zoom termina el gesto 150 ms después del último evento. */
+/** d3-zoom's wheel ends the gesture 150 ms after the last event. */
 const endWheel = () => act(() => void vi.advanceTimersByTime(200));
 
-// d3-zoom engancha `mousemove`/`mouseup` a `event.view`. jsdom no deja pasar `view` en el constructor
-// del evento (no reconoce el `window` de vitest como un Window), así que se fija después de crearlo.
+// d3-zoom hooks `mousemove`/`mouseup` to `event.view`. jsdom does not let `view` be passed in the event
+// constructor (it does not recognize vitest's `window` as a Window), so it is set after creating it.
 const mouse = (
   type: "mouseDown" | "mouseMove" | "mouseUp",
   target: Element | Window,
@@ -78,15 +78,15 @@ const mouse = (
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => {
-  // d3-zoom quita su supresor de clic (tras un arrastre) con `setTimeout(…, 0)`. Con temporizadores
-  // falsos no correría nunca, y el supresor se quedaría en la `window` compartida tragándose el clic
-  // del test siguiente. En un navegador real sí se ejecuta.
+  // d3-zoom removes its click suppressor (after a drag) with `setTimeout(…, 0)`. With fake timers
+  // it would never run, and the suppressor would stay on the shared `window` swallowing the next test's
+  // click. In a real browser it does run.
   if (vi.isFakeTimers()) act(() => void vi.runOnlyPendingTimers());
   vi.useRealTimers();
 });
 
-describe("Viewport y montaje", () => {
-  it("Svg envuelve las capas por defecto en `.cm-viewport` (la cámara)", () => {
+describe("Viewport and mounting", () => {
+  it("Svg wraps the default layers in `.cm-viewport` (the camera)", () => {
     const { svg, viewport, path } = setup();
 
     expect(svg.contains(viewport)).toBe(true);
@@ -95,7 +95,7 @@ describe("Viewport y montaje", () => {
     expect(viewport.querySelector(".cm-selection")).not.toBeNull();
   });
 
-  it("al montar, d3-zoom escribe el transform inicial (el encaje) y `--cm-k`", () => {
+  it("on mount, d3-zoom writes the initial transform (the fit) and `--cm-k`", () => {
     const { viewport, root } = setup();
 
     expect(cameraOf(viewport)).toEqual({ x: 0, y: 0, k: 1 });
@@ -103,7 +103,7 @@ describe("Viewport y montaje", () => {
     expect(root.hasAttribute("data-zoomed")).toBe(false);
   });
 
-  it("zoom={false}: no hay comportamiento de zoom (la rueda no hace nada)", () => {
+  it("zoom={false}: there is no zoom behavior (the wheel does nothing)", () => {
     const { svg, viewport } = setup({ zoom: false });
 
     expect(viewport.hasAttribute("transform")).toBe(false);
@@ -112,7 +112,7 @@ describe("Viewport y montaje", () => {
     expect(viewport.hasAttribute("transform")).toBe(false);
   });
 
-  it("un `zoom` con min > max lanza un error claro", () => {
+  it("a `zoom` with min > max throws a clear error", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     expect(() => setup({ zoom: { min: 5, max: 2 } })).toThrow(/\[choropleth\] zoom/);
     spy.mockRestore();
@@ -120,13 +120,13 @@ describe("Viewport y montaje", () => {
 });
 
 describe("rueda", () => {
-  it("por defecto (always): la rueda sin modificador hace zoom anclado al cursor", () => {
+  it("by default (always): the wheel without a modifier zooms anchored to the cursor", () => {
     const { svg, viewport, root } = setup();
     wheel(svg);
 
     const { k, x, y } = cameraOf(viewport);
     expect(k).toBeGreaterThan(1);
-    // Zoom anclado al cursor (100, 50): el punto del lienzo que había debajo sigue debajo.
+    // Zoom anchored to the cursor (100, 50): the canvas point that was underneath stays underneath.
     expect(100 * k + x).toBeCloseTo(100, 6);
     expect(50 * k + y).toBeCloseTo(50, 6);
     expect(x).toBeLessThan(0);
@@ -135,7 +135,7 @@ describe("rueda", () => {
     expect(root.hasAttribute("data-zoomed")).toBe(true);
   });
 
-  it("`data-interacting` vale durante el gesto y se quita al terminar; la cámara se confirma", () => {
+  it("`data-interacting` is set during the gesture and removed when it ends; the camera is confirmed", () => {
     const { svg, root } = setup();
     wheel(svg);
     expect(root.hasAttribute("data-interacting")).toBe(true);
@@ -144,14 +144,14 @@ describe("rueda", () => {
     expect(root.hasAttribute("data-interacting")).toBe(false);
   });
 
-  it("onViewChange llega UNA vez, al terminar, con un ViewState geográfico", () => {
+  it("onViewChange arrives ONCE, when it ends, with a geographic ViewState", () => {
     const onViewChange = vi.fn<(view: ViewState) => void>();
     const { svg } = setup({ zoom: { onViewChange } });
 
     wheel(svg);
     wheel(svg);
     wheel(svg);
-    expect(onViewChange).not.toHaveBeenCalled(); // nunca por frame
+    expect(onViewChange).not.toHaveBeenCalled(); // never per frame
     endWheel();
 
     expect(onViewChange).toHaveBeenCalledOnce();
@@ -162,7 +162,7 @@ describe("rueda", () => {
     expect(Number.isFinite(view?.center[0])).toBe(true);
   });
 
-  it("no avisa al montar (la restauración de la cámara no es un gesto)", () => {
+  it("does not notify on mount (camera restoration is not a gesture)", () => {
     const onViewChange = vi.fn<(view: ViewState) => void>();
     setup({ zoom: { onViewChange } });
     act(() => void vi.runAllTimers());
@@ -170,7 +170,7 @@ describe("rueda", () => {
     expect(onViewChange).not.toHaveBeenCalled();
   });
 
-  it("respeta los límites min y max", () => {
+  it("respects the min and max limits", () => {
     const { svg, viewport } = setup({ zoom: { max: 3 } });
     for (let i = 0; i < 20; i += 1) wheel(svg, { deltaY: -1000 });
     endWheel();
@@ -178,7 +178,7 @@ describe("rueda", () => {
     expect(cameraOf(viewport).k).toBe(3);
   });
 
-  it("alejar más allá del encaje no hace nada (min = 1)", () => {
+  it("zooming out past the fit does nothing (min = 1)", () => {
     const { svg, viewport } = setup();
     wheel(svg, { deltaY: 1000 });
     endWheel();
@@ -186,7 +186,7 @@ describe("rueda", () => {
     expect(cameraOf(viewport)).toEqual({ x: 0, y: 0, k: 1 });
   });
 
-  it("never: la rueda no hace zoom", () => {
+  it("never: the wheel does not zoom", () => {
     const { svg, viewport } = setup({ zoom: { wheel: "never" } });
     wheel(svg);
     endWheel();
@@ -197,27 +197,27 @@ describe("rueda", () => {
   describe("cooperative", () => {
     const cooperative: ZoomOptions = { wheel: "cooperative" };
 
-    it("la rueda sin modificador NO hace zoom, NO cancela el scroll de la página y enseña el aviso", () => {
+    it("the wheel without a modifier does NOT zoom, does NOT cancel the page scroll and shows the hint", () => {
       const { svg, viewport, root } = setup({ zoom: cooperative });
       const notPrevented = wheel(svg);
 
-      expect(notPrevented).toBe(true); // `preventDefault` no se llamó: la página sigue haciendo scroll
+      expect(notPrevented).toBe(true); // `preventDefault` was not called: the page keeps scrolling
       expect(cameraOf(viewport).k).toBe(1);
       expect(root.hasAttribute("data-interacting")).toBe(false);
     });
 
-    it("el aviso de gesto se muestra y se apaga solo", () => {
+    it("the gesture hint is shown and turns itself off", () => {
       const { svg } = setup({ zoom: cooperative });
       const hints: (string | null)[] = [];
       wheel(svg);
-      // el store no es público: se observa a través del DOM de la cámara y del temporizador
+      // the store is not public: it is observed through the camera's DOM and the timer
       hints.push("wheel");
       act(() => void vi.advanceTimersByTime(2000));
 
       expect(hints).toEqual(["wheel"]);
     });
 
-    it("con Ctrl o ⌘ sí hace zoom", () => {
+    it("with Ctrl or ⌘ it does zoom", () => {
       const ctrl = setup({ zoom: cooperative });
       wheel(ctrl.svg, { ctrlKey: true });
       expect(cameraOf(ctrl.viewport).k).toBeGreaterThan(1);
@@ -228,32 +228,32 @@ describe("rueda", () => {
       expect(cameraOf(meta.viewport).k).toBeGreaterThan(1);
     });
 
-    it("devuelve `touch-action` al navegador para que un dedo siga haciendo scroll", () => {
+    it("gives `touch-action` back to the browser so one finger keeps scrolling", () => {
       const { svg } = setup({ zoom: cooperative });
       expect(svg.style.touchAction).toBe("pan-x pan-y");
     });
 
-    it("en el resto de modos no se toca `touch-action` (d3 lo gestiona)", () => {
+    it("in the other modes `touch-action` is left alone (d3 handles it)", () => {
       expect(setup().svg.style.touchAction).not.toBe("pan-x pan-y");
     });
   });
 });
 
-describe("arrastre (pan) y clic", () => {
+describe("drag (pan) and click", () => {
   const drag = (svg: Element, from: [number, number], to: [number, number]) => {
     mouse("mouseDown", svg, { clientX: from[0], clientY: from[1], button: 0 });
     mouse("mouseMove", window, { clientX: to[0], clientY: to[1] });
     mouse("mouseUp", window, { clientX: to[0], clientY: to[1] });
   };
 
-  it("con k = 1 y `contain` no hay nada que arrastrar", () => {
+  it("with k = 1 and `contain` there is nothing to drag", () => {
     const { svg, viewport } = setup();
     drag(svg, [100, 50], [160, 80]);
 
     expect(cameraOf(viewport)).toEqual({ x: 0, y: 0, k: 1 });
   });
 
-  it("ampliado, arrastrar desplaza el mapa; no se puede arrastrar fuera de los límites", () => {
+  it("zoomed in, dragging pans the map; it cannot be dragged outside the limits", () => {
     const { svg, viewport } = setup({ zoom: { max: 4 } });
     wheel(svg, { deltaY: -2000 }); // k = 4
     endWheel();
@@ -264,14 +264,14 @@ describe("arrastre (pan) y clic", () => {
     expect(after.k).toBe(before.k);
     expect(after.x).toBeLessThan(before.x);
 
-    // Un arrastre enorme hacia el otro lado se queda en el borde: x ≤ 0 e y ≤ 0.
+    // A huge drag to the other side stays at the edge: x ≤ 0 and y ≤ 0.
     drag(svg, [0, 0], [5000, 5000]);
     const edge = cameraOf(viewport);
     expect(edge.x).toBeLessThanOrEqual(0);
     expect(edge.y).toBeLessThanOrEqual(0);
   });
 
-  it("pan = false: no se puede arrastrar aunque esté ampliado", () => {
+  it("pan = false: it cannot be dragged even if zoomed in", () => {
     const { svg, viewport } = setup({ zoom: { pan: false } });
     wheel(svg, { deltaY: -2000 });
     endWheel();
@@ -281,7 +281,7 @@ describe("arrastre (pan) y clic", () => {
     expect(cameraOf(viewport)).toEqual(before);
   });
 
-  it("un clic con 2 px de temblor sigue siendo un clic", () => {
+  it("a click with a 2 px tremor is still a click", () => {
     const onItemClick = vi.fn<(item: unknown) => void>();
     const { svg, path } = setup({ onItemClick });
     drag(svg, [100, 50], [102, 51]);
@@ -290,7 +290,7 @@ describe("arrastre (pan) y clic", () => {
     expect(onItemClick).toHaveBeenCalledOnce();
   });
 
-  it("un arrastre de verdad NO produce clic (no se selecciona al soltar)", () => {
+  it("a real drag does NOT produce a click (nothing is selected on release)", () => {
     const onItemClick = vi.fn<(item: unknown) => void>();
     const { svg, path } = setup({ onItemClick });
     drag(svg, [100, 50], [140, 50]);
@@ -299,10 +299,10 @@ describe("arrastre (pan) y clic", () => {
     expect(onItemClick).not.toHaveBeenCalled();
   });
 
-  it("pulsar NO marca `data-interacting`: si quitara los eventos a las regiones, el `click` caería en el <svg>", () => {
-    // Regresión (solo se veía en un navegador real): d3-zoom emite `start` en el `mousedown`. Si ahí se marca
-    // `interacting`, el CSS pone `pointer-events: none` en las regiones, el `mouseup` aterriza en el <svg> y el
-    // `click` nunca llega a la región: ningún clic funcionaba.
+  it("pressing does NOT set `data-interacting`: if it removed events from the regions, the `click` would land on the <svg>", () => {
+    // Regression (only visible in a real browser): d3-zoom emits `start` on `mousedown`. If `interacting` is
+    // set there, the CSS puts `pointer-events: none` on the regions, the `mouseup` lands on the <svg> and the
+    // `click` never reaches the region: no click worked.
     const { svg, root } = setup();
     mouse("mouseDown", svg, { clientX: 100, clientY: 50, button: 0 });
     expect(root.hasAttribute("data-interacting")).toBe(false);
@@ -310,7 +310,7 @@ describe("arrastre (pan) y clic", () => {
     expect(root.hasAttribute("data-interacting")).toBe(false);
   });
 
-  it("un temblor de 3 px (por debajo del umbral de clic) tampoco lo marca", () => {
+  it("a 3 px tremor (below the click threshold) does not set it either", () => {
     const { svg, root } = setup();
     mouse("mouseDown", svg, { clientX: 100, clientY: 50, button: 0 });
     mouse("mouseMove", window, { clientX: 102, clientY: 52 });
@@ -319,9 +319,9 @@ describe("arrastre (pan) y clic", () => {
     mouse("mouseUp", window, { clientX: 102, clientY: 52 });
   });
 
-  it("al ARRASTRAR de verdad (más de 4 px) sí está `data-interacting`, y al soltar se quita", () => {
+  it("when really DRAGGING (more than 4 px) `data-interacting` is set, and removed on release", () => {
     const { svg, root } = setup({ zoom: { max: 4 } });
-    wheel(svg, { deltaY: -2000 }); // con k = 1 y `contain` no hay nada que arrastrar
+    wheel(svg, { deltaY: -2000 }); // with k = 1 and `contain` there is nothing to drag
     endWheel();
     mouse("mouseDown", svg, { clientX: 100, clientY: 50, button: 0 });
     mouse("mouseMove", window, { clientX: 130, clientY: 50 });
@@ -330,7 +330,7 @@ describe("arrastre (pan) y clic", () => {
     expect(root.hasAttribute("data-interacting")).toBe(false);
   });
 
-  it("la rueda marca `data-interacting` en cuanto hay zoom", () => {
+  it("the wheel sets `data-interacting` as soon as there is zoom", () => {
     const { svg, root } = setup();
     wheel(svg);
 
@@ -339,7 +339,7 @@ describe("arrastre (pan) y clic", () => {
     expect(root.hasAttribute("data-interacting")).toBe(false);
   });
 
-  it("el botón secundario no arrastra", () => {
+  it("the secondary button does not drag", () => {
     const { svg, root } = setup();
     mouse("mouseDown", svg, { clientX: 100, clientY: 50, button: 2 });
 
@@ -350,14 +350,14 @@ describe("arrastre (pan) y clic", () => {
 describe("doble clic", () => {
   beforeEach(() => vi.useRealTimers());
 
-  it("sin clic con otro significado, hace zoom ×2", async () => {
+  it("without a click with another meaning, it zooms ×2", async () => {
     const { svg, viewport } = setup();
     fireEvent.dblClick(svg, { clientX: 100, clientY: 50 });
 
     await waitFor(() => expect(cameraOf(viewport).k).toBeCloseTo(2, 1), { timeout: 1500 });
   });
 
-  it("con onItemClick («auto») está desactivado: no se hace clic Y zoom a la vez", async () => {
+  it("with onItemClick (auto) it is disabled: no click AND zoom at once", async () => {
     const { svg, viewport } = setup({ onItemClick: () => {} });
     fireEvent.dblClick(svg, { clientX: 100, clientY: 50 });
     await new Promise((resolve) => setTimeout(resolve, 400));
@@ -365,7 +365,7 @@ describe("doble clic", () => {
     expect(cameraOf(viewport).k).toBe(1);
   });
 
-  it("doubleClick: true lo fuerza aunque haya onItemClick", async () => {
+  it("doubleClick: true forces it even with onItemClick", async () => {
     const { svg, viewport } = setup({ onItemClick: () => {}, zoom: { doubleClick: true } });
     fireEvent.dblClick(svg, { clientX: 100, clientY: 50 });
 
@@ -373,10 +373,10 @@ describe("doble clic", () => {
   });
 });
 
-describe("rendimiento: el zoom no toca React", () => {
-  // `getId` se llama una vez por fila en CADA render de `useChoropleth`: es un contador de renders
-  // de `Root` sin tocar el código de producción (ver el test del paso 15).
-  it("ni la rueda ni el arrastre re-renderizan Root durante el gesto", () => {
+describe("performance: zoom does not touch React", () => {
+  // `getId` is called once per row on EVERY render of `useChoropleth`: it is a render counter
+  // for `Root` without touching production code (see step 15's test).
+  it("neither the wheel nor the drag re-render Root during the gesture", () => {
     const getId = vi.fn<(r: Row) => string>((r) => r.code);
     const { svg } = setup({ getId, zoom: { max: 4 } });
     const before = getId.mock.calls.length;
@@ -390,7 +390,7 @@ describe("rendimiento: el zoom no toca React", () => {
     mouse("mouseUp", window, { clientX: 60, clientY: 30 });
   });
 
-  it("tampoco al TERMINAR el gesto (la cámara confirmada solo toca el store)", () => {
+  it("nor when the gesture ENDS (the confirmed camera only touches the store)", () => {
     const getId = vi.fn<(r: Row) => string>((r) => r.code);
     const { svg } = setup({ getId });
     const before = getId.mock.calls.length;
@@ -401,8 +401,8 @@ describe("rendimiento: el zoom no toca React", () => {
   });
 });
 
-describe("React no pisa la cámara", () => {
-  it("un render del consumidor (datos nuevos) en mitad de un zoom no reinicia el transform", () => {
+describe("React does not overwrite the camera", () => {
+  it("a consumer render (new data) in the middle of a zoom does not reset the transform", () => {
     const { svg, viewport, rerenderWith } = setup();
     wheel(svg);
     const zoomed = viewport.getAttribute("transform");
@@ -413,20 +413,20 @@ describe("React no pisa la cámara", () => {
     expect(viewport.getAttribute("transform")).toBe(zoomed);
   });
 
-  it("opciones en línea con los mismos valores NO reinstalan d3-zoom (dependencias primitivas)", () => {
+  it("inline options with the same values do NOT reinstall d3-zoom (primitive dependencies)", () => {
     const { svg, viewport, rerenderWith } = setup({ zoom: { max: 6 } });
     wheel(svg);
     endWheel();
     const zoomed = viewport.getAttribute("transform");
     const before = zoomStateOf(svg);
 
-    rerenderWith({ zoom: { max: 6 } }); // objeto NUEVO, mismos valores
+    rerenderWith({ zoom: { max: 6 } }); // NEW object, same values
 
     expect(zoomStateOf(svg)).toBe(before);
     expect(viewport.getAttribute("transform")).toBe(zoomed);
   });
 
-  it("al cambiar una opción se reinstala y se RESTAURA la cámara confirmada, sin animación", () => {
+  it("when an option changes it reinstalls and RESTORES the confirmed camera, without animation", () => {
     const { svg, viewport, rerenderWith } = setup({ zoom: { max: 6 } });
     wheel(svg);
     endWheel();
@@ -435,13 +435,13 @@ describe("React no pisa la cámara", () => {
     rerenderWith({ zoom: { max: 9 } });
 
     expect(cameraOf(viewport)).toEqual(zoomed);
-    // y el nuevo límite está en vigor
+    // and the new limit is in force
     for (let i = 0; i < 30; i += 1) wheel(svg, { deltaY: -1000 });
     endWheel();
     expect(cameraOf(viewport).k).toBe(9);
   });
 
-  it("cambiar el tamaño reinstala y conserva la cámara confirmada", () => {
+  it("changing the size reinstalls and preserves the confirmed camera", () => {
     const { svg, viewport, rerenderWith } = setup();
     wheel(svg);
     endWheel();
@@ -452,7 +452,7 @@ describe("React no pisa la cámara", () => {
     expect(cameraOf(viewport).k).toBe(zoomed.k);
   });
 
-  it("zoom true → false quita los gestos", () => {
+  it("zoom true → false removes the gestures", () => {
     const { svg, viewport, rerenderWith } = setup();
     rerenderWith({ zoom: false });
     wheel(svg);
@@ -462,8 +462,8 @@ describe("React no pisa la cámara", () => {
   });
 });
 
-describe("carga asíncrona", () => {
-  it("el zoom se engancha cuando aparece el <svg> tras cargar la geometría", async () => {
+describe("asynchronous loading", () => {
+  it("zoom is hooked up when the <svg> appears after the geometry loads", async () => {
     vi.useRealTimers();
     const { container } = render(mapElement({ geography: Promise.resolve(twoSquares) }));
     expect(container.querySelector("svg")).toBeNull();

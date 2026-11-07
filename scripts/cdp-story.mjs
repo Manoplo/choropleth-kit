@@ -1,23 +1,22 @@
-// Prueba de una story en un Chrome REAL (headless) por el protocolo CDP, sin dependencias (Node >= 22).
+// Test of a story in a REAL Chrome (headless) over the CDP protocol, with no dependencies (Node >= 22).
 //
-// POR QUÉ EXISTE: jsdom no tiene layout ni `pointer-events`, y dos fallos solo se veían en un navegador de
-// verdad (p. ej. el `click` caía en el <svg> porque el CSS quitaba los eventos a las regiones al pulsar).
-// Los tests de jsdom disparan `click` directamente sobre el <path> y no pueden verlo.
+// WHY IT EXISTS: jsdom has no layout or `pointer-events`, and two bugs were only visible in a real browser
+// (e.g. the `click` landed on the <svg> because the CSS removed events from the regions on press).
+// jsdom tests fire `click` directly on the <path> and cannot see it.
 //
-// USO (hace falta Google Chrome en /Applications):
+// USAGE (Google Chrome is required in /Applications):
 //   pnpm build-storybook
-//   python3 -m http.server 6007 --directory storybook-static &        # sirve la build estática
-//   node scripts/cdp-story.mjs <storyId> <ID_PAÍS> [single|dbl|esc|drag]
-//   p. ej.: node scripts/cdp-story.mjs drilldown-engine--uncontrolled-story ES single
-//   (los ids de las stories están en storybook-static/index.json)
+//   python3 -m http.server 6007 --directory storybook-static &        # serves the static build
+//   node scripts/cdp-story.mjs <storyId> <COUNTRY_ID> [single|dbl|esc|drag]
+//   e.g.: node scripts/cdp-story.mjs drilldown-engine--uncontrolled-story ES single
+//   (story ids are in storybook-static/index.json)
 //
-// Modos: `single` un clic · `dbl` doble clic · `esc` clic y luego Escape · `drag` clic, zoom con rueda y arrastre ·
-//        `touch` dos toques con el dedo (el 1.º previsualiza, el 2.º baja) · `tour` (story «Handle + intent»): pulsa
-//        «▶ Tour» y muestra el log cada segundo.
-// Imprime, por instantes, la fase del drill, las regiones, las burbujas, las migas, la cámara y el tooltip, además
-// de la secuencia de eventos de ratón (a qué elemento llegó cada uno) y los avisos / errores de la consola.
-// Maneja un Chrome real por CDP: abre una story, hace clic de verdad y cuenta qué pasa en el DOM y la consola.
-// Uso: node cdp.mjs <storyId> <country> [dbl]
+// Modes: `single` one click · `dbl` double click · `esc` click then Escape · `drag` click, wheel zoom and drag ·
+//        `touch` two finger taps (the 1st previews, the 2nd drills down) · `tour` (story "Handle + intent"): presses
+//        "▶ Tour" and prints the log every second.
+// It prints, moment by moment, the drill phase, the regions, the bubbles, the breadcrumbs, the camera and the tooltip, plus
+// the sequence of mouse events (which element each one reached) and the console warnings / errors.
+// It drives a real Chrome over CDP: opens a story, really clicks and counts what happens in the DOM and the console.
 import { spawn } from "node:child_process";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -53,7 +52,7 @@ for (let i = 0; i < 40; i++) {
   } catch {}
   await sleep(250);
 }
-if (!target) throw new Error("Chrome no arrancó");
+if (!target) throw new Error("Chrome did not start");
 
 const ws = new WebSocket(target.webSocketDebuggerUrl);
 await new Promise((r) => (ws.onopen = r));
@@ -126,19 +125,19 @@ if (mode === "tour") {
     await sleep(1000);
     console.log(`tour+${i + 1}s`, await snapshot());
   }
-  console.log("LOGS", logs.length ? "\n" + logs.join("\n") : "(sin errores ni avisos)");
+  console.log("LOGS", logs.length ? "\n" + logs.join("\n") : "(no errors or warnings)");
   ws.close();
   cleanup();
   process.exit(0);
 }
 
-// Centro de la región en pantalla (el centroide de su caja suele caer dentro; para ES se usa un punto interior).
+// Center of the region on screen (the centroid of its box usually falls inside; for ES an interior point is used).
 const point = JSON.parse(
   await evaluate(`(() => {
     const el = document.querySelector('.cm-regions [data-region-id="${country}"]');
     if (!el) return JSON.stringify(null);
     const b = el.getBoundingClientRect();
-    // buscar un punto realmente dentro de la forma
+    // find a point really inside the shape
     const svg = el.ownerSVGElement;
     for (let fy = 0.5; fy <= 0.9; fy += 0.1) for (let fx = 0.3; fx <= 0.8; fx += 0.1) {
       const x = b.left + b.width * fx, y = b.top + b.height * fy;
@@ -149,7 +148,7 @@ const point = JSON.parse(
   })()`),
 );
 console.log("punto", point);
-if (!point) throw new Error(`no hay región ${country}`);
+if (!point) throw new Error(`no region ${country}`);
 
 if (mode === "touch") {
   const touch = (type) =>
@@ -165,9 +164,9 @@ if (mode === "touch") {
       await sleep(ms === 200 ? 200 : 400);
       console.log(`toque ${n} +${ms}`, await snapshot());
     }
-    await sleep(500); // fuera del doble toque del navegador
+    await sleep(500); // outside the browser's double tap
   }
-  console.log("LOGS", logs.length ? "\n" + logs.join("\n") : "(sin errores ni avisos)");
+  console.log("LOGS", logs.length ? "\n" + logs.join("\n") : "(no errors or warnings)");
   ws.close();
   cleanup();
   process.exit(0);
@@ -224,7 +223,7 @@ if (mode === "esc") {
   }
 }
 if (mode === "drag") {
-  // acercar con la rueda y arrastrar
+  // zoom in with the wheel and drag
   await send("Input.dispatchMouseEvent", {
     type: "mouseWheel",
     x: point.x,
@@ -273,7 +272,7 @@ if (mode === "drag") {
   );
 }
 console.log("EVENTOS", await evaluate("JSON.stringify(window.__ev)"));
-console.log("LOGS", logs.length ? "\n" + logs.join("\n") : "(sin errores ni avisos)");
+console.log("LOGS", logs.length ? "\n" + logs.join("\n") : "(no errors or warnings)");
 ws.close();
 cleanup();
 process.exit(0);

@@ -1,29 +1,29 @@
 import type { CameraTransform } from "./camera";
 
 /**
- * Máquina de estados del drill-down (dd.md §11.2.3). Es un _reducer_ puro: ni DOM, ni temporizadores,
- * ni promesas. Quien la use (`react/`) traduce el mundo real a eventos (clic, fin del vuelo, geometría
- * lista…) y pinta el estado resultante. Así se testean todos los bordes (clic durante un vuelo, error,
- * subir antes de terminar de bajar…) sin jsdom.
+ * Drill-down state machine (dd.md §11.2.3). It is a pure _reducer_: no DOM, no timers, no promises.
+ * Whoever uses it (`react/`) translates the real world into events (click, end of flight, geometry
+ * ready…) and renders the resulting state. That way every edge case (click during a flight, error,
+ * going up before finishing going down…) is tested without jsdom.
  *
- * Vocabulario:
- *  - **path**: ids desde la raíz (`[]` = mundo, `["ES"]` = España). Es el destino «optimista»: cambia en
- *    el instante del clic.
- *  - **settledPath**: el path de lo que está realmente dibujado como capa activa. Hasta el rebase,
- *    `path` y `settledPath` difieren.
- *  - **capa** (`layer`): las regiones de un nivel. La capa de profundidad `d` muestra los hijos de
- *    `path[0..d)`. En `["ES"]` hay dos: el mundo (`context`) y las regiones de España (`active`).
+ * Vocabulary:
+ *  - **path**: ids from the root (`[]` = world, `["ES"]` = Spain). It is the "optimistic" target: it
+ *    changes the instant of the click.
+ *  - **settledPath**: the path of what is actually drawn as the active layer. Until the rebase,
+ *    `path` and `settledPath` differ.
+ *  - **layer**: the regions of one level. The layer at depth `d` shows the children of
+ *    `path[0..d)`. At `["ES"]` there are two: the world (`context`) and Spain's regions (`active`).
  */
 
 export type DrillPhase = "idle" | "flying" | "loading" | "revealing";
 
-/** `down`: un nivel más; `up`: a un ancestro; `lateral`: un hermano; `jump`: cualquier otro salto. */
+/** `down`: one level deeper; `up`: to an ancestor; `lateral`: a sibling; `jump`: any other jump. */
 export type DrillDirection = "down" | "up" | "lateral" | "jump";
 
 export type DrillLayerRole = "active" | "context" | "entering" | "exiting";
 
 export type DrillLayer = {
-  /** Identidad de la capa: ver `layerKey`. */
+  /** Layer identity: see `layerKey`. */
   key: string;
   depth: number;
   role: DrillLayerRole;
@@ -31,26 +31,26 @@ export type DrillLayer = {
 
 export type DrillMachineState = {
   phase: DrillPhase;
-  /** Destino (optimista). */
+  /** Target (optimistic). */
   path: readonly string[];
-  /** Lo que está dibujado como activo ahora. */
+  /** What is currently drawn as active. */
   settledPath: readonly string[];
-  /** Dirección de la transición en curso; `null` en reposo. */
+  /** Direction of the transition in progress; `null` at rest. */
   direction: DrillDirection | null;
   layers: readonly DrillLayer[];
-  /** ¿Hay un vuelo de cámara esperándose? */
+  /** Is a camera flight pending? */
   flight: "pending" | "done";
-  /** Identifica el vuelo vigente: un `FLIGHT_END` de otro vuelo (ya redirigido) se ignora. */
+  /** Identifies the current flight: a `FLIGHT_END` from another flight (already redirected) is ignored. */
   flightId: number;
-  /** Estado de la geometría de la capa nueva. `null` si no hay nada que cargar. */
+  /** State of the new layer's geometry. `null` if there is nothing to load. */
   geometry: "pending" | "ready" | "error" | null;
-  /** `key` de la capa cuya geometría se espera; el resto de avisos de geometría son viejos. */
+  /** `key` of the layer whose geometry is awaited; any other geometry notices are stale. */
   geometryKey: string | null;
-  /** Cámara de cada nivel al bajar desde él, por `layerKey`. Subir vuela a la que había. */
+  /** Camera of each level when going down from it, by `layerKey`. Going up flies back to the saved one. */
   savedCameras: Readonly<Record<string, CameraTransform>>;
-  /** Cámara en el instante en que empezó la transición: adonde se vuelve si falla o se cancela. */
+  /** Camera at the instant the transition started: where to return if it fails or is cancelled. */
   returnCamera: CameraTransform | null;
-  /** `key` de la capa cuya carga falló, hasta el siguiente `DRILL`. Sirve para `onDrillError`. */
+  /** `key` of the layer whose load failed, until the next `DRILL`. Feeds `onDrillError`. */
   error: string | null;
 };
 
@@ -58,11 +58,11 @@ export type DrillMachineEvent =
   | {
       type: "DRILL";
       to: readonly string[];
-      /** Solo se respeta `"jump"` (sin animación); el resto se deduce de `settledPath` → `to`. */
+      /** Only `"jump"` is honored (no animation); the rest is deduced from `settledPath` → `to`. */
       direction?: DrillDirection;
-      /** La cámara actual: se guarda al bajar, para que subir vuelva a ella. */
+      /** The current camera: saved when going down, so that going up returns to it. */
       camera?: CameraTransform;
-      /** La geometría de la capa nueva ya está en caché: no hay nada que esperar. */
+      /** The new layer's geometry is already cached: there is nothing to wait for. */
       cached?: boolean;
     }
   | { type: "FLIGHT_END"; id: number; completed: boolean }
@@ -70,11 +70,11 @@ export type DrillMachineEvent =
   | { type: "GEOMETRY_ERROR"; key: string }
   | { type: "REVEAL_END" };
 
-// ── identidad de las capas ─────────────────────────────────────────────────────────────────────────
+// ── layer identity ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Clave de la capa de profundidad `depth` bajo `path`: el JSON de `path.slice(0, depth)`. Con JSON no
- * hay colisiones aunque un id contenga `/` o `.`.
+ * Key of the layer at depth `depth` under `path`: the JSON of `path.slice(0, depth)`. With JSON there
+ * are no collisions even if an id contains `/` or `.`.
  */
 export const layerKey = (path: readonly string[], depth: number = path.length): string =>
   JSON.stringify(path.slice(0, depth));
@@ -86,9 +86,9 @@ const startsWith = (path: readonly string[], prefix: readonly string[]): boolean
   prefix.length <= path.length && prefix.every((id, i) => id === path[i]);
 
 /**
- * Cómo se llega de `from` a `to`: `"equal"` si son iguales; `"down"` si `to` es `from` + un id;
- * `"up"` si `to` es un ancestro (de cualquier número de pasos); `"lateral"` si cambia solo el último
- * id; `"jump"` en cualquier otro caso (varios niveles hacia abajo, otra rama…).
+ * How to get from `from` to `to`: `"equal"` if they are the same; `"down"` if `to` is `from` + one id;
+ * `"up"` if `to` is an ancestor (any number of steps); `"lateral"` if only the last id changes;
+ * `"jump"` in any other case (several levels down, another branch…).
  */
 export const classifyDrill = (
   from: readonly string[],
@@ -101,9 +101,9 @@ export const classifyDrill = (
   return "jump";
 };
 
-// ── estado inicial ─────────────────────────────────────────────────────────────────────────────────
+// ── initial state ─────────────────────────────────────────────────────────────────────────────────
 
-/** Las capas de un path ya asentado: la última `active`, las anteriores `context`. */
+/** The layers of an already-settled path: the last one `active`, the earlier ones `context`. */
 const settledLayers = (path: readonly string[]): DrillLayer[] =>
   Array.from({ length: path.length + 1 }, (_, depth) => ({
     key: layerKey(path, depth),
@@ -111,7 +111,7 @@ const settledLayers = (path: readonly string[]): DrillLayer[] =>
     role: depth === path.length ? "active" : "context",
   }));
 
-/** Estado en reposo en `path` (por defecto, el mundo). Montar con una ruta de la URL no anima. */
+/** Resting state at `path` (the world by default). Mounting with a route from the URL does not animate. */
 export const createDrillState = (path: readonly string[] = []): DrillMachineState => ({
   phase: "idle",
   path,
@@ -127,18 +127,18 @@ export const createDrillState = (path: readonly string[] = []): DrillMachineStat
   error: null,
 });
 
-/** La cámara a la que volver al subir a `path` (la que había al bajar desde ahí), si se guardó. */
+/** The camera to return to when going up to `path` (the one saved when going down from there), if any. */
 export const savedCameraFor = (
   state: DrillMachineState,
   path: readonly string[],
 ): CameraTransform | null => state.savedCameras[layerKey(path)] ?? null;
 
-// ── piezas del reducer ─────────────────────────────────────────────────────────────────────────────
+// ── reducer pieces ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Capas tras pasar a `to`: las que `to` necesita (activa la última, contexto las demás), más las que
- * sobran como `exiting`. Las que no existían entran con `newRole` (`entering` si hay revelado,
- * `active` si no).
+ * Layers after moving to `to`: the ones `to` needs (the last one active, the others context), plus
+ * the surplus ones as `exiting`. Those that did not exist enter with `newRole` (`entering` if there
+ * is a reveal, `active` if not).
  */
 const layersFor = (
   current: readonly DrillLayer[],
@@ -156,13 +156,13 @@ const layersFor = (
   return [...wanted, ...leaving].sort((a, b) => a.depth - b.depth);
 };
 
-/** Fin de las animaciones de capa: lo que entraba pasa a activo y lo que salía desaparece. */
+/** End of the layer animations: what was entering becomes active and what was leaving disappears. */
 const settleLayers = (layers: readonly DrillLayer[]): DrillLayer[] =>
   layers
     .filter((layer) => layer.role !== "exiting")
     .map((layer) => (layer.role === "entering" ? { ...layer, role: "active" } : layer));
 
-/** Deja en reposo lo que ya terminó de cambiar (revelado o subida); no toca una bajada a medias. */
+/** Settles whatever has finished changing (reveal or going up); does not touch a half-done descent. */
 const settle = (state: DrillMachineState): DrillMachineState =>
   state.phase === "revealing" || state.direction === "up"
     ? {
@@ -178,7 +178,7 @@ const settle = (state: DrillMachineState): DrillMachineState =>
       }
     : state;
 
-/** Sin vuelo ni carga pendientes, en `settledPath`. Conserva `error` (lo lee `onDrillError`). */
+/** No pending flight or load, at `settledPath`. Keeps `error` (read by `onDrillError`). */
 const cancelled = (state: DrillMachineState): DrillMachineState => ({
   ...state,
   phase: "idle",
@@ -191,7 +191,7 @@ const cancelled = (state: DrillMachineState): DrillMachineState => ({
   returnCamera: null,
 });
 
-/** Vuelta atrás con vuelo inverso hasta `returnCamera` (cancelación o fallo de carga). */
+/** Back out with a reverse flight to `returnCamera` (cancellation or load failure). */
 const flyBack = (state: DrillMachineState): DrillMachineState => ({
   ...cancelled(state),
   phase: "flying",
@@ -218,14 +218,14 @@ const onDrill = (
   const from = start.settledPath;
   const direction = event.direction === "jump" ? "jump" : classifyDrill(from, to);
   const base = { ...start, error: null };
-  // Un clic repetido sobre el destino que ya se está yendo: nada que hacer (y no hay que perder una
-  // geometría que ya llegó).
+  // A repeated click on the target already being headed to: nothing to do (and a geometry that has
+  // already arrived must not be lost).
   if (start.direction !== null && start.direction !== "up" && samePath(to, start.path))
     return state;
-  const busy = start.direction !== null; // una bajada, un salto o una vuelta con vuelo en curso
+  const busy = start.direction !== null; // a descent, a jump or a return with a flight in progress
 
   if (direction === "equal") {
-    // Volver al origen mientras se baja = cancelar: vuelo de vuelta y se descarta la carga.
+    // Going back to the origin while descending = cancel: flight back and the load is discarded.
     return busy ? flyBack({ ...base, returnCamera: start.returnCamera }) : base;
   }
 
@@ -251,7 +251,7 @@ const onDrill = (
   const geometry = cached ? "ready" : "pending";
 
   if (direction === "jump") {
-    // Sin animación: se pinta el estado final en cuanto está la geometría.
+    // No animation: the final state is painted as soon as the geometry is there.
     if (cached) {
       return {
         ...base,
@@ -281,8 +281,8 @@ const onDrill = (
     };
   }
 
-  // down / lateral: vuelo en el espacio del origen, en paralelo a la carga. Una redirección a mitad de
-  // vuelo conserva la cámara de partida original (es la que hay que restaurar).
+  // down / lateral: flight in the origin's space, in parallel with the load. A redirect mid-flight
+  // keeps the original starting camera (it is the one to restore).
   const fresh = !busy;
   return {
     ...base,
@@ -301,7 +301,7 @@ const onDrill = (
   };
 };
 
-/** El vuelo y la geometría están listos: el rebase ocurre aquí y empieza el revelado. */
+/** The flight and the geometry are ready: the rebase happens here and the reveal starts. */
 const startReveal = (state: DrillMachineState): DrillMachineState => ({
   ...state,
   phase: "revealing",
@@ -309,7 +309,7 @@ const startReveal = (state: DrillMachineState): DrillMachineState => ({
   flight: "done",
 });
 
-/** Un salto que ya tiene su geometría: se pinta el estado final sin revelado. */
+/** A jump whose geometry is already there: the final state is painted without a reveal. */
 const finishJump = (state: DrillMachineState): DrillMachineState => ({
   ...state,
   phase: "idle",
@@ -332,9 +332,9 @@ export const drillReducer = (
 
     case "FLIGHT_END": {
       if (state.phase !== "flying" || event.id !== state.flightId) return state;
-      // Subida (o vuelta atrás): ya estaba todo dibujado, solo faltaba la cámara.
+      // Going up (or backing out): everything was already drawn, only the camera was missing.
       if (state.direction === "up") return settle(state);
-      // Un gesto del usuario cortó el vuelo de bajada: se cancela la bajada, no se sigue contra él.
+      // A user gesture cut the descent flight: the descent is cancelled, not continued against it.
       if (!event.completed) return cancelled(state);
       if (state.geometry === "error") return flyBack(state);
       return state.geometry === "ready"
@@ -345,14 +345,14 @@ export const drillReducer = (
     case "GEOMETRY_READY": {
       if (event.key !== state.geometryKey || state.geometry !== "pending") return state;
       const ready = { ...state, geometry: "ready" as const };
-      if (state.phase !== "loading") return ready; // aún vuela: el fin del vuelo hará el rebase
+      if (state.phase !== "loading") return ready; // still flying: the end of the flight will do the rebase
       return state.direction === "jump" ? finishJump(ready) : startReveal(ready);
     }
 
     case "GEOMETRY_ERROR": {
       if (event.key !== state.geometryKey || state.geometry !== "pending") return state;
       const failed = { ...state, geometry: "error" as const, error: event.key };
-      if (state.phase === "flying") return failed; // el fin del vuelo deshará la bajada
+      if (state.phase === "flying") return failed; // the end of the flight will undo the descent
       if (state.phase !== "loading") return state;
       return state.direction === "jump" ? cancelled(failed) : flyBack(failed);
     }

@@ -2,5 +2,6 @@
 
 # Claude Code
 
-- **Primera regla (de `AGENTS.md`): no hacer commit ni push sin que el usuario lo pida explícitamente.**
-  Al terminar un paso, resumir los cambios y esperar su revisión.
+- **First rule (from `AGENTS.md`): do not commit or push unless the user explicitly asks.**
+  When finishing a step, summarize the changes and wait for their review.
+- **Everything you write in this repo is in English** (code, comments, docs, stories, tests).

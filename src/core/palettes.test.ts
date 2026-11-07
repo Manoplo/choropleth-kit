@@ -7,7 +7,7 @@ import {
 } from "./palettes";
 
 describe("sampleSequentialColors", () => {
-  it("devuelve un color por clase, de claro a oscuro", () => {
+  it("returns one color per class, from light to dark", () => {
     const colors = sampleSequentialColors({ interpolate: interpolateBlues, classes: 5 });
 
     expect(colors).toHaveLength(5);
@@ -15,12 +15,12 @@ describe("sampleSequentialColors", () => {
     expect(colors[4]).toBe(interpolateBlues(1));
   });
 
-  it("no empieza en el extremo casi blanco de la paleta", () => {
+  it("does not start at the palette's almost-white extreme", () => {
     const [first] = sampleSequentialColors({ interpolate: interpolateBlues, classes: 3 });
     expect(first).not.toBe(interpolateBlues(0));
   });
 
-  it("con una clase usa un tono medio", () => {
+  it("with one class it uses a mid tone", () => {
     expect(sampleSequentialColors({ interpolate: interpolateBlues, classes: 1 })).toEqual([
       interpolateBlues(0.6),
     ]);
@@ -28,7 +28,7 @@ describe("sampleSequentialColors", () => {
 });
 
 describe("sampleDivergingColors", () => {
-  it("con clases impares, la central es el color neutro (t = 0.5)", () => {
+  it("with odd classes, the middle one is the neutral color (t = 0.5)", () => {
     const colors = sampleDivergingColors({ interpolate: interpolateRdBu, classes: 5 });
 
     expect(colors[2]).toBe(interpolateRdBu(0.5));
@@ -36,8 +36,8 @@ describe("sampleDivergingColors", () => {
   });
 });
 
-describe("registros de paletas", () => {
-  it("todas las paletas devuelven un color CSS", () => {
+describe("palette registries", () => {
+  it("all palettes return a CSS color", () => {
     for (const interpolate of [
       ...Object.values(SEQUENTIAL_PALETTES),
       ...Object.values(DIVERGING_PALETTES),

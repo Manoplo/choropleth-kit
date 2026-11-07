@@ -19,7 +19,7 @@ const feature = (
 const getId = (row: Row) => row.code;
 
 describe("joinData", () => {
-  it("cruza datos y regiones cuando los ids coinciden", () => {
+  it("joins data and regions when the ids match", () => {
     const rows: Row[] = [
       { code: "A", value: 1 },
       { code: "B", value: 2 },
@@ -33,11 +33,11 @@ describe("joinData", () => {
     expect(result.featuresWithoutData).toEqual([]);
   });
 
-  it("informa de los dos lados cuando los ids están mezclados", () => {
+  it("reports both sides when the ids are mixed", () => {
     const rows: Row[] = [
       { code: "A", value: 1 }, // cruza
-      { code: "ES", value: 2 }, // no existe en la geometría
-      { code: "XK", value: 3 }, // no existe en la geometría
+      { code: "ES", value: 2 }, // does not exist in the geometry
+      { code: "XK", value: 3 }, // does not exist in the geometry
     ];
 
     const result = joinData({
@@ -51,7 +51,7 @@ describe("joinData", () => {
     expect(result.featuresWithoutData).toEqual(["B", "C"]);
   });
 
-  it("no cruza nada si el formato de ids es distinto (alpha-2 frente a numérico)", () => {
+  it("joins nothing if the id format differs (alpha-2 versus numeric)", () => {
     const result = joinData({
       features: [feature("724"), feature("250")],
       data: [
@@ -66,14 +66,14 @@ describe("joinData", () => {
     expect(result.featuresWithoutData).toEqual(["724", "250"]);
   });
 
-  it("convierte feature.id numérico a string para poder cruzar", () => {
+  it("converts a numeric feature.id to string so it can join", () => {
     const result = joinData({ features: [feature(724)], data: [{ code: "724", value: 1 }], getId });
 
     expect(result.joined.has("724")).toBe(true);
     expect(result.featuresWithoutData).toEqual([]);
   });
 
-  it("usa getFeatureId cuando el id está en properties", () => {
+  it("uses getFeatureId when the id is in properties", () => {
     const result = joinData({
       features: [feature(undefined, { iso_a2: "ES" })],
       data: [{ code: "ES", value: 1 }],
@@ -84,13 +84,13 @@ describe("joinData", () => {
     expect([...result.joined.keys()]).toEqual(["ES"]);
   });
 
-  it("ignora las regiones sin id (no se pueden cruzar ni nombrar)", () => {
+  it("ignores regions without an id (they cannot be joined or named)", () => {
     const result = joinData({ features: [feature(undefined), feature("A")], data: [], getId });
 
     expect(result.featuresWithoutData).toEqual(["A"]);
   });
 
-  it("conserva el primer dato y reporta los ids duplicados", () => {
+  it("keeps the first datum and reports the duplicate ids", () => {
     const rows: Row[] = [
       { code: "A", value: 1 },
       { code: "A", value: 99 },
@@ -102,7 +102,7 @@ describe("joinData", () => {
     expect(result.duplicateDataIds).toEqual(["A"]);
   });
 
-  it("trata un dato con value null como cruzado (null ≠ sin dato)", () => {
+  it("treats a datum with value null as joined (null ≠ no data)", () => {
     const result = joinData({
       features: [feature("A")],
       data: [{ code: "A", value: null }],
@@ -113,13 +113,13 @@ describe("joinData", () => {
     expect(result.featuresWithoutData).toEqual([]);
   });
 
-  it("no repite ids de regiones duplicadas en la geometría", () => {
+  it("does not repeat the ids of duplicate regions in the geometry", () => {
     const result = joinData({ features: [feature("A"), feature("A")], data: [], getId });
 
     expect(result.featuresWithoutData).toEqual(["A"]);
   });
 
-  it("devuelve todo vacío con entradas vacías", () => {
+  it("returns everything empty with empty inputs", () => {
     const result = joinData({ features: [], data: [], getId });
 
     expect(result).toEqual({
@@ -130,13 +130,13 @@ describe("joinData", () => {
     });
   });
 
-  describe("con world-atlas real", () => {
+  describe("with the real world-atlas", () => {
     const { features } = toFeatureCollection({
       geography: countries110m as unknown as Topology,
       objectName: "countries",
     });
 
-    it("cruza con ISO numérico y falla con alpha-2: el problema real del proyecto", () => {
+    it("joins with numeric ISO and fails with alpha-2: the project's real problem", () => {
       const numeric = joinData({ features, data: [{ code: "724", value: 1 }], getId });
       const alpha2 = joinData({ features, data: [{ code: "ES", value: 1 }], getId });
 

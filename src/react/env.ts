@@ -1,10 +1,10 @@
-// `process` no existe en un navegador sin bundler; los bundlers lo sustituyen por una constante.
+// `process` does not exist in a browser without a bundler; bundlers replace it with a constant.
 export const isProduction = (): boolean =>
   typeof process !== "undefined" && process.env["NODE_ENV"] === "production";
 
 /**
- * «Reducir movimiento» del sistema. Sin `matchMedia` (SSR, jsdom) se asume que no. Se lee en el
- * momento de mover la cámara, no al renderizar: el usuario puede cambiarlo con la página abierta.
+ * The system's "reduce motion". Without `matchMedia` (SSR, jsdom) it is assumed not. It is read at the
+ * moment of moving the camera, not while rendering: the user can change it with the page open.
  */
 export const prefersReducedMotion = (): boolean =>
   typeof window !== "undefined" &&

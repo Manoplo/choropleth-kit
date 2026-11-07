@@ -2397,6 +2397,8 @@ leyenda, hover, selección y tooltip headless, más un playground con datos sint
 ## 21. Handoff para Sonnet 5.5 (v0.2-v0.5: cimientos, cámara, drill-down y pulido visual)
 
 > Copiar esta sección como prompt. Sustituye a §20 como handoff vigente.
+>
+> **Actualización (paso 37):** el MVP (tareas 1-22 de abajo, salvo el tween de conteos) está cerrado. Lo que queda de esta lista (Motion, capas decorativas, tween de conteos) y el resto del roadmap se gestiona en `evolution-and-issues/`, un documento por feature o issue.
 
 ### Contexto
 

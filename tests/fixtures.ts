@@ -1,6 +1,6 @@
 import type { Topology } from "topojson-specification";
 
-// Dos cuadrados 1×1 pegados (A y B). Detalle del dibujo en src/core/geography.test.ts.
+// Two 1×1 squares glued together (A and B). Drawing details in src/core/geography.test.ts.
 export const twoSquares: Topology = {
   type: "Topology",
   objects: {

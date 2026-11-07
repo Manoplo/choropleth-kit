@@ -3,37 +3,37 @@ import { isProduction } from "./env";
 import type { MapStore } from "./map-store";
 
 /**
- * El handle imperativo (dd.md §9.5): lo que se obtiene con `ref` en `<ChoroplethMap>` / `<Choropleth.Root>`
- * y con `useChoroplethApi()` dentro del compound. **Todo lo animado devuelve una `Promise`** que
- * resuelve al terminar, o al ser interrumpido (`completed: false`); así se pueden encadenar vuelos
- * sin temporizadores: `await map.zoomTo("ES"); await map.zoomTo("FR");`.
+ * The imperative handle (dd.md §9.5): what you get with `ref` on `<ChoroplethMap>` / `<Choropleth.Root>`
+ * and with `useChoroplethApi()` inside the compound. **Everything animated returns a `Promise`** that
+ * resolves when done, or when interrupted (`completed: false`); that way flights can be chained
+ * without timers: `await map.zoomTo("ES"); await map.zoomTo("FR");`.
  *
- * `drillDown`, `drillUp` y `drillTo` (paso 34) navegan por los niveles del `drill`; resuelven al volver a reposo
- * en la ruta pedida. (`toSVGString` y `toPNG` de dd.md §9.5 llegan con la exportación.)
+ * `drillDown`, `drillUp` and `drillTo` (step 34) navigate the `drill` levels; they resolve on returning
+ * to rest at the requested route. (`toSVGString` and `toPNG` from dd.md §9.5 arrive with export.)
  */
 export type ChoroplethMapHandle = {
-  /** Vuela a una región (id), unos límites `{ bounds }` o un centro con zoom `{ center, zoom }`. */
+  /** Flies to a region (id), some `{ bounds }` or a center with zoom `{ center, zoom }`. */
   zoomTo: (target: ZoomTarget, options?: CameraOptions) => Promise<TransitionResult>;
-  /** Multiplica el zoom actual (2 = acercar al doble, 0,5 = alejar a la mitad), centrado en la vista. */
+  /** Multiplies the current zoom (2 = zoom in to double, 0.5 = zoom out to half), centered on the view. */
   zoomBy: (factor: number, options?: Pick<CameraOptions, "duration">) => Promise<TransitionResult>;
-  /** Vuelo al encaje del nivel. */
+  /** Flight to the level's fit. */
   resetView: (options?: Pick<CameraOptions, "duration">) => Promise<TransitionResult>;
-  /** La vista actual (también a mitad de un vuelo). */
+  /** The current view (also mid-flight). */
   getView: () => ViewState;
   /**
-   * Baja al hijo `id` de lo que se está pidiendo (no de lo mostrado: encadenar `await` es seguro).
-   * Resuelve `completed: true` al terminar la coreografía en esa ruta; `false` si algo la cortó (un gesto,
-   * otra navegación, un error de carga) o si la petición no era válida (id inexistente, `canDrill: false`,
-   * mapa sin `drill`): en esos casos, además, avisa por consola fuera de producción.
+   * Goes down to child `id` of what is being requested (not of what is shown: chaining `await` is safe).
+   * Resolves `completed: true` when the choreography ends at that route; `false` if something cut it
+   * short (a gesture, another navigation, a load error) or if the request was not valid (nonexistent id,
+   * `canDrill: false`, a map without `drill`): in those cases it also warns on the console outside production.
    */
   drillDown: (id: string) => Promise<TransitionResult>;
-  /** Sube `steps` niveles (1 por defecto; de más = a la raíz). En la raíz resuelve `completed: true` sin hacer nada. */
+  /** Goes up `steps` levels (1 by default; more = to the root). At the root it resolves `completed: true` and does nothing. */
   drillUp: (steps?: number) => Promise<TransitionResult>;
-  /** Va a una ruta cualquiera (lateral, salto, la URL): `["ES", "ES-MD"]`; `[]` = la raíz. */
+  /** Goes to any route (lateral, jump, the URL): `["ES", "ES-MD"]`; `[]` = the root. */
   drillTo: (path: readonly string[]) => Promise<TransitionResult>;
 };
 
-/** Solo antes de que el mapa se haya renderizado por primera vez. */
+/** Only before the map has rendered for the first time. */
 const EMPTY_VIEW: ViewState = {
   k: 1,
   x: 0,
@@ -57,10 +57,10 @@ const noDrill = (method: string): Promise<TransitionResult> => {
 };
 
 /**
- * Handle sobre el store. Se puede crear una sola vez: busca la API de zoom en cada llamada, porque
- * `use-zoom` la registra y la des-registra al instalarse y desinstalarse. Sin zoom (`zoom={false}`)
- * o antes de que el mapa esté listo, los movimientos resuelven `completed: false` en vez de lanzar, y
- * `getView` devuelve el encaje.
+ * Handle over the store. It can be created just once: it looks up the zoom API on every call, because
+ * `use-zoom` registers and unregisters it as it installs and uninstalls. Without zoom (`zoom={false}`)
+ * or before the map is ready, moves resolve `completed: false` instead of throwing, and `getView`
+ * returns the fit.
  */
 export const createHandle = (store: MapStore): ChoroplethMapHandle => ({
   zoomTo: (target, options) => store.getZoom()?.zoomTo(target, options) ?? NOT_AVAILABLE,

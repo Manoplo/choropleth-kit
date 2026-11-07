@@ -13,7 +13,7 @@ import {
 const NAMES: ThemeName[] = ["light", "dark", "minimal", "contrast"];
 
 describe("themeToCssVars", () => {
-  it("traduce cada campo a su variable, con px donde toca", () => {
+  it("translates each field to its variable, with px where needed", () => {
     const vars = themeToCssVars({
       background: "#101010",
       empty: { fill: "#222" },
@@ -48,7 +48,7 @@ describe("themeToCssVars", () => {
       "--cm-selected-stroke-width": "3px",
       "--cm-focus-ring": "#888",
       "--cm-focus-ring-width": "4px",
-      "--cm-dim-opacity": "0.4", // la opacidad no lleva unidad
+      "--cm-dim-opacity": "0.4", // opacity carries no unit
       "--cm-bubble-fill": "#999",
       "--cm-bubble-stroke": "#aaa",
       "--cm-bubble-opacity": "0.5",
@@ -67,26 +67,26 @@ describe("themeToCssVars", () => {
     });
   });
 
-  it("lo que no se define no produce variable (se queda el CSS base)", () => {
+  it("what is not defined produces no variable (the base CSS stays)", () => {
     expect(themeToCssVars({ border: { color: "#fff" } })).toEqual({ "--cm-border-color": "#fff" });
     expect(themeToCssVars({})).toEqual({});
     expect(themeToCssVars(undefined)).toEqual({});
     expect(themeToCssVars({ border: {} })).toEqual({});
   });
 
-  it("el cero cuenta como valor (un borde de 0 px es un borde de 0 px)", () => {
+  it("zero counts as a value (a 0 px border is a 0 px border)", () => {
     expect(themeToCssVars({ border: { width: 0 }, dim: { opacity: 0 } })).toEqual({
       "--cm-border-width": "0px",
       "--cm-dim-opacity": "0",
     });
   });
 
-  it("una cadena de ancho se respeta tal cual (sin duplicar la unidad)", () => {
+  it("a width string is respected as is (without duplicating the unit)", () => {
     const loose = { border: { width: "0.1rem" } } as unknown as ChoroplethTheme;
     expect(themeToCssVars(loose)).toEqual({ "--cm-border-width": "0.1rem" });
   });
 
-  it("solo emite variables --cm-* y nunca las internas que escribe la librería", () => {
+  it("only emits --cm-* variables and never the internal ones the library writes", () => {
     for (const name of NAMES) {
       for (const key of Object.keys(themeToCssVars(THEMES[name]))) {
         expect(key).toMatch(/^--cm-[a-z-]+$/);
@@ -97,7 +97,7 @@ describe("themeToCssVars", () => {
 });
 
 describe("temas predefinidos", () => {
-  it("hay cuatro y cada uno define todos los grupos de colores", () => {
+  it("there are four and each one defines all the color groups", () => {
     expect(Object.keys(THEMES).sort()).toEqual([...NAMES].sort());
     for (const name of NAMES) {
       const vars = themeToCssVars(THEMES[name]);
@@ -121,7 +121,7 @@ describe("temas predefinidos", () => {
     }
   });
 
-  it("`light` es exactamente el aspecto por defecto del CSS", () => {
+  it("`light` is exactly the CSS's default look", () => {
     const vars = themeToCssVars(THEMES.light);
     expect(vars["--cm-empty-fill"]).toBe("#d4d4d4");
     expect(vars["--cm-border-color"]).toBe("#ffffff");
@@ -130,17 +130,17 @@ describe("temas predefinidos", () => {
     expect(vars["--cm-selected-stroke"]).toBe("#0b5fff");
   });
 
-  it("`dark` tiene fondo oscuro, fronteras oscuras y tooltip invertido", () => {
+  it("`dark` has a dark background, dark borders and an inverted tooltip", () => {
     const dark = THEMES.dark;
     expect(luminance(dark.background as string)).toBeLessThan(0.05);
     expect(luminance(dark.border?.color as string)).toBeLessThan(0.05);
-    // Invertido: la caja del tooltip es más clara que el fondo del mapa.
+    // Inverted: the tooltip box is lighter than the map background.
     expect(luminance(dark.tooltip?.background as string)).toBeGreaterThan(
       luminance(dark.background as string),
     );
   });
 
-  it("`contrast` engorda fronteras, resaltes y anillo de foco respecto a `light`", () => {
+  it("`contrast` thickens borders, highlights and focus ring relative to `light`", () => {
     const [c, l] = [THEMES.contrast, THEMES.light];
     expect(c.border?.width).toBeGreaterThan(l.border?.width as number);
     expect(c.hover?.width).toBeGreaterThan(l.hover?.width as number);
@@ -148,7 +148,7 @@ describe("temas predefinidos", () => {
     expect(c.focus?.width).toBeGreaterThan(l.focus?.width as number);
   });
 
-  it("el texto de cada tema se lee (contraste ≥ 4,5:1, WCAG AA): tooltip, controles y etiquetas", () => {
+  it("each theme's text is readable (contrast ≥ 4.5:1, WCAG AA): tooltip, controls and labels", () => {
     for (const name of NAMES) {
       const t = THEMES[name];
       expect(
@@ -164,7 +164,7 @@ describe("temas predefinidos", () => {
     }
   });
 
-  it("el resalte de selección y el de hover se distinguen del fondo del mapa (≥ 3:1)", () => {
+  it("the selection highlight and the hover one stand out from the map background (≥ 3:1)", () => {
     for (const name of NAMES) {
       const t = THEMES[name];
       const bg = t.background === "transparent" ? "#ffffff" : t.background;
@@ -176,13 +176,13 @@ describe("temas predefinidos", () => {
 });
 
 describe("resolveTheme / isThemeName", () => {
-  it("un nombre da su objeto; un objeto, el mismo; nada, nada", () => {
+  it("a name gives its object; an object, the same one; nothing, nothing", () => {
     expect(resolveTheme("dark")).toBe(THEMES.dark);
     const mine = defineTheme({ border: { color: "#f00" } });
     expect(resolveTheme(mine)).toBe(mine);
     expect(resolveTheme(undefined)).toBeUndefined();
   });
-  it("isThemeName no confunde propiedades heredadas con temas", () => {
+  it("isThemeName does not mistake inherited properties for themes", () => {
     expect(isThemeName("dark")).toBe(true);
     expect(isThemeName("toString")).toBe(false);
     expect(isThemeName("__proto__")).toBe(false);
@@ -191,34 +191,34 @@ describe("resolveTheme / isThemeName", () => {
 });
 
 describe("extendTheme", () => {
-  it("superpone grupo a grupo: lo que no tocas se queda", () => {
+  it("overlays group by group: what you do not touch stays", () => {
     const mine = extendTheme("dark", { border: { color: "#ff0000" }, tooltip: { radius: 12 } });
-    expect(mine.border).toEqual({ color: "#ff0000", width: 0.5 }); // el ancho sigue siendo el de dark
+    expect(mine.border).toEqual({ color: "#ff0000", width: 0.5 }); // the width is still dark's
     expect(mine.tooltip?.radius).toBe(12);
     expect(mine.tooltip?.background).toBe(THEMES.dark.tooltip?.background);
     expect(mine.background).toBe(THEMES.dark.background);
   });
-  it("no muta el tema base", () => {
+  it("does not mutate the base theme", () => {
     const before = JSON.stringify(THEMES.dark);
     extendTheme("dark", { border: { color: "#ff0000" } });
     expect(JSON.stringify(THEMES.dark)).toBe(before);
   });
-  it("acepta un objeto como base y un grupo nuevo", () => {
+  it("accepts an object as a base and a new group", () => {
     const base = defineTheme({ border: { color: "#111" } });
     expect(extendTheme(base, { bubble: { fill: "#222" } })).toEqual({
       border: { color: "#111" },
       bubble: { fill: "#222" },
     });
   });
-  it("un valor `undefined` no borra lo que hay", () => {
+  it("an `undefined` value does not erase what is there", () => {
     expect(extendTheme("light", { background: undefined }).background).toBe("transparent");
   });
-  it("un campo plano (background) se sustituye", () => {
+  it("a flat field (background) is replaced", () => {
     expect(extendTheme("light", { background: "#abcdef" }).background).toBe("#abcdef");
   });
 });
 
-// ── contraste WCAG ─────────────────────────────────────────────────────────────────────────────────
+// ── WCAG contrast ─────────────────────────────────────────────────────────────────────────────────
 
 function luminance(hex: string): number {
   const n = hex.replace("#", "");

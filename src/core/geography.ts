@@ -1,25 +1,25 @@
-// Solo tipos: `import type` se borra por completo al compilar (verbatimModuleSyntax lo exige).
-// Impacto real: estos dos imports NO aparecen en dist/core.js, así que `@types/geojson` y
-// `@types/topojson-specification` no cuestan ni un byte de runtime.
+// Types only: `import type` is erased entirely when compiling (verbatimModuleSyntax requires it).
+// Real impact: these two imports do NOT appear in dist/core.js, so `@types/geojson` and
+// `@types/topojson-specification` cost not a single byte at runtime.
 import type { FeatureCollection, Geometry } from "geojson";
 import type { Topology } from "topojson-specification";
-// Único import con código real de este archivo. Importamos solo `feature` (no `mesh`, no `merge`):
-// el bundler (tsup) puede descartar el resto de topojson-client y el consumidor solo descarga lo que usamos.
+// The only import with real code in this file. We import only `feature` (not `mesh`, not `merge`):
+// the bundler (tsup) can drop the rest of topojson-client and the consumer only downloads what we use.
 import { feature } from "topojson-client";
 
-/** Geometría ya cargada. */
+/** Already-loaded geometry. */
 export type GeographyData = Topology | FeatureCollection;
 
 /**
- * Lo que acepta la prop `geography` (dd.md §9.2): el dato, una promesa ya en vuelo, o una función
- * que lo carga bajo demanda (`() => import("…/world-110m")`; vale el módulo entero con `default`).
+ * What the `geography` prop accepts (dd.md §9.2): the data, a promise already in flight, or a
+ * function that loads it on demand (`() => import("…/world-110m")`; the whole module with `default` works).
  */
 export type GeographyInput =
   | GeographyData
   | Promise<GeographyData | { default: GeographyData }>
   | (() => Promise<GeographyData | { default: GeographyData }>);
 
-/** Un módulo ES (`import()`) trae la geometría en `default`. */
+/** An ES module (`import()`) brings the geometry in `default`. */
 export const unwrapGeography = (
   value: GeographyData | { default: GeographyData },
 ): GeographyData => ("default" in value ? value.default : value);
@@ -27,47 +27,47 @@ export const unwrapGeography = (
 export type ToFeatureCollectionOptions = {
   geography: Topology | FeatureCollection;
   /**
-   * Qué objeto de la topología usar (p. ej. "countries" o "land" en world-atlas).
-   * Se ignora si `geography` ya es GeoJSON.
+   * Which topology object to use (e.g. "countries" or "land" in world-atlas).
+   * Ignored if `geography` is already GeoJSON.
    */
   objectName?: string;
 };
 
 /**
- * Punto de entrada único de los geodatos: acepta TopoJSON o GeoJSON y devuelve SIEMPRE un
- * `FeatureCollection`. Todo lo que viene después (join con los datos, proyección, rutas SVG) puede
- * asumir esa forma y no volver a preguntarse "¿qué formato me han dado?".
+ * Single entry point for geodata: accepts TopoJSON or GeoJSON and ALWAYS returns a
+ * `FeatureCollection`. Everything that follows (joining with the data, projection, SVG paths) can
+ * assume that shape and never ask again "what format was I given?".
  *
- * Es una función pura y síncrona: no hace fetch. La carga diferida (`() => import(...)`) de
- * `GeographyInput` se resolverá en la capa React; aquí ya llega el dato resuelto.
+ * It is a pure, synchronous function: it does not fetch. The deferred load (`() => import(...)`) of
+ * `GeographyInput` is resolved in the React layer; here the data arrives already resolved.
  */
 export const toFeatureCollection = ({
   geography,
   objectName,
 }: ToFeatureCollectionOptions): FeatureCollection => {
-  // ── PASO 1: distinguir el formato. Tiene que ser lo PRIMERO. ──────────────────────────────────
-  // Por qué va primero: los dos formatos tienen formas incompatibles. Un Topology guarda
-  // `objects` + `arcs`; un FeatureCollection guarda `features`. Si llamáramos a `feature()` de
-  // topojson-client con un GeoJSON, fallaría con un error interno críptico
-  // ("Cannot read properties of undefined (reading 'arcs')") lejos de la causa real.
-  // Decidir aquí, con el campo discriminante `type`, nos permite dar un error claro o un atajo.
+  // ── STEP 1: tell the format apart. Must come FIRST. ──────────────────────────────────────────
+  // Why it goes first: the two formats have incompatible shapes. A Topology stores `objects` +
+  // `arcs`; a FeatureCollection stores `features`. If we called topojson-client's `feature()` with
+  // GeoJSON, it would fail with a cryptic internal error
+  // ("Cannot read properties of undefined (reading 'arcs')") far from the real cause.
+  // Deciding here, with the discriminating field `type`, lets us give a clear error or a shortcut.
   //
-  // Se lee `type` como `unknown` a propósito: en runtime llegan JSON de fuera (fetch, import) que
-  // TypeScript no puede garantizar, así que la comprobación tiene que ser real y no solo de tipos.
+  // `type` is read as `unknown` on purpose: at runtime outside JSON arrives (fetch, import) that
+  // TypeScript cannot guarantee, so the check has to be real and not just a type check.
   const kind: unknown = (geography as { type?: unknown } | null)?.type;
 
-  // ── PASO 2: atajo para GeoJSON. Va ANTES de tocar nada de TopoJSON. ───────────────────────────
-  // Se devuelve el MISMO objeto, sin copiarlo. Impacto real: más adelante las rutas SVG se
-  // memoizarán con `useMemo` usando este objeto como dependencia. Si aquí clonáramos, cada render
-  // produciría una referencia nueva, `useMemo` creería que la geometría cambió y recalcularía los
-  // ~177 paths de `geoPath` en cada render (en un hover, por ejemplo). Devolver la misma referencia
-  // es lo que permite el criterio de aceptación "cambiar de indicador no recalcula rutas".
+  // ── STEP 2: shortcut for GeoJSON. BEFORE touching anything TopoJSON. ─────────────────────────
+  // The SAME object is returned, uncopied. Real impact: later the SVG paths will be memoized with
+  // `useMemo` using this object as a dependency. If we cloned here, every render would produce a new
+  // reference, `useMemo` would think the geometry changed and recompute the ~177 `geoPath` paths on
+  // every render (on a hover, for example). Returning the same reference is what makes the acceptance
+  // criterion "changing indicator does not recompute paths" possible.
   if (kind === "FeatureCollection") {
     return geography as FeatureCollection;
   }
 
-  // Cualquier otra cosa que no sea Topology es un error del llamador: se corta aquí, antes de
-  // buscar objetos, para que el mensaje diga lo que realmente pasó.
+  // Anything else that is not a Topology is a caller error: it is cut off here, before looking for
+  // objects, so the message says what really happened.
   if (kind !== "Topology") {
     throw new Error(
       `[choropleth] toFeatureCollection: unrecognized format (type = ${JSON.stringify(kind)}). ` +
@@ -77,15 +77,15 @@ export const toFeatureCollection = ({
 
   const topology = geography as Topology;
 
-  // ── PASO 3: elegir el objeto de la topología. Va DESPUÉS de saber que es Topology. ────────────
-  // Un TopoJSON puede contener varias capas (world-atlas trae `countries` y `land`). Pintar la
-  // equivocada daría un mapa de un solo polígono continental sin ningún id por el que cruzar los
-  // datos. Si el usuario no dice cuál, usamos la primera: es lo que hace `dd.md §9.2`.
+  // ── STEP 3: choose the topology object. AFTER knowing it is a Topology. ──────────────────────
+  // A TopoJSON can contain several layers (world-atlas ships `countries` and `land`). Painting the
+  // wrong one would give a single-continental-polygon map with no id to join the data on. If the
+  // user does not say which, we use the first: that is what `dd.md §9.2` does.
   const availableNames = Object.keys(topology.objects);
   const name = objectName ?? availableNames[0];
 
-  // `noUncheckedIndexedAccess` nos obliga a contemplar `undefined`; aquí lo convertimos en un error
-  // que lista las opciones, en lugar de dejar que `feature()` reciba `undefined` y falle más tarde.
+  // `noUncheckedIndexedAccess` forces us to handle `undefined`; here we turn it into an error that
+  // lists the options, rather than letting `feature()` receive `undefined` and fail later.
   const object = name === undefined ? undefined : topology.objects[name];
   if (name === undefined || object === undefined) {
     throw new Error(
@@ -94,19 +94,19 @@ export const toFeatureCollection = ({
     );
   }
 
-  // ── PASO 4: convertir. Solo aquí, con formato y objeto ya validados. ──────────────────────────
-  // `feature()` hace el trabajo caro y no trivial: recorre los arcos compartidos, deshace la
-  // cuantización/delta-encoding (`transform`) y reconstruye las coordenadas lon/lat reales.
-  // Impacto real: es lo que convierte un archivo de ~100 KB (fronteras guardadas una sola vez) en
-  // la geometría completa que `geoPath` sabe dibujar.
+  // ── STEP 4: convert. Only here, with format and object already validated. ────────────────────
+  // `feature()` does the expensive, non-trivial work: it walks the shared arcs, undoes the
+  // quantization/delta-encoding (`transform`) and rebuilds the real lon/lat coordinates.
+  // Real impact: it is what turns a ~100 KB file (borders stored only once) into the complete
+  // geometry `geoPath` knows how to draw.
   const converted = feature(topology, object);
 
-  // ── PASO 5: normalizar el resultado. Va ÚLTIMO porque depende de lo que devolvió `feature()`. ─
-  // `feature()` devuelve cosas distintas según el objeto: un `GeometryCollection` produce un
-  // FeatureCollection, pero un objeto de una sola geometría (p. ej. `land` en world-atlas, que es
-  // un único MultiPolygon) produce un Feature suelto. Si lo devolviéramos tal cual, el tipo de
-  // retorno mentiría y `.features.map(...)` en el render rompería solo con algunos geodatos.
-  // Envolverlo garantiza que el resto del código solo tiene que conocer una forma.
+  // ── STEP 5: normalize the result. LAST because it depends on what `feature()` returned. ──────
+  // `feature()` returns different things depending on the object: a `GeometryCollection` produces a
+  // FeatureCollection, but a single-geometry object (e.g. `land` in world-atlas, which is a single
+  // MultiPolygon) produces a lone Feature. If we returned it as is, the return type would lie and
+  // `.features.map(...)` in the render would break only with some geodata. Wrapping it guarantees
+  // the rest of the code only has to know one shape.
   if (converted.type === "FeatureCollection") {
     return converted as FeatureCollection<Geometry>;
   }

@@ -18,29 +18,30 @@
 
 ## Estado actual y handoff (leer primero)
 
-> Actualizada tras el **paso 36** (34 y 35 commiteados en `627bb5d`; el 36 terminado y **sin commitear**; revisión visual de 34-36 pendiente del humano). Rama `feat/drill-close-and-theming`. **880 tests** en verde;
-> `typecheck`, `lint`, `format:check`, `build` y `build-storybook` limpios. Cobertura de `src/core` 100 % líneas.
+> Actualizada tras el **paso 37**, que **cierra el MVP básico y la fase inicial** (pasos 1-37). Los pasos 34-37 están hechos y **sin commitear**; la revisión visual de 25, 26 y 34-37 está pendiente del humano. Rama `feat/pre-pub`. **887 tests** en verde;
+> `typecheck`, `lint`, `format:check`, `build`, `build-storybook`, `size-limit`, `publint` y `attw` limpios (`pnpm verify`). Cobertura de `src/core` 100 % líneas.
+>
+> **Desde ahora, features nuevas e incidencias van en [`evolution-and-issues/`](./evolution-and-issues/README.md)**, un documento por elemento. Este diario es el registro histórico del MVP.
 
 ### Dónde estamos
 
-| Fase                   | Pasos  | Estado                                                                                                                                                                                                                                                                                             |
-| ---------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| v0.1                   | 1-13   | ✅                                                                                                                                                                                                                                                                                                 |
-| A · cimientos          | 14-22  | ✅ (revisión visual de «Foundations» pendiente del humano)                                                                                                                                                                                                                                         |
-| **B · cámara**         | 23-26  | ✅ código y tests. Revisión visual: el 24 la dio por buena el humano; **25 y 26 sin confirmar**                                                                                                                                                                                                    |
-| B · cámara             | **27** | ✅ (revisión visual confirmada por el humano)                                                                                                                                                                                                                                                      |
-| C · drill-down (v0.4)  | 28-34  | ✅ **28-33** commiteados y confirmados por el humano. **34** (cierre del drill) hecho, pendiente de revisión visual y de commit: con él, v0.4 queda completo                                                                                                                                       |
-| **MVP básico**         | 34-37  | **34** ✅\* · **35** ✅\* · **36** ✅\* leyenda `bar` e interactiva, `Defs` / `Patterns` con ids por instancia · **37 ⏳ SIGUIENTE** higiene de publicación (`useCamera`, `size-limit`, story de rendimiento, README, `Zoom/Cooperative`). Alcance y orden en «Plan hasta el MVP básico», al final |
-| Post-MVP               | —      | ⏳ motion ⭐, capas decorativas (`Labels`, `Marker`, `Sphere`, `Graticule`), tween de conteos, accesibilidad completa, exportación y lo aplazado del drill. Lista en «Post-MVP», al final                                                                                                          |
-| Accesibilidad completa | —      | ⏳ **al final, por decisión del humano** (`dd.md §13`); es post-MVP                                                                                                                                                                                                                                |
+| Fase                   | Pasos  | Estado                                                                                                                                                                                                                   |
+| ---------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| v0.1                   | 1-13   | ✅                                                                                                                                                                                                                       |
+| A · cimientos          | 14-22  | ✅ (revisión visual de «Foundations» pendiente del humano)                                                                                                                                                               |
+| **B · cámara**         | 23-26  | ✅ código y tests. Revisión visual: el 24 la dio por buena el humano; **25 y 26 sin confirmar**                                                                                                                          |
+| B · cámara             | **27** | ✅ (revisión visual confirmada por el humano)                                                                                                                                                                            |
+| C · drill-down (v0.4)  | 28-34  | ✅ **28-33** commiteados y confirmados por el humano. **34** (cierre del drill) hecho, pendiente de revisión visual y de commit: con él, v0.4 queda completo                                                             |
+| **MVP básico**         | 34-37  | **34** ✅\* · **35** ✅\* · **36** ✅\* · **37** ✅\* higiene de publicación (`useCamera`, `size-limit`, `Performance/AdminLevel`, `Zoom/Cooperative`, README, paquete listo para npm). **Fase inicial CERRADA**         |
+| Post-MVP               | —      | ⏳ Se gestiona en [`evolution-and-issues/`](./evolution-and-issues/README.md) (21 features y 11 issues iniciales): motion ⭐, capas decorativas, accesibilidad completa, exportación, drill aplazado, producción y v1.0… |
+| Accesibilidad completa | —      | ⏳ **al final, por decisión del humano** (`dd.md §13`); es post-MVP                                                                                                                                                      |
 
-### Qué leer para el paso 37 (no más)
+### Qué leer para el siguiente trabajo (no más)
 
 1. `AGENTS.md` (reglas; **la primera: commit y push solo bajo petición explícita**).
-2. Este «Estado actual» y la tabla del paso 37 en «Plan hasta el MVP básico» (al final del diario).
-3. `dd.md §11.1.7` (`useCamera(selector)`, `getView`), `§14.2` (presupuestos: < 50 KB gzip, rendimiento) y `§21` criterios globales (README, stories obligatorias).
-4. El código que se toca: `src/react/map-store.ts` (la cámara confirmada vive ahí), `src/react/handle.ts` (`getView`), `package.json` (`size-limit`), `stories/` (`Performance/AdminLevel`, `Zoom/Cooperative`).
-5. Para comprobar en un navegador: `scripts/cdp-story.mjs` (ratón y táctil por CDP). **jsdom no ve ni `pointer-events` ni el CSS**: para estilos, `getComputedStyle` en Chrome real (y capturas con `Page.captureScreenshot`, que se pueden mirar con `Read`). Para medir rendimiento hace falta Chrome real, no jsdom.
+2. [`evolution-and-issues/README.md`](./evolution-and-issues/README.md) (índice) y el documento `FEAT-NNN` / `ISSUE-NNN` que toque.
+3. El paso 37 de este diario (cifras de peso y de rendimiento, y el aviso sobre `preinstall`), y solo las secciones de `dd.md` que cite el documento.
+4. Para comprobar en un navegador: `scripts/cdp-story.mjs` (ratón y táctil por CDP). **jsdom no ve ni `pointer-events` ni el CSS**: para estilos, `getComputedStyle` en Chrome real. Para medir rendimiento hace falta Chrome real, no jsdom.
 
 ### Decisiones del humano que se desvían de `dd.md` (vigentes)
 
@@ -98,6 +99,8 @@
 
 ### Preguntas abiertas
 
+> Tras el paso 37 pasan a ser documentos de [`evolution-and-issues/`](./evolution-and-issues/README.md) (`ISSUE-004`, `-005`, `FEAT-006`, `-011`, `-012`, `-013`); esta lista queda como histórico.
+
 - **Ancla de las burbujas de Rusia** (§26.8): `getAnchorPoint` proyecta el anillo que cruza el antimeridiano vértice
   a vértice; visualmente salió plausible pero no está garantizado. ¿Prueba específica ahora o en el pulido?
 - **Foco de teclado como intención de bajar** (`dd.md §11.2.2`: «hover sostenido o foco»): aplazado, hoy las regiones no se enfocan. Entra con la accesibilidad (flechas entre regiones).
@@ -109,12 +112,10 @@
 
 ### Prompt de arranque para una sesión nueva
 
-> Lee `AGENTS.md` y la sección «Estado actual y handoff» de `choropleth-build-proccess.md`, y los pasos 35 y 36 de ese
-> diario. Sigue con el **paso 37** (higiene de publicación: `useCamera(selector)`, `size-limit` con presupuesto < 50 KB gzip,
-> story `Performance/AdminLevel` con Profiler y tests de «hover/zoom/pan no re-renderizan `Root`», README y la story
-> `Zoom/Cooperative` completa), leyendo solo `coropleth-library.md` §11.1.7, §14.2 y §21 (criterios globales) y el código que se
-> toca. Un paso cada vez; no commitees ni hagas push sin que te lo pida; la revisión visual la hago yo, pero puedes comprobar
-> interacciones y estilos en Chrome real con `scripts/cdp-story.mjs` y `getComputedStyle`.
+> Lee `AGENTS.md`, el índice de `evolution-and-issues/README.md` y el documento que te indique el humano (`FEAT-NNN` o
+> `ISSUE-NNN`). El MVP (pasos 1-37) está cerrado: el diario es histórico. Lee solo las secciones de `coropleth-library.md` que cite
+> ese documento. Un paso cada vez; no commitees ni hagas push sin que te lo pida; la revisión visual la hace el humano, pero puedes comprobar
+> interacciones y estilos en Chrome real con `scripts/cdp-story.mjs` y `getComputedStyle`. Verifica con `pnpm verify`.
 
 ## Índice de pasos
 
@@ -172,15 +173,14 @@
 
 **MVP básico** (plan acordado; alcance en «Plan hasta el MVP básico», al final del diario):
 
-| Paso | Título                                                                                                            | Estado       |
-| ---- | ----------------------------------------------------------------------------------------------------------------- | ------------ |
-| 34   | Cierre del drill: `onDrillIntent`, handle `drillDown`/`drillUp`/`drillTo`, dos toques, avisos de desarrollo       | ✅ Hecho\*   |
-| 35   | Theming mínimo: `theme`, `themeToCssVars`, `classNames`, `getRegionStyle`, contrato `data-*` (+ 2 fallos del CSS) | ✅ Hecho\*   |
-| 36   | Leyenda `bar` e interactiva, `Defs` / `Patterns` con ids por instancia                                            | ✅ Hecho\*   |
-| 37   | Higiene de publicación: `useCamera`, `size-limit`, story de rendimiento, README, `Zoom/Cooperative`               | ⏳ Pendiente |
+| Paso | Título                                                                                                                | Estado     |
+| ---- | --------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 34   | Cierre del drill: `onDrillIntent`, handle `drillDown`/`drillUp`/`drillTo`, dos toques, avisos de desarrollo           | ✅ Hecho\* |
+| 35   | Theming mínimo: `theme`, `themeToCssVars`, `classNames`, `getRegionStyle`, contrato `data-*` (+ 2 fallos del CSS)     | ✅ Hecho\* |
+| 36   | Leyenda `bar` e interactiva, `Defs` / `Patterns` con ids por instancia                                                | ✅ Hecho\* |
+| 37   | Higiene de publicación: `useCamera`, `size-limit`, story de rendimiento, README, `Zoom/Cooperative`, paquete para npm | ✅ Hecho\* |
 
-**Post-MVP:** motion ⭐, capas decorativas (`Labels`, `Marker`, `Sphere`, `Graticule`), tween de conteos, accesibilidad completa, exportación y
-lo aplazado del drill (ver «Post-MVP», al final del diario). Cada paso se detalla en su propia entrada al empezarlo.
+**Fase inicial cerrada con el paso 37.** **Post-MVP:** se gestiona en [`evolution-and-issues/`](./evolution-and-issues/README.md) (un documento por feature o issue). La tabla «Post-MVP» del final de este diario es la lista original de la que salieron.
 
 ---
 
@@ -3275,6 +3275,105 @@ Comprobado por mí en Chrome real: al entrar en el primer tramo de la barra, `da
 - ¿Por qué `bubble` y la escala continua no se resaltan?
 - ¿Por qué el `background` en línea del swatch tapaba la trama del CSS?
 
+# Paso 37: higiene de publicación y cierre del MVP
+
+Archivos nuevos: `src/react/use-camera.ts` (+ test), `src/react/readme-example.test.tsx`, `stories/performance.stories.tsx`, `stories/zoom-cooperative.stories.tsx`, `.size-limit.json`, `README.md`, `LICENSE`, `evolution-and-issues/`.
+Tocan: `package.json` (metadatos, `files`, `typesVersions`, scripts), `src/react/index.ts`, `pnpm-lock.yaml`. **Sin commitear.**
+
+## 37.1 Qué se hizo
+
+| Pieza                          | Resultado                                                                                                                                                                                                                                                                           |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `useCamera(selector)`          | `dd.md §11.1.7`. Suscripción con selector a la cámara **confirmada**. Solo se re-renderiza si cambia el resultado (`Object.is`, o igualdad superficial para objetos y arrays). Exportado desde `choropleth-kit`.                                                                    |
+| `size-limit`                   | `.size-limit.json` con cinco entradas; `pnpm size` (build + medición) y también dentro de `pnpm verify`. **Medido en gzip** (por defecto mide en brotli).                                                                                                                           |
+| Story `Performance/AdminLevel` | `Regions3600` (3.600 regiones coloreadas) y `Bubbles1000` (1.000 burbujas sobre 3.600 regiones). Contador vivo de «Renders de Root» (llamadas a `getId` ÷ filas), `Profiler` y botón de cambio de indicador con su tiempo.                                                          |
+| Story `Zoom/Cooperative`       | Mapa con `wheel: "cooperative"` dentro de una página con scroll: aviso Ctrl/⌘, pinch, inercia, controles y teclado, con una lista de comprobación y `useCamera` en un panel. Variantes `WithoutInertia` y `WithoutPinch`.                                                           |
+| README                         | Instalación, ejemplo de 10 líneas, imports, variants, interacción y handle, drill-down, theming, geodatos y fronteras, tamaño, límites conocidos y desarrollo. Enlaza al glosario (`dd.md §2`).                                                                                     |
+| Puesta a punto de npm          | Metadatos (`repository`, `bugs`, `homepage`, `keywords`), `LICENSE` (MIT), `files` sin sourcemaps (el tarball pasa de 323 KB a 138 KB), `typesVersions` para `node10`, `publint` y `@arethetypeswrong/cli` en `pnpm check:package`, `prepublishOnly: pnpm verify`, versión `0.1.0`. |
+| `evolution-and-issues/`        | Índice con la taxonomía, plantillas, 21 features y 11 issues, cada uno en su documento. **Desde aquí, el trabajo posterior al MVP se gestiona ahí.**                                                                                                                                |
+
+## 37.2 Un fallo que habría roto la publicación
+
+El `package.json` llevaba `"preinstall": "… Usa pnpm …"` para bloquear npm y yarn en el repo. **Ese script se publica con el paquete y se ejecuta al instalarlo**: cualquier consumidor con `npm install choropleth-kit` habría visto el error y la instalación habría fallado. Se movió a `prepare`, que npm/pnpm ejecutan en local y al empaquetar, **no** al instalar desde el registro. Comprobado instalando el tarball con **npm** en un proyecto vacío: instala y `renderToString(<ChoroplethMap>)` pinta 175 regiones. (Efecto lateral buscado: `npm pack` dentro del repo sigue bloqueado.)
+
+## 37.3 Presupuesto de peso (`dd.md §14.2`)
+
+`dd.md §14.2` dice «< 50 KB gzip (core + react, sin geodatos)» y no aclara si cuenta d3. Se mide de las dos formas (esbuild, minificado, gzip):
+
+| Medida                                                                   | Gzip        | Límite en `.size-limit.json` |
+| ------------------------------------------------------------------------ | ----------- | ---------------------------- |
+| **Código propio** (core + react; d3, topojson y polylabel como externos) | **28,8 KB** | 50 KB ✅                     |
+| `ChoroplethMap` con todo d3 incluido (sin React)                         | 71,6 KB     | 75 KB                        |
+| Solo `core` con sus dependencias                                         | 43,9 KB     | 50 KB                        |
+| `styles.css`                                                             | 2,3 KB      | 5 KB                         |
+| `choropleth-kit/geo` (`world-110m`, datos)                               | 40,2 KB     | 60 KB                        |
+
+El MVP cumple el presupuesto en la lectura «código propio». **Con d3 incluido (lo que ve el bundler de quien instala) no baja de 50 KB**: d3-geo ≈ 25 KB min, `d3-scale-chromatic` ≈ 17 KB min, `d3-selection` + `d3-transition` ≈ 24 KB min (solo para el zoom), `d3-zoom` ≈ 9 KB min. No se optimizó más en el MVP; queda como `ISSUE-001` con las ideas (carga diferida del zoom/drill, prescindir de `d3-transition`) y la decisión de qué cuenta el presupuesto.
+
+## 37.4 Rendimiento medido en Chrome real
+
+Con Chrome headless por CDP sobre el Storybook estático (`Performance/AdminLevel`):
+
+| Escenario                       | Renders de `Root` tras 60 `mousemove` + 20 ticks de rueda + un arrastre | Cambiar de indicador | _Long animation frames_ | Consola |
+| ------------------------------- | ----------------------------------------------------------------------- | -------------------- | ----------------------- | ------- |
+| 3.600 regiones                  | **2** (los dos iniciales; no sube)                                      | +1 render, ≈ 19 ms   | ninguno                 | limpia  |
+| 1.000 burbujas + 3.600 regiones | **4** (los iniciales; no sube)                                          | +2 renders, ≈ 21 ms  | ninguno                 | limpia  |
+
+Los tests de jsdom que ya vigilaban esto siguen en verde (`choropleth.test.tsx`, `zoom.test.tsx`, `drill-close.test.tsx`, `legend-patterns.test.tsx`). **No medido con rigor:** «primer render del mundo < 50 ms» y «60 fps con mundo + 500 burbujas» (`ISSUE-009`). El `Profiler` solo emite en desarrollo (React lo desactiva en producción): por eso el contador de renders no depende de él (`ISSUE-010`).
+
+## 37.5 Decisiones
+
+- **`useCamera` con caché por referencia de la cámara confirmada.** El store notifica también por hover y puntero; sin la caché, cada `mousemove` evaluaría el selector (y `getView` proyecta límites). La caché vive fuera del hook (`createCameraSnapshot`) porque el linter de React prohíbe mutar variables locales tras el render.
+- **La guardia de pnpm pasa a `prepare`** (ver 37.2).
+- **ESM-only** (`ISSUE-008`): `attw` marca CommonJS como «solo `import()`»; se acepta y se documenta. `check:package` ignora esa regla y la resolución de CSS, que no tiene tipos.
+- **Versión `0.1.0`, `MIT` y titular «choropleth-kit contributors»**: son valores por defecto míos, **por confirmar** (`ISSUE-011`). No hay campo `author`.
+- **README en español** (después reescrito en inglés), por la convención de `AGENTS.md` de entonces (luego se decidió que todo el repositorio va en inglés; ver `ISSUE-012`).
+- **El ejemplo del README tiene test** (`readme-example.test.tsx`): criterio «el ejemplo funciona copiado tal cual». Al escribirlo apareció el aviso de consola «172 region(s) have no data» con solo 3 países: es el diagnóstico del paso 11 (se apaga con `diagnostics={false}`); se documenta y queda como `ISSUE-006`.
+
+## 37.6 Tests
+
+**887 tests** en verde (880 + 6 de `useCamera` + 1 del README); cobertura de `src/core` 100 % líneas. `typecheck`, `lint`, `format:check`, `build`, `build-storybook`, `size-limit`, `publint` y `attw` limpios (`pnpm verify`).
+
+- **`use-camera.test.tsx` (6):** vista inicial; se actualiza al **terminar** el gesto y no durante él; selector primitivo que no cambia → sin renders; objeto nuevo en cada llamada sin bucle y con igualdad superficial; el hover no evalúa el selector; error claro fuera de `Root`.
+- **Mutaciones (cada una comprobada como aplicada):** sin caché por cámara → fallan «terminar el gesto» y «el hover no evalúa el selector»; igualdad `Object.is` en vez de superficial → falla el del objeto.
+- **Flaky conocido (`ISSUE-002`):** en una ejecución de `pnpm verify`, `drill-choreography.test.tsx` tardó 290 s y agotó el límite de 5 s de un test; al repetirlo solo pasó en 44 s. Depende del reloj de pared.
+
+## 37.7 Verificación visual: pendiente de ti \*
+
+Comprobado por mí en Chrome real: en `Zoom/Cooperative`, la rueda sin modificador mueve la página (`scrollY` 0 → 500) y deja el zoom en 1,00; con Ctrl + rueda el zoom llega a 12,00 y el panel de `useCamera` solo se actualiza al terminar el gesto (`1.00` durante). Lo que **no** puedo juzgar:
+
+| Qué comprobar                                                                                                                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm storybook` → **Zoom → Cooperative**: aviso «Usa ⌘/Ctrl + rueda», pinch en táctil (o trackpad), inercia al soltar un arrastre y controles. ¿Se siente bien? ¿La lista de comprobación es clara?                           |
+| **Performance → AdminLevel** (`Regions3600`, `Bubbles1000`): fluidez a ojo al hacer hover, zoom y pan; que el contador de «Renders de Root» no suba; y que el `Profiler` (solo en `pnpm storybook`) no muestre commits largos. |
+| El `README.md` renderizado (en GitHub o en el editor): ¿se entiende el ejemplo de 10 líneas y las secciones?                                                                                                                   |
+
+## 37.8 Cierre de la fase inicial
+
+Con el 37 termina el **MVP básico** (pasos 1-37): v0.4 completo, theming, leyendas, dos mapas conviviendo, peso medido, README y stories de zoom, drill, estilado y rendimiento. **La fase inicial queda cerrada.** Lo pendiente de la revisión visual del humano (`ISSUE-007`) se confirma en paralelo. A partir de aquí:
+
+- El diario (este documento) pasa a ser **registro histórico** del MVP.
+- Las nuevas features, las incidencias y la deuda se gestionan en [`evolution-and-issues/`](./evolution-and-issues/README.md), un documento por elemento (`FEAT-NNN`, `ISSUE-NNN`).
+- Publicar en npm (`pnpm verify` + `pnpm publish`) lo decide el humano; antes, resolver `ISSUE-011` (titular, licencia, versión).
+
+## 37.8 bis Decisiones del autor tras el cierre (7 nov 2026)
+
+- **Autor: Manuel Martín** (`package.json` → `author`, `LICENSE`). Sustituye al titular provisional de 37.5.
+- **Todo en inglés**: código, comentarios y JSDoc (también en los `.d.ts` publicados), README, stories, títulos de tests, `evolution-and-issues/`, `AGENTS.md`.
+  Este diario y `coropleth-library.md` **se quedan en español** como registro histórico (`ISSUE-012`). El paquete de textos `es` de la librería se mantiene: es una traducción opcional, no un valor por defecto.
+- **Landing y documentación en Astro** (también como banco de pruebas del autor): `FEAT-014`.
+- Se añadió `PUBLISHING.md` con los pasos para publicar en npm.
+
+## 37.9 Antes de dar el MVP por cerrado: ¿lo tienes claro?
+
+- ¿Por qué un `preinstall` en `package.json` rompe la instalación de los consumidores y `prepare` no?
+- ¿Por qué `useCamera` no puede darte la cámara «por frame», y por qué su caché va por la referencia de la cámara?
+- ¿Qué mide cada entrada de `.size-limit.json` y por qué el MVP cumple una lectura del presupuesto pero no la otra?
+- ¿Cómo sabe la story de rendimiento que `Root` no se ha re-renderizado sin usar el `Profiler`?
+- ¿Qué cosas decidirías tú antes del primer `pnpm publish`?
+
+---
+
 # Plan hasta el MVP básico (pasos 34-37) y post-MVP
 
 > Orden acordado con el humano (tras el paso 33). El criterio: primero lo que falta de la fase C (`dd.md §17`, «v0.4 Navegación entre niveles»),
@@ -3288,7 +3387,7 @@ Comprobado por mí en Chrome real: al entrar en el primer tramo de la barra, `da
 | **34** | **Cierre del drill** ✅\*       | (hecho: ver «Paso 34»; el foco como intención queda para la accesibilidad)                                                                                                                                                                                                                                                                                                                           | §11.2.2, §11.2.3 (fila del prefetch), §9.5, §21 tarea 20 |
 | **35** | **Theming mínimo** ✅\*         | (hecho: ver «Paso 35»; sin `Defs`, que va en el 36)                                                                                                                                                                                                                                                                                                                                                  | §12 (estilado), §21 tarea 21                             |
 | **36** | **Leyenda `bar` y `Defs`** ✅\* | (hecho: ver «Paso 36»; sin tween de conteos ni `filter`)                                                                                                                                                                                                                                                                                                                                             | §12, §21 tarea 22                                        |
-| **37** | **Higiene de publicación**      | `useCamera(selector)` (§11.1.7). **`size-limit`** con presupuesto < 50 KB gzip, anotado en el diario. Story `Performance/AdminLevel` (miles de regiones + 1.000 burbujas) con **Profiler** y tests de «hover/zoom/pan no re-renderizan `Root`». `README` con el ejemplo de 10 líneas, instalación y enlace al glosario. Story `Zoom/Cooperative` completa (aviso Ctrl/⌘, pinch, inercia, controles). | §11.1.7, §14.2, §21 criterios globales                   |
+| **37** | **Higiene de publicación** ✅\* | `useCamera(selector)` (§11.1.7). **`size-limit`** con presupuesto < 50 KB gzip, anotado en el diario. Story `Performance/AdminLevel` (miles de regiones + 1.000 burbujas) con **Profiler** y tests de «hover/zoom/pan no re-renderizan `Root`». `README` con el ejemplo de 10 líneas, instalación y enlace al glosario. Story `Zoom/Cooperative` completa (aviso Ctrl/⌘, pinch, inercia, controles). | §11.1.7, §14.2, §21 criterios globales                   |
 
 **Qué significa «MVP básico cerrado»:** v0.4 completo y revisado; un consumidor puede cambiar el aspecto sin tocar el CSS interno; dos mapas conviven en una página;
 el peso está medido y dentro del presupuesto; hay README y las stories obligatorias de zoom, drill, estilado y rendimiento.
@@ -3301,6 +3400,8 @@ el peso está medido y dentro del presupuesto; hay README y las stories obligato
   del MVP** (primera pieza post-MVP).
 
 ## Post-MVP
+
+> **Sustituido por [`evolution-and-issues/`](./evolution-and-issues/README.md)** al cerrar el paso 37: cada fila de esta tabla es ahora un `FEAT-NNN` y la deuda técnica, un `ISSUE-NNN`. Se conserva como histórico.
 
 Ordenado por valor aproximado; ninguno bloquea el MVP.
 

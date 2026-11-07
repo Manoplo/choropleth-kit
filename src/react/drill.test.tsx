@@ -8,9 +8,9 @@ import { defineDrillLevels, type DrillEvent } from "./drill-levels";
 import { world110m } from "../geo";
 import { useDrillDown, type DrillController } from "./use-drill-down";
 
-// Paso 31: la prop `drill` dentro del mapa. El cambio de nivel es instantáneo (el vuelo y el contexto
-// llegan en el paso siguiente). Geometrías pequeñas hechas a mano: el anillo exterior va en sentido
-// HORARIO (el que espera d3), no el de GeoJSON.
+// Step 31: the `drill` prop inside the map. The level change is instantaneous (the flight and the context
+// arrive in the next step). Small hand-made geometries: the outer ring goes CLOCKWISE
+// (what d3 expects), not GeoJSON's.
 
 const square = (id: string, west: number, south: number, size: number): Feature => ({
   type: "Feature",
@@ -34,8 +34,8 @@ const collection = (...features: Feature[]): FeatureCollection => ({
   features,
 });
 
-// Nivel 0: A, B y C. Nivel 1 (por padre): A1, A2 dentro de A; B1, B2 dentro de B.
-// C está lejos: hace que A y B sean pequeñas en la raíz (si no, A ya llenaría el lienzo y encuadrarla la alejaría).
+// Level 0: A, B and C. Level 1 (per parent): A1, A2 inside A; B1, B2 inside B.
+// C is far away: it makes A and B small at the root (otherwise A would already fill the canvas and framing it would zoom out).
 const world = collection(square("A", 0, 0, 4), square("B", 6, 0, 4), square("C", 60, 40, 4));
 const children: Record<string, FeatureCollection> = {
   A: collection(square("A1", 0, 0, 2), square("A2", 2, 0, 2)),
@@ -89,10 +89,10 @@ const setup = (props: Partial<RootProps<Row>> = {}) => {
   };
 };
 
-// El cambio de nivel espera al vuelo de cámara (350-1200 ms). Los vuelos de d3 no avanzan con los
-// temporizadores falsos de Vitest (su reloj de fotogramas usa el `requestAnimationFrame` real), así que
-// salvo en la coreografía real (más abajo) se simula «reducir movimiento»: el vuelo es un salto inmediato
-// y el revelado dura 0 ms. `waitFor` de Testing Library tampoco sabe de temporizadores falsos de Vitest.
+// The level change waits for the camera flight (350-1200 ms). d3 flights do not advance with Vitest's
+// fake timers (its frame clock uses the real `requestAnimationFrame`), so except in the real choreography
+// (further below) "reduce motion" is simulated: the flight is an immediate jump and the reveal lasts 0 ms.
+// Testing Library's `waitFor` does not know about Vitest's fake timers either.
 const reduceMotion = (reduced: boolean) =>
   vi.stubGlobal(
     "matchMedia",
@@ -112,13 +112,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/** Avanza el reloj y deja correr las promesas (cargas de geometría, vuelos). */
+/** Advances the clock and lets promises run (geometry loads, flights). */
 const flush = (ms = 100) =>
   act(async () => {
     await vi.advanceTimersByTimeAsync(ms);
   });
 
-/** Como `waitFor`, pero avanzando el reloj falso: reintenta la aserción hasta ~6 s de reloj simulado. */
+/** Like `waitFor`, but advancing the fake clock: retries the assertion for up to ~6 s of simulated clock. */
 const until = async (assertion: () => void) => {
   for (let step = 0; step < 60; step++) {
     await flush();
@@ -126,28 +126,28 @@ const until = async (assertion: () => void) => {
       assertion();
       return;
     } catch {
-      // todavía no
+      // not yet
     }
   }
   assertion();
 };
 
-describe("la prop `drill`: nivel raíz", () => {
-  it("pinta la geometría del primer nivel, con sus datos", () => {
+describe("the `drill` prop: root level", () => {
+  it("paints the first level's geometry, with its data", () => {
     const { ids, path } = setup();
 
     expect(ids()).toEqual(["A", "B", "C"]);
     expect(path("A").getAttribute("style")).not.toBe(path("B").getAttribute("style"));
   });
 
-  it("las regiones navegables llevan `data-drillable`", () => {
+  it("drillable regions carry `data-drillable`", () => {
     const { path } = setup();
 
     expect(path("A").hasAttribute("data-drillable")).toBe(true);
     expect(path("B").hasAttribute("data-drillable")).toBe(true);
   });
 
-  it("`canDrill: false` en el nivel: nada es navegable", () => {
+  it("`canDrill: false` on the level: nothing is drillable", () => {
     const closed = defineDrillLevels<Row>([
       { id: "country", geography: world, canDrill: false },
       levels[1] as never,
@@ -157,7 +157,7 @@ describe("la prop `drill`: nivel raíz", () => {
     expect(path("A").hasAttribute("data-drillable")).toBe(false);
   });
 
-  it("`canDrill` como función decide por item", () => {
+  it("`canDrill` as a function decides per item", () => {
     const some = defineDrillLevels<Row>([
       { id: "country", geography: world, canDrill: (item) => item.id !== "B" },
       levels[1] as never,
@@ -168,7 +168,7 @@ describe("la prop `drill`: nivel raíz", () => {
     expect(path("B").hasAttribute("data-drillable")).toBe(false);
   });
 
-  it("sin `geography` ni `drill` lanza un error que dice qué pasar", () => {
+  it("without `geography` or `drill` it throws an error that says what to pass", () => {
     const quiet = vi.spyOn(console, "error").mockImplementation(() => {});
 
     expect(() => setup({ drill: undefined })).toThrow(/Missing `geography`/);
@@ -176,8 +176,8 @@ describe("la prop `drill`: nivel raíz", () => {
   });
 });
 
-describe("bajar de nivel (no controlado)", () => {
-  it("clic en una región navegable: aparecen sus hijas, con sus datos", async () => {
+describe("going down a level (uncontrolled)", () => {
+  it("a click on a drillable region: its children appear, with their data", async () => {
     const { ids, path } = setup();
     fireEvent.click(path("A"));
     await until(() => expect(ids()).toEqual(["A1", "A2"]));
@@ -185,7 +185,7 @@ describe("bajar de nivel (no controlado)", () => {
     expect(path("A1").getAttribute("style")).not.toBe(path("A2").getAttribute("style"));
   });
 
-  it("el último nivel no es navegable: clic selecciona, no baja", async () => {
+  it("the last level is not drillable: a click selects, it does not go down", async () => {
     const { ids, path } = setup({ defaultSelectedId: null });
     fireEvent.click(path("A"));
     await until(() => expect(ids()).toEqual(["A1", "A2"]));
@@ -195,7 +195,7 @@ describe("bajar de nivel (no controlado)", () => {
     expect(path("A1").hasAttribute("data-drillable")).toBe(false);
   });
 
-  it("`onItemClick` se llama también al bajar, con el nivel y `drillable` del item", async () => {
+  it("`onItemClick` is also called when going down, with the item's level and `drillable`", async () => {
     const onItemClick =
       vi.fn<
         (item: { id: string; drillable: boolean; level: { id: string; depth: number } }) => void
@@ -209,7 +209,7 @@ describe("bajar de nivel (no controlado)", () => {
     );
   });
 
-  it("la proyección del hijo encuadra la región: sus rutas caen dentro del lienzo", async () => {
+  it("the child's projection frames the region: its paths fall inside the canvas", async () => {
     const { ids, path } = setup();
     fireEvent.click(path("A"));
     await until(() => expect(ids()).toEqual(["A1", "A2"]));
@@ -222,7 +222,7 @@ describe("bajar de nivel (no controlado)", () => {
     }
   });
 
-  it("A llena el lienzo al bajar (rebase): su hija A1 ocupa mucho más que antes", async () => {
+  it("A fills the canvas when going down (rebase): its child A1 takes up much more than before", async () => {
     const extent = (d: string) => {
       const n = (d.match(/-?\d+(\.\d+)?/g) ?? []).map(Number);
       const xs = n.filter((_, i) => i % 2 === 0);
@@ -237,7 +237,7 @@ describe("bajar de nivel (no controlado)", () => {
     expect(after).toBeGreaterThan(before);
   });
 
-  it("al cambiar de nivel la cámara vuelve al encaje (sin animar)", async () => {
+  it("on a level change the camera returns to the fit (without animating)", async () => {
     const { ids, path, container, viewport } = setup({ zoom: { max: 6 } });
     const svg = container.querySelector("svg") as SVGSVGElement;
     fireEvent.wheel(svg, { deltaY: -2000, clientX: 40, clientY: 20 });
@@ -250,7 +250,7 @@ describe("bajar de nivel (no controlado)", () => {
     expect(viewport().getAttribute("transform")).toBe("translate(0,0) scale(1)");
   });
 
-  it("la selección se limpia al cambiar de nivel", async () => {
+  it("the selection is cleared on a level change", async () => {
     const closed = defineDrillLevels<Row>([
       { id: "country", geography: world, canDrill: (item) => item.id === "A" },
       levels[1] as never,
@@ -265,8 +265,8 @@ describe("bajar de nivel (no controlado)", () => {
   });
 });
 
-describe("`data` como selector", () => {
-  it("recibe el contexto del nivel que se muestra", async () => {
+describe("`data` as a selector", () => {
+  it("receives the context of the level being shown", async () => {
     const seen: (string | null)[] = [];
     const data = (ctx: DrillContext) => {
       seen.push(ctx.parentId);
@@ -280,13 +280,13 @@ describe("`data` como selector", () => {
     expect(seen).toContain("B");
   });
 
-  it("una lista fija también vale (la cruza con la geometría del nivel mostrado)", () => {
+  it("a fixed list also works (it joins it with the shown level's geometry)", () => {
     const { ids } = setup({ data: rows.filter((r) => r.parent === undefined) });
 
     expect(ids()).toEqual(["A", "B", "C"]);
   });
 
-  it("sin `drill`, un selector se resuelve con el contexto de la raíz", () => {
+  it("without `drill`, a selector is resolved with the root's context", () => {
     const data = vi.fn<(ctx: DrillContext) => Row[]>(() => rows.slice(0, 2));
     const { ids } = setup({ drill: undefined, geography: world, data });
 
@@ -296,7 +296,7 @@ describe("`data` como selector", () => {
 });
 
 describe("carga entre niveles", () => {
-  it("mientras la geometría hija carga se sigue mostrando el nivel anterior, con SUS datos", async () => {
+  it("while the child geometry loads the previous level keeps showing, with ITS data", async () => {
     let release: (value: FeatureCollection) => void = () => {};
     const slow = defineDrillLevels<Row>([
       { id: "country", geography: world },
@@ -317,7 +317,7 @@ describe("carga entre niveles", () => {
     await until(() => expect(ids()).toEqual(["A1", "A2"]));
   });
 
-  it("si los DATOS del nivel nuevo son `undefined`, se mantiene el nivel anterior (sin mapa gris)", async () => {
+  it("if the new level's DATA is `undefined`, the previous level is kept (no gray map)", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const Harness = () => {
       const [loaded, setLoaded] = useState(false);
@@ -343,8 +343,8 @@ describe("carga entre niveles", () => {
     fireEvent.click(container.querySelector('[data-region-id="A"]') as Element);
     await flush();
 
-    expect(ids()).toEqual(["A", "B", "C"]); // sigue el nivel viejo
-    expect(warn).not.toHaveBeenCalled(); // y sin avisos de «sin cruzar»
+    expect(ids()).toEqual(["A", "B", "C"]); // the old level is still there
+    expect(warn).not.toHaveBeenCalled(); // and without "unjoined" warnings
 
     fireEvent.click(getByText("load"));
     await until(() => expect(ids()).toEqual(["A1", "A2"]));
@@ -352,14 +352,14 @@ describe("carga entre niveles", () => {
   });
 });
 
-describe("subir de nivel", () => {
+describe("going up a level", () => {
   const Controlled = ({ onController }: { onController: (c: DrillController<Row>) => void }) => {
     const controller = useDrillDown<Row>({ levels });
     onController(controller);
     return mapElement({ drill: controller });
   };
 
-  it("`drillUp` del controlador vuelve al nivel anterior", async () => {
+  it("the controller's `drillUp` returns to the previous level", async () => {
     let controller: DrillController<Row> | undefined;
     const { container } = render(<Controlled onController={(c) => (controller = c)} />);
     const ids = () =>
@@ -375,7 +375,7 @@ describe("subir de nivel", () => {
     expect(controller?.path).toEqual([]);
   });
 
-  it("`status` del controlador: «loading» mientras carga y «idle» al terminar", async () => {
+  it("the controller's `status`: loading while loading and idle when done", async () => {
     let release: (value: FeatureCollection) => void = () => {};
     const slow = defineDrillLevels<Row>([
       { id: "country", geography: world },
@@ -401,7 +401,7 @@ describe("subir de nivel", () => {
 });
 
 describe("modo controlado", () => {
-  it("el clic avisa con `onPathChange` y la ruta la manda el padre", async () => {
+  it("the click notifies with `onPathChange` and the route is dictated by the parent", async () => {
     const onPathChange = vi.fn<(path: readonly string[]) => void>();
     const Harness = () => {
       const [path, setPath] = useState<readonly string[]>([]);
@@ -426,7 +426,7 @@ describe("modo controlado", () => {
     expect(onPathChange).toHaveBeenCalledWith(["B"]);
   });
 
-  it("montar con una ruta (URL) muestra directamente ese nivel", async () => {
+  it("mounting with a route (URL) shows that level directly", async () => {
     const Harness = () => mapElement({ drill: useDrillDown<Row>({ levels, path: ["A"] }) });
     const { container } = render(<Harness />);
     const ids = () =>
@@ -436,7 +436,7 @@ describe("modo controlado", () => {
     await until(() => expect(ids()).toEqual(["A1", "A2"]));
   });
 
-  it("si el padre rechaza el cambio, el mapa no se mueve", async () => {
+  it("if the parent rejects the change, the map does not move", async () => {
     const Harness = () =>
       mapElement({ drill: useDrillDown<Row>({ levels, path: [], onPathChange: () => {} }) });
     const { container } = render(<Harness />);
@@ -449,14 +449,14 @@ describe("modo controlado", () => {
 });
 
 describe("eventos onDrill / onDrillEnd", () => {
-  it("al bajar: onDrill con dirección, contextos e item; después onDrillEnd", async () => {
+  it("when going down: onDrill with direction, contexts and item; then onDrillEnd", async () => {
     const order: string[] = [];
     const onDrill = vi.fn<(e: DrillEvent<Row>) => void>(() => void order.push("drill"));
     const onDrillEnd = vi.fn<(e: DrillEvent<Row>) => void>(() => void order.push("end"));
     const { ids, path } = setup({ onDrill, onDrillEnd });
     fireEvent.click(path("A"));
     await until(() => expect(ids()).toEqual(["A1", "A2"]));
-    await until(() => expect(onDrillEnd).toHaveBeenCalledOnce()); // al acabar el revelado
+    await until(() => expect(onDrillEnd).toHaveBeenCalledOnce()); // when the reveal ends
 
     expect(onDrill).toHaveBeenCalledOnce();
     expect(onDrill.mock.calls[0]?.[0]).toMatchObject({
@@ -470,7 +470,7 @@ describe("eventos onDrill / onDrillEnd", () => {
     expect(order).toEqual(["drill", "end"]);
   });
 
-  it("al montar NO hay eventos", () => {
+  it("on mount there are NO events", () => {
     const onDrill = vi.fn<(e: DrillEvent<Row>) => void>();
     const onDrillEnd = vi.fn<(e: DrillEvent<Row>) => void>();
     setup({ onDrill, onDrillEnd });
@@ -479,7 +479,7 @@ describe("eventos onDrill / onDrillEnd", () => {
     expect(onDrillEnd).not.toHaveBeenCalled();
   });
 
-  it("subir desde el controlador: dirección `up` y sin item", async () => {
+  it("going up from the controller: direction `up` and no item", async () => {
     const onDrill = vi.fn<(e: DrillEvent<Row>) => void>();
     let controller: DrillController<Row> | undefined;
     const Harness = () => {
@@ -496,8 +496,8 @@ describe("eventos onDrill / onDrillEnd", () => {
   });
 });
 
-describe("errores de geometría", () => {
-  it("si la carga falla: onDrillError, vuelta al nivel anterior y el mapa sigue usable", async () => {
+describe("geometry errors", () => {
+  it("if the load fails: onDrillError, back to the previous level and the map stays usable", async () => {
     const failing = defineDrillLevels<Row>([
       { id: "country", geography: world },
       { id: "region", geography: () => Promise.reject(new Error("boom")) },
@@ -519,7 +519,7 @@ describe("errores de geometría", () => {
     expect(container.querySelector('[data-region-id="A"]')).not.toBeNull();
   });
 
-  it("un nivel con 0 regiones para ese padre: error con la pista de `canDrill`", async () => {
+  it("a level with 0 regions for that parent: an error with the `canDrill` hint", async () => {
     const empty = defineDrillLevels<Row>([
       { id: "country", geography: world },
       { id: "region", geography: () => Promise.resolve(collection() as never) },
@@ -536,7 +536,7 @@ describe("errores de geometría", () => {
     );
   });
 
-  it("sin `onDrillError` el fallo se cuenta por consola (en inglés)", async () => {
+  it("without `onDrillError` the failure is reported on the console (in English)", async () => {
     const failing = defineDrillLevels<Row>([
       { id: "country", geography: world },
       { id: "region", geography: () => Promise.reject(new Error("boom")) },
@@ -550,7 +550,7 @@ describe("errores de geometría", () => {
     error.mockRestore();
   });
 
-  it("se puede reintentar tras un fallo", async () => {
+  it("can be retried after a failure", async () => {
     let fail = true;
     const flaky = defineDrillLevels<Row>([
       { id: "country", geography: world },
@@ -573,8 +573,8 @@ describe("errores de geometría", () => {
   });
 });
 
-describe("niveles con `encoding` y `inherit`", () => {
-  it("`encoding` sustituye el variant y el getValue de ESE nivel", async () => {
+describe("levels with `encoding` and `inherit`", () => {
+  it("`encoding` replaces the variant and getValue of THAT level", async () => {
     const encoded = defineDrillLevels<Row>([
       { id: "country", geography: world },
       {
@@ -591,7 +591,7 @@ describe("niveles con `encoding` y `inherit`", () => {
     expect(container.querySelectorAll("circle.cm-bubble")).toHaveLength(2);
   });
 
-  it('"inherit": el nivel siguiente reutiliza la geometría del padre, encuadrada en la región', async () => {
+  it('"inherit": the next level reuses the geometry of the parent, framed on the region', async () => {
     const inherited = defineDrillLevels<Row>([
       { id: "country", geography: world },
       { id: "store", geography: "inherit" },
@@ -606,12 +606,12 @@ describe("niveles con `encoding` y `inherit`", () => {
     fireEvent.click(path("A"));
     await until(() => expect(extent(path("A").getAttribute("d") ?? "")).toBeGreaterThan(before));
 
-    expect(ids()).toEqual(["A", "B", "C"]); // mismas regiones; ahora A llena la vista
+    expect(ids()).toEqual(["A", "B", "C"]); // same regions; now A fills the view
   });
 });
 
-describe("proporción automática", () => {
-  it('con `aspectRatio: "auto"` el alto NO cambia al bajar (se mide en la raíz, no en el nivel)', async () => {
+describe("automatic aspect ratio", () => {
+  it('with `aspectRatio: "auto"` the height does NOT change when going down (it is measured at the root, not at the level)', async () => {
     const { container, ids, path } = setup({
       width: undefined,
       height: undefined,
@@ -628,7 +628,7 @@ describe("proporción automática", () => {
 });
 
 describe("rendimiento", () => {
-  it("el hover no re-renderiza el mapa con `drill` (no vuelve a llamar a `getId`)", () => {
+  it("hover does not re-render the map with `drill` (it does not call `getId` again)", () => {
     const getId = vi.fn<(r: Row) => string>((r) => r.id);
     const { path } = setup({ getId });
     const calls = getId.mock.calls.length;
@@ -645,9 +645,9 @@ describe("geodatos reales (world110m)", () => {
     { id: "store", geography: "inherit" },
   ]);
 
-  // Rusia y Fiyi cruzan el antimeridiano: sin tratarlo, el encuadre sale del ancho del mundo. Al bajar a un
-  // país, su cuerpo principal debe quedar DENTRO de la vista (los territorios lejanos —Guayana, Hawái, la
-  // isla de Fiyi al otro lado del mapa— se salen a propósito) y las rutas ser finitas.
+  // Russia and Fiji cross the antimeridian: without handling it, the framing comes out as wide as the world. When going down to a
+  // country, its main body must stay INSIDE the view (the distant territories —Guiana, Hawaii, Fiji's
+  // island on the other side of the map— overflow on purpose) and the paths be finite.
   it.each(["ES", "FR", "US", "RU", "FJ", "NO", "BR"])(
     "bajar a %s: su cuerpo principal queda dentro de la vista",
     async (id) => {

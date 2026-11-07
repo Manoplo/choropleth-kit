@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { unwrapGeography, type GeographyData, type GeographyInput } from "../core";
 
 /**
- * Caché de geometrías cargadas (dd.md §21 tarea 8). Dos mapas con el mismo `() => import("…")` no
- * descargan dos veces. Se indexa por `geographyKey` si el consumidor lo da, y si no por la
- * identidad de la función / promesa. Una función en línea (`() => import(…)`) tiene identidad
- * nueva en cada render: no rompe nada (el módulo ya cargado devuelve el mismo objeto y React no
- * re-renderiza), pero la caché solo sirve con una función estable o con `geographyKey`.
+ * Cache of loaded geometries (dd.md §21 task 8). Two maps with the same `() => import("…")` do not
+ * download twice. It is keyed by `geographyKey` if the consumer gives one, and otherwise by the
+ * identity of the function / promise. An inline function (`() => import(…)`) has a new identity on
+ * every render: it breaks nothing (the already-loaded module returns the same object and React does
+ * not re-render), but the cache only helps with a stable function or with `geographyKey`.
  */
 const promisesByKey = new Map<string, Promise<GeographyData>>();
 const promisesByIdentity = new WeakMap<object, Promise<GeographyData>>();
@@ -36,7 +36,7 @@ const load = (
   });
   if (key === undefined) promisesByIdentity.set(input, promise);
   else promisesByKey.set(key, promise);
-  // Un fallo no se cachea: el siguiente intento (otro montaje) puede volver a pedirla.
+  // A failure is not cached: the next attempt (another mount) can request it again.
   promise.catch(() => {
     if (key === undefined) promisesByIdentity.delete(input);
     else promisesByKey.delete(key);
@@ -52,11 +52,11 @@ export type UseGeographyResult = {
 };
 
 /**
- * Resuelve la prop `geography`. Un dato síncrono se devuelve en el mismo render (sin parpadeo ni
- * efecto); una promesa o un cargador se esperan en un efecto (carga asíncrona = efecto real) y
- * mientras tanto `geography` es `undefined` y el estado, `loading`.
+ * Resolves the `geography` prop. Synchronous data is returned in the same render (no flicker and no
+ * effect); a promise or a loader is awaited in an effect (async loading = a real effect) and in the
+ * meantime `geography` is `undefined` and the status is `loading`.
  *
- * Si cambia a otra geometría que aún no se ha cargado, se mantiene la anterior hasta que llegue.
+ * If it changes to another geometry that has not loaded yet, the previous one is kept until it arrives.
  */
 export const useGeography = (
   input: GeographyInput,
@@ -88,7 +88,7 @@ export const useGeography = (
     return () => {
       cancelled = true;
     };
-    // `onError` queda fuera a propósito: suele ser una función en línea y relanzaría la carga.
+    // `onError` is left out on purpose: it is usually an inline function and would relaunch the load.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [input, key, ready]);
 
@@ -97,7 +97,7 @@ export const useGeography = (
   return { geography: undefined, status: failed ? "error" : "loading" };
 };
 
-/** Solo para tests: vacía la caché entre pruebas. */
+/** For tests only: empties the cache between tests. */
 export const clearGeographyCache = (): void => {
   promisesByKey.clear();
   valuesByKey.clear();
