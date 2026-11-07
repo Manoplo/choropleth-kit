@@ -21,7 +21,14 @@ import {
   DEFAULT_EMPTY_FILL,
   DEFAULT_FOCUS_BOUNDS,
   defaultFormatValue,
+  checkDrillStep,
+  clampPath,
+  createIntentTimer,
+  formatDrillRequestProblem,
   formatJoinDiagnostics,
+  formatNoIdsDiagnostic,
+  formatTooDeepRequest,
+  formatWrongLevelDataHint,
   getAnchorPoint,
   getFocusExtent,
   getFocusGeometry,
@@ -38,6 +45,7 @@ import {
   type CameraTransform,
   type ColorScale,
   type DrillContext,
+  type DrillRequestProblem,
   type GeographyData,
   type GeographyInput,
   type JoinResult,
@@ -64,7 +72,7 @@ import {
   type MapItem,
 } from "./map-item";
 import { isProduction } from "./env";
-import { createMapStore, type MapStore } from "./map-store";
+import { createMapStore, type DrillApi, type MapStore } from "./map-store";
 import { useContainerSize } from "./use-container-size";
 import { useDrillEngine } from "./use-drill-engine";
 import type { DrillController } from "./use-drill-down";
@@ -87,6 +95,27 @@ export type Region<TDatum> = {
   drillable: boolean;
   /** 0…1: cuánto se retrasa su entrada en el revelado (distancia al centro). Solo mientras se revela. */
   wave: number | undefined;
+  /** De `getRegionStyle`; `undefined` = la del CSS (1). */
+  opacity: number | undefined;
+  /** De `getRegionStyle`: clase propia para esta región. */
+  className: string | undefined;
+};
+
+/**
+ * Estilo por región (dd.md §12.5.6): excepciones basadas en datos que la escala no sabe expresar. Se evalúa en
+ * render y sus campos pasan al `<path>` como primitivas, así que no rompe el `memo` de las regiones.
+ */
+export type RegionStyle = {
+  /** Sustituye al color de la escala (y a `emptyFill`). */
+  fill?: string;
+  opacity?: number;
+  /** Clase propia; se suma a `classNames.region`. */
+  className?: string;
+  /**
+   * **Reservado**: las tramas (`"hatch"`, `"dots"`) llegan con `<Choropleth.Defs>` (paso 36). Hasta entonces se
+   * ignora y, fuera de producción, se avisa una vez.
+   */
+  pattern?: "hatch" | "dots" | (string & {});
 };
 
 /**
@@ -161,6 +190,12 @@ type BaseOptions<TDatum> = {
   onDrillEnd?: (event: DrillEvent<TDatum>) => void;
   /** Si falla la geometría de un nivel (o tiene 0 regiones): se vuelve al nivel anterior. */
   onDrillError?: (event: { error: unknown; ctx: DrillContext }) => void;
+  /**
+   * El puntero lleva 150 ms sobre una región a la que se puede bajar (o, en táctil, se tocó una vez): `ctx` es
+   * el del nivel al que bajaría. Úsalo para precargar los datos (`queryClient.prefetchQuery`); la geometría
+   * de ese nivel ya la precarga el mapa. Se llama una vez por permanencia.
+   */
+  onDrillIntent?: (ctx: DrillContext) => void;
   /** Fuerza el estado de carga de los datos (pulso) aunque `data` esté definido. */
   loading?: boolean;
   getId: (datum: TDatum) => string;
@@ -200,6 +235,11 @@ type BaseOptions<TDatum> = {
   onItemClick?: (item: MapItem<TDatum>) => void;
   /** Hover (o primer toque, en táctil). `null` al salir. Solo se llama cuando cambia el item. */
   onItemHover?: (item: MapItem<TDatum> | null) => void;
+  /**
+   * Estilo por región basado en sus datos: `(r) => r.datum?.estimated ? { opacity: 0.6 } : undefined`. Prioridad:
+   * `getRegionStyle` > color de la escala > `emptyFill`. No definas `fill` en `.cm-region` por CSS: ganaría al dato.
+   */
+  getRegionStyle?: (region: Region<TDatum>) => RegionStyle | undefined;
   /** Se llama cada vez que cambia el resultado del cruce datos↔regiones (también en producción). */
   onJoinReport?: (report: JoinReport) => void;
   /**
@@ -762,6 +802,7 @@ export const useChoropleth = <TDatum>(
     ? { id: engine.level?.id ?? ROOT_LEVEL.id, depth: engine.depth }
     : ROOT_LEVEL;
   const regions: Region<TDatum>[] = [];
+  const patternIgnored = { current: false };
   const anonymousPaths: string[] = [];
   features.features.forEach((feature, index) => {
     const path = paths[index];
@@ -785,7 +826,7 @@ export const useChoropleth = <TDatum>(
           ? Math.min(1, Math.hypot(cx - width / 2, cy - height / 2) / reach)
           : 0;
     }
-    regions.push({
+    const base: Region<TDatum> = {
       id: entry.id,
       feature,
       datum,
@@ -794,6 +835,8 @@ export const useChoropleth = <TDatum>(
       formattedValue: variant.labels[index] ?? "",
       fill: variant.fills[index] ?? "",
       wave,
+      opacity: undefined,
+      className: undefined,
       drillable:
         engine.active &&
         isDrillable(engine.levels, engine.depth, {
@@ -804,7 +847,29 @@ export const useChoropleth = <TDatum>(
           level: levelInfo,
           drillable: true,
         }),
-    });
+    };
+    const custom = options.getRegionStyle?.(base);
+    if (custom?.pattern !== undefined) patternIgnored.current = true;
+    regions.push(
+      custom === undefined
+        ? base
+        : {
+            ...base,
+            fill: custom.fill ?? base.fill,
+            opacity: custom.opacity,
+            className: custom.className,
+          },
+    );
+  });
+  // `pattern` aún no se pinta (paso 36): se avisa una vez, en un efecto, no en el render.
+  const patternWarned = useRef(false);
+  useEffect(() => {
+    if (patternIgnored.current && !patternWarned.current && !isProduction()) {
+      patternWarned.current = true;
+      console.warn(
+        "[choropleth] getRegionStyle: `pattern` is not rendered yet (patterns arrive with <Choropleth.Defs>); it was ignored.",
+      );
+    }
   });
 
   // Los microestados son burbujas en `bubble` (con sus coordenadas) y puntos sueltos en el resto.
@@ -851,11 +916,33 @@ export const useChoropleth = <TDatum>(
     onJoinReport?.(joinReport);
     if (!diagnostics || isProduction()) return;
     const message = formatJoinDiagnostics({ ...joinReport, dataCount: data.length });
-    if (message !== null) console.warn(message);
+    const levelHint = formatWrongLevelDataHint({
+      drillActive: engine.active,
+      dataIsSelector: typeof rawOptions.data === "function",
+      dataCount: data.length,
+      unmatchedCount: joinReport.unmatchedData.length,
+      levelId: engine.level?.id ?? null,
+    });
+    if (message !== null) {
+      console.warn(levelHint === null ? message : `${message}\n             ${levelHint}`);
+    }
     // Solo `reportKey`: el contenido de `joinReport` ya está resumido en ella, y volver a ejecutar
     // por la identidad de `onJoinReport` (casi siempre una función inline) avisaría en cada render.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [reportKey, status]);
+
+  // Ninguna región con id: ningún dato puede cruzar (casi siempre, un `getFeatureId` que lee otra cosa).
+  const noIdsMessage = formatNoIdsDiagnostic({
+    featureCount: features.features.length,
+    idCount: regions.length,
+    levelId: engine.level?.id ?? null,
+    customGetFeatureId: getFeatureId !== undefined,
+  });
+  useEffect(() => {
+    if (status === "ready" && noIdsMessage !== null && diagnostics && !isProduction()) {
+      console.warn(noIdsMessage);
+    }
+  }, [noIdsMessage, status, diagnostics]);
 
   // ── selección (solo regiones) ─────────────────────────────────────────────────────────────────
   // Controlada si se pasa `selectedId` (aunque sea `null`); si no, la lleva la librería. Sin
@@ -940,9 +1027,15 @@ export const useChoropleth = <TDatum>(
     };
   };
 
+  // Táctil: el primer toque sobre una región navegable es una vista previa (tooltip + selección) y el segundo,
+  // sobre la misma, baja (dd.md §11.2.5). `previewed` es la región ya previsualizada; el hover la olvida en cuanto
+  // el dedo se va a otra cosa. (`pointerover` llega ANTES que `click`, así que el hover solo no distingue 1.º de 2.º.)
+  const previewed = useRef<ItemRef | null>(null);
+
   const hoverItem = (ref: ItemRef | null) => {
     // Sin cambio no hay nada que contar: ni el store ni el consumidor se enteran.
     if (isSameItem(store.getState().hovered, ref)) return;
+    if (!isSameItem(previewed.current, ref)) previewed.current = null;
     store.setState({ hovered: ref });
     onItemHover?.(ref === null ? null : (getItemContext(ref) ?? null));
   };
@@ -953,6 +1046,12 @@ export const useChoropleth = <TDatum>(
     if (ref.kind === "region" && item.drillable && engine.controller !== null) {
       // Con `drill`, un item navegable BAJA (no se selecciona); uno que no lo es, selecciona. La ruta
       // se arma sobre lo que se está MOSTRANDO: si el nivel nuevo aún carga, un segundo clic redirige.
+      if (store.getState().pointerType === "touch" && !isSameItem(previewed.current, ref)) {
+        hoverItem(ref);
+        previewed.current = ref;
+        return;
+      }
+      previewed.current = null;
       engine.noteItem(item);
       engine.controller.drillTo([...engine.shownPath, ref.id]);
     } else if (ref.kind === "region" && selectable) {
@@ -962,6 +1061,113 @@ export const useChoropleth = <TDatum>(
     }
     onItemClick?.(item);
   };
+
+  // ── cierre del drill (paso 34) ────────────────────────────────────────────────────────────────
+  // 1) Prefetch por intención: 150 ms sobre una región navegable → se precarga la geometría de su nivel y se
+  //    avisa a `onDrillIntent` (para los datos). Vive en un efecto sobre el store: el hover no re-renderiza `Root`.
+  const { onDrillIntent } = options;
+  const intentRef = useRef({ regionsById, shownPath: engine.shownPath, idle: true, onDrillIntent });
+  const { prefetch } = engine;
+  useEffect(() => {
+    intentRef.current = {
+      regionsById,
+      shownPath: engine.shownPath,
+      idle: engine.machine.phase === "idle",
+      onDrillIntent,
+    };
+  });
+  useEffect(() => {
+    if (!engine.active) return;
+    const timer = createIntentTimer({
+      onIntent: (id) => {
+        const current = intentRef.current;
+        if (!current.idle) return; // a mitad de una coreografía no hay nada que anticipar
+        const path = [...current.shownPath, id];
+        prefetch(path);
+        current.onDrillIntent?.(contextOf(path));
+      },
+    });
+    const sync = () => {
+      const hovered = store.getState().hovered;
+      const drillable =
+        hovered?.kind === "region" && intentRef.current.regionsById.get(hovered.id)?.drillable;
+      timer.hover(hovered !== null && drillable === true ? hovered.id : null);
+    };
+    sync();
+    const unsubscribe = store.subscribe(sync);
+    return () => {
+      unsubscribe();
+      timer.dispose();
+    };
+  }, [engine.active, store, prefetch]);
+
+  // 2) ¿Es válida una navegación pedida? Solo se puede juzgar lo que ya está cargado: la parte de la ruta que
+  //    coincide con lo mostrado. Una región del nivel mostrado también se juzga con `canDrill` (tiene su dato).
+  const findRequestProblem = (path: readonly string[]): DrillRequestProblem | null => {
+    const shown = engine.shownPath;
+    for (let depth = 0; depth < path.length; depth++) {
+      if (depth > shown.length || (depth > 0 && path[depth - 1] !== shown[depth - 1])) break;
+      const id = path[depth] as string;
+      const level = engine.chain[depth];
+      const knownIds =
+        level === undefined
+          ? undefined
+          : new Set(level.features.flatMap((feature) => level.idOf(feature) ?? []));
+      const problem = checkDrillStep({
+        id,
+        depth,
+        levelId: engine.levels[depth]?.id ?? "?",
+        knownIds,
+        drillable:
+          depth === shown.length && !dataLoading ? regionsById.get(id)?.drillable : undefined,
+      });
+      if (problem !== null) return problem;
+    }
+    return null;
+  };
+
+  // 3) La API del drill del handle. Un objeto estable que mira siempre la última versión de la lógica.
+  const latestDrill = useRef({ findRequestProblem, engine });
+  useEffect(() => {
+    latestDrill.current = { findRequestProblem, engine };
+  });
+  const drillApi = useMemo<DrillApi>(() => {
+    const refuse = (message: string) => {
+      if (!isProduction()) console.warn(message);
+      return Promise.resolve({ completed: false });
+    };
+    const go = (path: readonly string[], source: string) => {
+      const { findRequestProblem: find, engine: current } = latestDrill.current;
+      if (clampPath(path, current.levels.length).clamped) {
+        return refuse(formatTooDeepRequest(path, current.levels.length, source));
+      }
+      const problem = find(path);
+      if (problem !== null) return refuse(formatDrillRequestProblem(problem, source));
+      return current.navigate((controller) => controller.drillTo(path));
+    };
+    return {
+      drillDown: (id) => go([...latestDrill.current.engine.target, id], "drillDown()"),
+      drillUp: (steps) =>
+        latestDrill.current.engine.navigate((controller) => controller.drillUp(steps)),
+      drillTo: (path) => go(path, "drillTo()"),
+    };
+  }, []);
+  useEffect(() => {
+    if (!engine.active) return;
+    store.registerDrill(drillApi);
+    return () => store.registerDrill(null);
+  }, [engine.active, store, drillApi]);
+
+  // 4) Una ruta que llega por otro camino (la URL, un `useDrillDown` ajeno) también se comprueba: aquí solo
+  //    se AVISA (el mapa ya hará lo que pueda, y si el nivel sale vacío lo deshará con su propio error).
+  const targetKey = JSON.stringify(engine.target);
+  useEffect(() => {
+    if (!engine.active || isProduction()) return;
+    const problem = latestDrill.current.findRequestProblem(engine.target);
+    if (problem !== null) console.warn(formatDrillRequestProblem(problem, "drill path"));
+    // `engine.target` se resume en `targetKey`.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [engine.active, targetKey]);
 
   // En táctil no hay «salir»: el navegador manda `pointerleave` justo al levantar el dedo, y
   // quitaría la vista previa al instante. El hover se retira al tocar fuera de cualquier item.

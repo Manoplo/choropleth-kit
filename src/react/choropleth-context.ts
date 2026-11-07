@@ -1,4 +1,5 @@
 import { createContext, useContext, type RefObject } from "react";
+import type { ChoroplethClassNames } from "./class-names";
 import type { ChoroplethMapHandle } from "./handle";
 import type { MapStore } from "./map-store";
 import type { UseChoroplethResult } from "./use-choropleth";
@@ -10,6 +11,8 @@ export type ChoroplethContextValue = {
   viewportRef: RefObject<SVGGElement | null>;
   /** El handle imperativo (el mismo que se obtiene con `ref`). */
   api: ChoroplethMapHandle;
+  /** Clases del consumidor por pieza (`classNames` de `Root`). Vacío si no las hay. */
+  classNames: ChoroplethClassNames;
 };
 
 export const ChoroplethContext = createContext<ChoroplethContextValue | null>(null);
@@ -23,6 +26,7 @@ export const useChoroplethContext = <TDatum = unknown>(): {
   store: MapStore;
   viewportRef: RefObject<SVGGElement | null>;
   api: ChoroplethMapHandle;
+  classNames: ChoroplethClassNames;
 } => {
   const value = useContext(ChoroplethContext);
   if (value === null) {
@@ -35,6 +39,7 @@ export const useChoroplethContext = <TDatum = unknown>(): {
     store: MapStore;
     viewportRef: RefObject<SVGGElement | null>;
     api: ChoroplethMapHandle;
+    classNames: ChoroplethClassNames;
   };
 };
 

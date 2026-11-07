@@ -1,4 +1,5 @@
 import { useRef, type KeyboardEvent, type ReactNode } from "react";
+import { cx } from "../class-names";
 import { useChoroplethContext } from "../choropleth-context";
 import { Borders } from "./borders";
 import { Bubbles } from "./bubbles";
@@ -30,7 +31,7 @@ export type SvgProps = {
  * el mapa: la página no salta cuando aparece.
  */
 export const Svg = ({ children, className, ariaLabel }: SvgProps) => {
-  const { choropleth, store, viewportRef } = useChoroplethContext();
+  const { choropleth, store, viewportRef, classNames } = useChoroplethContext();
   const {
     width,
     height,
@@ -105,7 +106,7 @@ export const Svg = ({ children, className, ariaLabel }: SvgProps) => {
       ref={svgRef}
       tabIndex={keyboard ? 0 : undefined}
       onKeyDown={keyboard ? handleKeyDown : undefined}
-      className={className === undefined ? "cm-svg" : `cm-svg ${className}`}
+      className={cx("cm-svg", classNames.svg, className)}
       viewBox={`0 0 ${width} ${height}`}
       role="img"
       aria-label={ariaLabel}

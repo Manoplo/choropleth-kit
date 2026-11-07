@@ -1,3 +1,4 @@
+import { cx } from "../class-names";
 import { useChoroplethContext } from "../choropleth-context";
 import { useMapStore } from "../map-store";
 
@@ -9,7 +10,7 @@ import { useMapStore } from "../map-store";
  * Una región se resalta con una copia de su contorno; un punto, con un anillo sobre su burbuja.
  */
 export const Selection = () => {
-  const { choropleth, store } = useChoroplethContext();
+  const { choropleth, store, classNames } = useChoroplethContext();
   const { regions, bubbles, fallbackPoints, selectedId } = choropleth;
   const hovered = useMapStore(store, (s) => s.hovered);
 
@@ -24,7 +25,7 @@ export const Selection = () => {
   const selectedRegion = selectedId === null ? undefined : regions.find((r) => r.id === selectedId);
 
   return (
-    <g className="cm-selection" pointerEvents="none">
+    <g className={cx("cm-selection", classNames.selection)} pointerEvents="none">
       {/* Las copias llevan el color de la región: con `dimOthers` el resto se atenúa y ellas no. */}
       {hoveredRegion !== undefined && (
         <path data-selection="hover" d={hoveredRegion.path} style={{ fill: hoveredRegion.fill }} />

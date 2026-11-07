@@ -1,4 +1,5 @@
 import { memo, type CSSProperties, type SyntheticEvent } from "react";
+import { cx } from "../class-names";
 import { useChoroplethContext } from "../choropleth-context";
 
 type RegionPathProps = {
@@ -6,6 +7,12 @@ type RegionPathProps = {
   d: string;
   fill: string;
   drillable: boolean;
+  /** Sin valor que pintar (sin fila de datos, o con valor nulo): `data-empty`, para estilarlas por CSS. */
+  empty: boolean;
+  /** Clases del consumidor (`classNames.region` + `getRegionStyle().className`). */
+  className: string | undefined;
+  /** De `getRegionStyle`; `undefined` = la del CSS (1). */
+  opacity: number | undefined;
   /** Es la región hacia la que se baja (se atenúa el resto; si tarda, «respira»). */
   target: boolean;
   /** 0…1: retraso de su entrada en el revelado. */
@@ -15,16 +22,25 @@ type RegionPathProps = {
 // Solo se re-renderiza si cambia su color o su ruta: ni el hover ni la selección lo tocan
 // (eso lo pinta `Selection` encima). Todas las props son primitivos para que `memo` sirva.
 // `fill` va en `style` (no como atributo) porque puede ser `var(--cm-empty-fill, …)`.
-const RegionPath = memo(({ id, d, fill, drillable, target, wave }: RegionPathProps) => (
-  <path
-    className="cm-region"
-    data-region-id={id}
-    data-drillable={drillable ? "" : undefined}
-    data-drill-target={target ? "" : undefined}
-    d={d}
-    style={wave === undefined ? { fill } : ({ fill, "--cm-wave": wave } as CSSProperties)}
-  />
-));
+const RegionPath = memo(
+  ({ id, d, fill, drillable, empty, className, opacity, target, wave }: RegionPathProps) => (
+    <path
+      className={cx("cm-region", className)}
+      data-region-id={id}
+      data-empty={empty ? "" : undefined}
+      data-drillable={drillable ? "" : undefined}
+      data-drill-target={target ? "" : undefined}
+      d={d}
+      style={
+        {
+          fill,
+          ...(opacity === undefined ? undefined : { opacity }),
+          ...(wave === undefined ? undefined : { "--cm-wave": wave }),
+        } as CSSProperties
+      }
+    />
+  ),
+);
 
 // Regiones sin id (Kosovo en world-atlas): se ven, pero no se pueden cruzar ni seleccionar.
 const AnonymousPath = memo(({ d, fill }: { d: string; fill: string }) => (
@@ -40,7 +56,7 @@ const regionIdFrom = (event: SyntheticEvent): string | null =>
  * Pointer Events: el mismo código para ratón, lápiz y táctil.
  */
 export const Regions = () => {
-  const { choropleth, store } = useChoroplethContext();
+  const { choropleth, store, classNames } = useChoroplethContext();
   const {
     regions,
     anonymousPaths,
@@ -63,7 +79,7 @@ export const Regions = () => {
 
   return (
     <g
-      className="cm-regions"
+      className={cx("cm-regions", classNames.regions)}
       data-outlined={outlined ? "" : undefined}
       style={clickable ? { cursor: "pointer" } : undefined}
       onClick={(event) => {
@@ -96,6 +112,9 @@ export const Regions = () => {
           d={region.path}
           fill={region.fill}
           drillable={region.drillable}
+          empty={region.value === null}
+          className={cx(classNames.region, region.className)}
+          opacity={region.opacity}
           target={region.id === drillFocusId}
           wave={region.wave}
         />

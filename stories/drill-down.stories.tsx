@@ -1,11 +1,17 @@
 // Fase C (v0.4), pasos 31-32: la prop `drill` y su coreografía (vuelo a R, contexto gris, revelado
 // escalonado, subir a la cámara de antes, navegación lateral). Datos SINTÉTICOS deterministas.
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { geoBounds, geoCentroid } from "d3-geo";
 import { toFeatureCollection, type DrillContext } from "../src/core";
 import { world110m } from "../src/geo";
-import { ChoroplethMap, defineDrillLevels, useDrillDown, type DrillEvent } from "../src/react";
+import {
+  ChoroplethMap,
+  defineDrillLevels,
+  useDrillDown,
+  type ChoroplethMapHandle,
+  type DrillEvent,
+} from "../src/react";
 import { seed } from "./seed";
 
 type Row = {
@@ -214,6 +220,55 @@ const Errors = () => {
   );
 };
 
+// ── Handle e intención (paso 34) ──────────────────────────────────────────────────────────────────
+
+const HandleDemo = () => {
+  const ref = useRef<ChoroplethMapHandle>(null);
+  const [lines, setLines] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const push = (line: string) => setLines((prev) => [...prev.slice(-7), line]);
+  const api = () => ref.current as ChoroplethMapHandle;
+
+  /** Cada paso se `await`ea: no hay temporizadores, solo promesas que resuelven al volver a reposo. */
+  const tour = async () => {
+    setBusy(true);
+    const step = async (name: string, run: () => Promise<{ completed: boolean }>) => {
+      const { completed } = await run();
+      push(`${name} → completed: ${completed}`);
+    };
+    await step('drillDown("ES")', () => api().drillDown("ES"));
+    await step('drillTo(["FR"])', () => api().drillTo(["FR"]));
+    await step('drillTo(["DE"])', () => api().drillTo(["DE"]));
+    await step("drillUp()", () => api().drillUp());
+    await step('drillDown("ZZ")  (no existe: avisa en consola)', () => api().drillDown("ZZ"));
+    setBusy(false);
+  };
+
+  return (
+    <div style={{ maxWidth: 1100, font: "13px sans-serif" }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+        <button disabled={busy} onClick={() => void tour()}>
+          ▶ Tour (ES → FR → DE → mundo)
+        </button>
+        <button onClick={() => void api().drillDown("US")}>drillDown("US")</button>
+        <button onClick={() => void api().drillUp()}>drillUp()</button>
+        <button onClick={() => void api().drillTo([])}>drillTo([])</button>
+      </div>
+      <ChoroplethMap<Row>
+        {...common}
+        ref={ref}
+        drill={levels}
+        data={select}
+        onDrillIntent={(ctx) =>
+          push(`onDrillIntent  [${ctx.path.join(" › ")}]  (hover de 150 ms: precarga de datos)`)
+        }
+        onDrillEnd={(e) => push(`onDrillEnd     ${describe(e)}`)}
+      />
+      <Log lines={lines} />
+    </div>
+  );
+};
+
 const meta = {
   title: "DrillDown/Engine",
   parameters: { layout: "padded" },
@@ -234,3 +289,11 @@ export const ControlledUrl: Story = { render: () => <Controlled /> };
 
 /** Una geometría que falla y un nivel vacío: vuelta al nivel anterior y `onDrillError`. */
 export const ErrorsStory: Story = { name: "Errors", render: () => <Errors /> };
+
+/**
+ * El handle del drill (`ref`): `drillDown` / `drillUp` / `drillTo` devuelven una `Promise` que resuelve al volver
+ * a reposo, así un guion es un `await` tras otro. Además, `onDrillIntent`: deja el ratón 150 ms sobre un país con
+ * tiendas y se anota (la geometría del nivel de abajo ya se precarga). **Táctil** (emulación en las devtools):
+ * el primer toque en un país muestra el tooltip «Tap again to enter» y el segundo baja.
+ */
+export const HandleStory: Story = { name: "Handle + intent", render: () => <HandleDemo /> };

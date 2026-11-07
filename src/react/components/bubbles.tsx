@@ -1,3 +1,4 @@
+import { cx } from "../class-names";
 import { useChoroplethContext } from "../choropleth-context";
 
 /**
@@ -10,18 +11,18 @@ import { useChoroplethContext } from "../choropleth-context";
  *  - **Con coordenadas propias** (tiendas): son items `point`, con su propio hover, clic y tooltip.
  */
 export const Bubbles = () => {
-  const { choropleth } = useChoroplethContext();
+  const { choropleth, classNames } = useChoroplethContext();
   const { bubbles, clickable, getPointProps } = choropleth;
   if (bubbles.length === 0) return null;
 
   return (
-    <g className="cm-bubbles" pointerEvents="none">
+    <g className={cx("cm-bubbles", classNames.bubbles)} pointerEvents="none">
       {bubbles.map((bubble) => {
         const isPoint = bubble.coordinates !== null;
         return (
           <circle
             key={bubble.id}
-            className="cm-bubble"
+            className={cx("cm-bubble", classNames.bubble)}
             data-bubble-id={bubble.id}
             cx={bubble.x}
             cy={bubble.y}

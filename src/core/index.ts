@@ -54,6 +54,15 @@ export type {
   ViewLevel,
   ViewState,
 } from "./camera";
+export {
+  THEMES,
+  defineTheme,
+  extendTheme,
+  isThemeName,
+  resolveTheme,
+  themeToCssVars,
+} from "./theme";
+export type { ChoroplethTheme, ThemeName } from "./theme";
 export { en, es, resolveLabels } from "./labels";
 export type { ChoroplethLabels } from "./labels";
 export { joinData } from "./join";
@@ -150,5 +159,15 @@ export {
   validateLevels,
 } from "./drill-levels";
 export type { DrillContext, DrillCrumb, LevelShape, LruCache } from "./drill-levels";
+export {
+  DRILL_INTENT_MS,
+  checkDrillStep,
+  createIntentTimer,
+  formatDrillRequestProblem,
+  formatNoIdsDiagnostic,
+  formatTooDeepRequest,
+  formatWrongLevelDataHint,
+} from "./drill-intent";
+export type { DrillRequestProblem, IntentTimer, IntentTimerOptions } from "./drill-intent";
 export { buildProjectionChain } from "./drill-chain";
 export type { BuildProjectionChainParams, ChainLevel, ProjectionChain } from "./drill-chain";

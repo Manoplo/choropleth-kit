@@ -1,51 +1,25 @@
 /*
  * Estilos base de choropleth-kit. Se importan una vez: `import "choropleth-kit/styles.css"`.
  *
- * Dos mecanismos de personalización (dd.md §9.7):
- *  1. Variables CSS `--cm-*`, sobrescribibles en cualquier ancestro de `.cm-root`.
- *  2. `unstyled` en el componente: no se aplica NINGUNA regla de este archivo salvo las variables.
+ * Mecanismos de personalización (dd.md §9.7 y §12.5), de menos a más esfuerzo:
+ *  1. `theme="dark"` / `theme={{ … }}`: la librería escribe las variables `--cm-*` en línea en `.cm-root`.
+ *  2. Variables CSS `--cm-*` en CUALQUIER ancestro de `.cm-root` (o en el propio `.cm-root`).
+ *  3. `classNames` por pieza (Tailwind, CSS Modules) y los atributos `data-*` como contrato.
+ *  4. `unstyled`: no se aplica NINGUNA regla de este archivo (las variables que pongas siguen valiendo).
+ *
+ * POR QUÉ LOS VALORES POR DEFECTO ESTÁN EN CADA USO (`var(--cm-x, valor)`) Y NO EN UN BLOQUE `.cm-root { --cm-x: … }`:
+ * una variable declarada en `.cm-root` gana a la que viene heredada de un ancestro, así que el consumidor que
+ * escribe `.mi-tema { --cm-border-color: … }` más arriba no vería ningún efecto (fallo del paso 12, corregido
+ * en el 35). Sin declararlas aquí, cualquier ancestro puede fijarlas.
+ *
+ * POR QUÉ TODOS LOS SELECTORES EMPIEZAN POR `:where(.cm-root:not([data-unstyled]))`: `:where()` no suma especificidad.
+ * Sin él, el prefijo valdría (0,2,0) y ninguna clase suelta del consumidor (`classNames`, Tailwind: 0,1,0) podría
+ * ganarle sin `!important`. Con él, una regla `.cm-region` de la librería vale (0,1,0): igual que la tuya, y a
+ * igualdad gana la que va después (la tuya, normalmente). Es el mismo mecanismo que `unstyled`, pero pieza a pieza.
  *
  * Los estilos "visuales" viven aquí; los "funcionales" (posición del tooltip, cursor, el
  * `fill` calculado de cada región) van en línea porque dependen de datos o del cursor.
  */
-
-.cm-root {
-  --cm-empty-fill: #d4d4d4;
-  --cm-border-color: #ffffff;
-  --cm-border-width: 0.5px;
-  --cm-hover-stroke: #000000;
-  --cm-hover-stroke-width: 1.5px;
-  --cm-selected-stroke: #0b5fff;
-  --cm-selected-stroke-width: 2px;
-  --cm-focus-ring: #0b5fff;
-  --cm-controls-bg: #ffffff;
-  --cm-controls-color: #111111;
-  --cm-controls-border: #cccccc;
-  --cm-hint-bg: rgb(17 24 39 / 0.85);
-  --cm-hint-color: #ffffff;
-  --cm-dim-opacity: 0.45;
-  --cm-skeleton-color: #e5e5e5;
-  --cm-bubble-fill: #2563eb;
-  --cm-bubble-stroke: #ffffff;
-  --cm-bubble-opacity: 0.75;
-  --cm-transition-duration: 250ms;
-  /* Drill-down (dd.md §11.2.5): el contexto va en gris, sin color de dato. */
-  --cm-context-fill: #e5e5e5;
-  --cm-context-stroke: #ffffff;
-  --cm-context-hover-fill: #d4d4d4;
-  --cm-drill-dim-opacity: 0.35;
-  --cm-reveal-duration: 200ms;
-  --cm-reveal-stagger: 250ms;
-  --cm-breadcrumb-bg: #ffffff;
-  --cm-breadcrumb-color: #111111;
-  --cm-breadcrumb-muted: #6b7280;
-  --cm-breadcrumb-border: #cccccc;
-  --cm-font-family: inherit;
-  --cm-font-size: 12px;
-  --cm-tooltip-bg: #ffffff;
-  --cm-tooltip-color: #111111;
-  --cm-tooltip-border: #cccccc;
-}
 
 /* Quien tiene «reducir movimiento» no ve el fundido de color al cambiar de indicador. */
 @media (prefers-reduced-motion: reduce) {
@@ -54,70 +28,72 @@
   }
 }
 
-.cm-root:not([data-unstyled]) {
-  font-family: var(--cm-font-family);
-  font-size: var(--cm-font-size);
+:where(.cm-root:not([data-unstyled])) {
+  background: var(--cm-background, transparent);
+  color: var(--cm-label-color, inherit);
+  font-family: var(--cm-font-family, inherit);
+  font-size: var(--cm-font-size, 12px);
 }
 
 /* ── mapa ─────────────────────────────────────────────────────────────────────────────────── */
 
 /* OJO: aquí NO se define `fill`: una regla CSS ganaría al `fill` de cada región (el color del dato). */
-.cm-root:not([data-unstyled]) .cm-region {
-  transition: fill var(--cm-transition-duration);
+:where(.cm-root:not([data-unstyled])) .cm-region {
+  transition: fill var(--cm-transition-duration, 250ms);
 }
 
 /* Con GeoJSON no hay capa de fronteras (mesh): cada región dibuja su propio contorno. */
-.cm-root:not([data-unstyled]) .cm-regions[data-outlined] .cm-region {
-  stroke: var(--cm-border-color);
-  stroke-width: var(--cm-border-width);
+:where(.cm-root:not([data-unstyled])) .cm-regions[data-outlined] .cm-region {
+  stroke: var(--cm-border-color, #ffffff);
+  stroke-width: var(--cm-border-width, 0.5px);
   /* El trazo no engorda al hacer zoom (dd.md §11.1.6). */
   vector-effect: non-scaling-stroke;
 }
 
-.cm-root:not([data-unstyled]) .cm-borders {
+:where(.cm-root:not([data-unstyled])) .cm-borders {
   fill: none;
-  stroke: var(--cm-border-color);
-  stroke-width: var(--cm-border-width);
+  stroke: var(--cm-border-color, #ffffff);
+  stroke-width: var(--cm-border-width, 0.5px);
   vector-effect: non-scaling-stroke;
 }
 
-.cm-root:not([data-unstyled]) .cm-selection :is(path, circle) {
+:where(.cm-root:not([data-unstyled])) .cm-selection :is(path, circle) {
   fill: none;
   /* El trazo no engorda al hacer zoom. */
   vector-effect: non-scaling-stroke;
 }
-.cm-root:not([data-unstyled]) .cm-selection [data-selection="hover"] {
-  stroke: var(--cm-hover-stroke);
-  stroke-width: var(--cm-hover-stroke-width);
+:where(.cm-root:not([data-unstyled])) .cm-selection [data-selection="hover"] {
+  stroke: var(--cm-hover-stroke, #000000);
+  stroke-width: var(--cm-hover-stroke-width, 1.5px);
 }
-.cm-root:not([data-unstyled]) .cm-selection [data-selection="selected"] {
-  stroke: var(--cm-selected-stroke);
-  stroke-width: var(--cm-selected-stroke-width);
+:where(.cm-root:not([data-unstyled])) .cm-selection [data-selection="selected"] {
+  stroke: var(--cm-selected-stroke, #0b5fff);
+  stroke-width: var(--cm-selected-stroke-width, 2px);
 }
 
 /* Como el `fill` de las regiones, el de cada burbuja va en línea (es el color del dato). */
-.cm-root:not([data-unstyled]) .cm-bubble {
-  stroke: var(--cm-bubble-stroke);
+:where(.cm-root:not([data-unstyled])) .cm-bubble {
+  stroke: var(--cm-bubble-stroke, #ffffff);
   stroke-width: 0.5px;
-  fill-opacity: var(--cm-bubble-opacity);
+  fill-opacity: var(--cm-bubble-opacity, 0.75);
   /* Contraescalado (dd.md §11.1.6): `use-zoom` escribe UNA variable por frame (1/√k, 1/k o 1). */
   transform: scale(var(--cm-bubble-scale, 1));
   transform-box: fill-box;
   transform-origin: center;
   vector-effect: non-scaling-stroke;
   transition:
-    r var(--cm-transition-duration),
-    fill var(--cm-transition-duration);
+    r var(--cm-transition-duration, 250ms),
+    fill var(--cm-transition-duration, 250ms);
 }
 
 /* Se puede bajar de nivel desde esta región (dd.md §11.2.5): el cursor lo promete, y solo si es verdad. */
-.cm-root:not([data-unstyled]) .cm-region[data-drillable] {
+:where(.cm-root:not([data-unstyled])) .cm-region[data-drillable] {
   cursor: zoom-in;
 }
 
 /* Puntos de respaldo (microestados): un punto con el color de su dato. */
-.cm-root:not([data-unstyled]) .cm-fallback-point {
-  stroke: var(--cm-bubble-stroke);
+:where(.cm-root:not([data-unstyled])) .cm-fallback-point {
+  stroke: var(--cm-bubble-stroke, #ffffff);
   stroke-width: 1px;
   vector-effect: non-scaling-stroke;
 }
@@ -130,10 +106,10 @@
  */
 
 /* Solo hay algo que arrastrar si el mapa está ampliado: en el encaje el cursor no cambia. */
-.cm-root:not([data-unstyled])[data-zoomed] .cm-svg {
+:where(.cm-root:not([data-unstyled]))[data-zoomed] .cm-svg {
   cursor: grab;
 }
-.cm-root:not([data-unstyled])[data-interacting] .cm-svg {
+:where(.cm-root:not([data-unstyled]))[data-interacting] .cm-svg {
   cursor: grabbing;
 }
 
@@ -141,80 +117,84 @@
  * Durante un gesto no hay hover (dd.md §11.1.2): arrastrar sobre 200 países dispararía 200 hovers y
  * el tooltip parpadearía detrás del cursor. Tampoco transiciones de color.
  */
-.cm-root:not([data-unstyled])[data-interacting] :is(.cm-regions, .cm-bubbles, .cm-fallback-points) {
+:where(.cm-root:not([data-unstyled]))[data-interacting]
+  :is(.cm-regions, .cm-bubbles, .cm-fallback-points) {
   pointer-events: none;
 }
-.cm-root:not([data-unstyled])[data-interacting] .cm-region {
+:where(.cm-root:not([data-unstyled]))[data-interacting] .cm-region {
   transition: none;
 }
-.cm-root:not([data-unstyled])[data-interacting] .cm-tooltip {
+:where(.cm-root:not([data-unstyled]))[data-interacting] .cm-tooltip {
   display: none;
 }
 
 /* Foco de teclado: siempre visible con teclado, nunca solo un cambio de relleno (dd.md §13). */
-.cm-root:not([data-unstyled]) .cm-svg:focus-visible {
-  outline: 2px solid var(--cm-focus-ring);
+:where(.cm-root:not([data-unstyled])) .cm-svg:focus-visible {
+  outline: var(--cm-focus-ring-width, 2px) solid var(--cm-focus-ring, #0b5fff);
   outline-offset: -2px;
 }
 
 /* ── controles y aviso de gesto ───────────────────────────────────────────────────────────── */
 
-.cm-root:not([data-unstyled]) .cm-zoom-controls {
+:where(.cm-root:not([data-unstyled])) .cm-zoom-controls {
   display: flex;
   flex-direction: column;
-  background: var(--cm-controls-bg);
-  border: 1px solid var(--cm-controls-border);
-  border-radius: 6px;
+  background: var(--cm-control-bg, #ffffff);
+  border: 1px solid var(--cm-control-border, #cccccc);
+  border-radius: var(--cm-control-radius, 6px);
   overflow: hidden;
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.15);
 }
-.cm-root:not([data-unstyled]) .cm-zoom-button {
+:where(.cm-root:not([data-unstyled])) .cm-zoom-button {
   width: 32px;
   height: 32px;
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--cm-controls-color);
+  color: var(--cm-control-color, #111111);
   font: inherit;
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
 }
-.cm-root:not([data-unstyled]) .cm-zoom-button + .cm-zoom-button {
-  border-top: 1px solid var(--cm-controls-border);
+:where(.cm-root:not([data-unstyled])) .cm-zoom-button + .cm-zoom-button {
+  border-top: 1px solid var(--cm-control-border, #cccccc);
 }
-.cm-root:not([data-unstyled]) .cm-zoom-button:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--cm-controls-bg), #000000 8%);
+:where(.cm-root:not([data-unstyled])) .cm-zoom-button:hover:not(:disabled) {
+  background: var(
+    --cm-control-hover-bg,
+    color-mix(in srgb, var(--cm-control-bg, #ffffff), var(--cm-control-color, #111111) 10%)
+  );
 }
-.cm-root:not([data-unstyled]) .cm-zoom-button:focus-visible {
-  outline: 2px solid var(--cm-focus-ring);
+:where(.cm-root:not([data-unstyled])) .cm-zoom-button:focus-visible {
+  outline: var(--cm-focus-ring-width, 2px) solid var(--cm-focus-ring, #0b5fff);
   outline-offset: -2px;
 }
-.cm-root:not([data-unstyled]) .cm-zoom-button:disabled {
+:where(.cm-root:not([data-unstyled])) .cm-zoom-button:disabled {
   opacity: 0.35;
   cursor: default;
 }
 
 /* Centrado sobre el mapa; no captura el ratón. Aparece y se va con un fundido. */
-.cm-root:not([data-unstyled]) .cm-gesture-hint {
+:where(.cm-root:not([data-unstyled])) .cm-gesture-hint {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   padding: 8px 14px;
   border-radius: 6px;
-  background: var(--cm-hint-bg);
-  color: var(--cm-hint-color);
+  background: var(--cm-hint-bg, rgb(17 24 39 / 0.85));
+  color: var(--cm-hint-color, #ffffff);
   pointer-events: none;
   white-space: nowrap;
   opacity: 0;
   transition: opacity 200ms;
 }
-.cm-root:not([data-unstyled]) .cm-gesture-hint[data-visible] {
+:where(.cm-root:not([data-unstyled])) .cm-gesture-hint[data-visible] {
   opacity: 1;
 }
 @media (prefers-reduced-motion: reduce) {
-  .cm-root:not([data-unstyled]) .cm-gesture-hint {
+  :where(.cm-root:not([data-unstyled])) .cm-gesture-hint {
     transition: none;
   }
 }
@@ -225,42 +205,43 @@
  * Todo con atributos en contenedores: seleccionar o pasar el cursor NO cambia las props de las
  * regiones. `Selection` pinta encima una copia a color completo de la resaltada.
  */
-.cm-root:not([data-unstyled])[data-dim="selection"][data-has-selection] .cm-regions,
-.cm-root:not([data-unstyled])[data-dim="hover-and-selection"][data-has-selection] .cm-regions,
-.cm-root:not([data-unstyled])[data-dim="hover-and-selection"]
+:where(.cm-root:not([data-unstyled]))[data-dim="selection"][data-has-selection] .cm-regions,
+:where(.cm-root:not([data-unstyled]))[data-dim="hover-and-selection"][data-has-selection]
+  .cm-regions,
+:where(.cm-root:not([data-unstyled]))[data-dim="hover-and-selection"]
   .cm-svg:has(path[data-selection="hover"])
   .cm-regions {
-  opacity: var(--cm-dim-opacity);
+  opacity: var(--cm-dim-opacity, 0.45);
 }
-.cm-root:not([data-unstyled]) .cm-regions {
-  transition: opacity var(--cm-transition-duration);
+:where(.cm-root:not([data-unstyled])) .cm-regions {
+  transition: opacity var(--cm-transition-duration, 250ms);
 }
 
 /* ── carga ────────────────────────────────────────────────────────────────────────────────── */
 
 /* Esqueleto mientras llega la geometría: ocupa el mismo espacio que tendrá el mapa. */
-.cm-root:not([data-unstyled]) .cm-skeleton {
+:where(.cm-root:not([data-unstyled])) .cm-skeleton {
   width: 100%;
   border-radius: 6px;
   background: linear-gradient(
     90deg,
-    var(--cm-skeleton-color) 25%,
-    color-mix(in srgb, var(--cm-skeleton-color), #ffffff 55%) 50%,
-    var(--cm-skeleton-color) 75%
+    var(--cm-skeleton-color, #e5e5e5) 25%,
+    color-mix(in srgb, var(--cm-skeleton-color, #e5e5e5), #ffffff 55%) 50%,
+    var(--cm-skeleton-color, #e5e5e5) 75%
   );
   background-size: 200% 100%;
   animation: cm-shimmer 1.5s linear infinite;
 }
-.cm-root:not([data-unstyled]) .cm-error {
+:where(.cm-root:not([data-unstyled])) .cm-error {
   display: grid;
   place-items: center;
   width: 100%;
-  background: var(--cm-skeleton-color);
+  background: var(--cm-skeleton-color, #e5e5e5);
   border-radius: 6px;
 }
 
 /* Datos en camino: el mapa «respira» sin vaciarse (se mantiene el último dato). */
-.cm-root:not([data-unstyled])[data-loading] .cm-regions {
+:where(.cm-root:not([data-unstyled]))[data-loading] .cm-regions {
   animation: cm-pulse 1.5s ease-in-out infinite;
 }
 
@@ -275,57 +256,57 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .cm-root:not([data-unstyled]) .cm-skeleton,
-  .cm-root:not([data-unstyled])[data-loading] .cm-regions {
+  :where(.cm-root:not([data-unstyled])) .cm-skeleton,
+  :where(.cm-root:not([data-unstyled]))[data-loading] .cm-regions {
     animation: none;
   }
 }
 
 /* ── leyenda ──────────────────────────────────────────────────────────────────────────────── */
 
-.cm-root:not([data-unstyled]) .cm-legend__title {
+:where(.cm-root:not([data-unstyled])) .cm-legend__title {
   font-weight: 600;
   margin-bottom: 4px;
 }
-.cm-root:not([data-unstyled]) .cm-legend__items {
+:where(.cm-root:not([data-unstyled])) .cm-legend__items {
   list-style: none;
   margin: 0;
   padding: 0;
 }
-.cm-root:not([data-unstyled]) .cm-legend__item {
+:where(.cm-root:not([data-unstyled])) .cm-legend__item {
   display: flex;
   align-items: center;
   gap: 6px;
 }
-.cm-root:not([data-unstyled]) .cm-legend__swatch {
+:where(.cm-root:not([data-unstyled])) .cm-legend__swatch {
   display: inline-block;
   width: 12px;
   height: 12px;
 }
-.cm-root:not([data-unstyled]) .cm-legend__count {
+:where(.cm-root:not([data-unstyled])) .cm-legend__count {
   opacity: 0.6;
 }
-.cm-root:not([data-unstyled]) .cm-legend__gradient {
+:where(.cm-root:not([data-unstyled])) .cm-legend__gradient {
   width: 160px;
   height: 10px;
 }
-.cm-root:not([data-unstyled]) .cm-legend__range {
+:where(.cm-root:not([data-unstyled])) .cm-legend__range {
   display: flex;
   justify-content: space-between;
   width: 160px;
 }
 
-.cm-root:not([data-unstyled]) .cm-legend__sizes {
+:where(.cm-root:not([data-unstyled])) .cm-legend__sizes {
   list-style: none;
   margin: 6px 0 0;
   padding: 0;
 }
-.cm-root:not([data-unstyled]) .cm-legend__size {
+:where(.cm-root:not([data-unstyled])) .cm-legend__size {
   display: flex;
   align-items: center;
   gap: 6px;
 }
-.cm-root:not([data-unstyled]) .cm-legend__circle circle {
+:where(.cm-root:not([data-unstyled])) .cm-legend__circle circle {
   fill: none;
   stroke: currentColor;
 }
@@ -333,11 +314,12 @@
 /* ── tooltip ──────────────────────────────────────────────────────────────────────────────── */
 
 /* Solo el tooltip por defecto lleva caja: si pasas tu propio contenido, la caja es tuya. */
-.cm-root:not([data-unstyled]) .cm-tooltip--default {
-  background: var(--cm-tooltip-bg);
-  color: var(--cm-tooltip-color);
-  border: 1px solid var(--cm-tooltip-border);
-  border-radius: 4px;
+:where(.cm-root:not([data-unstyled])) .cm-tooltip--default {
+  background: var(--cm-tooltip-bg, #ffffff);
+  color: var(--cm-tooltip-color, #111111);
+  border: 1px solid var(--cm-tooltip-border, #cccccc);
+  border-radius: var(--cm-tooltip-radius, 4px);
+  box-shadow: var(--cm-tooltip-shadow, none);
   padding: 4px 8px;
   white-space: nowrap;
 }
@@ -348,56 +330,65 @@
  * Contexto: los niveles de arriba, en gris y SIN el color de dato. Razón cartográfica: la escala del padre
  * y la del hijo son distintas; ver ambas en color invita a comparar lo que no es comparable.
  */
-.cm-root:not([data-unstyled]) .cm-layer[data-role="context"] .cm-context-region {
-  fill: var(--cm-context-fill);
-  stroke: var(--cm-context-stroke);
+:where(.cm-root:not([data-unstyled])) .cm-layer[data-role="context"] .cm-context-region {
+  fill: var(--cm-context-fill, #e5e5e5);
+  stroke: var(--cm-context-border-color, #ffffff);
   stroke-width: 0.5px;
   vector-effect: non-scaling-stroke;
-  transition: fill var(--cm-transition-duration);
+  transition: fill var(--cm-transition-duration, 250ms);
 }
 /* La región en la que se entró está cubierta por sus hijas: su contorno no debe verse doble. */
-.cm-root:not([data-unstyled]) .cm-layer[data-role="context"] .cm-context-region[data-focus] {
+:where(.cm-root:not([data-unstyled]))
+  .cm-layer[data-role="context"]
+  .cm-context-region[data-focus] {
   stroke: none;
 }
-.cm-root:not([data-unstyled]) .cm-layer[data-role="context"] .cm-context-region[data-drillable] {
+:where(.cm-root:not([data-unstyled]))
+  .cm-layer[data-role="context"]
+  .cm-context-region[data-drillable] {
   cursor: zoom-in;
 }
-.cm-root:not([data-unstyled])
+:where(.cm-root:not([data-unstyled]))
   .cm-layer[data-role="context"]
   .cm-context-region[data-drillable]:hover {
-  fill: var(--cm-context-hover-fill);
+  fill: var(
+    --cm-context-hover-fill,
+    color-mix(in srgb, var(--cm-context-fill, #e5e5e5), var(--cm-hover-stroke, #000000) 12%)
+  );
 }
 /* Durante un gesto no hay hover en el contexto (como en las regiones). */
-.cm-root:not([data-unstyled])[data-interacting] .cm-layer[data-role="context"] {
+:where(.cm-root:not([data-unstyled]))[data-interacting] .cm-layer[data-role="context"] {
   pointer-events: none;
 }
 
 /* La capa que sale (al subir o ir a un hermano) se desvanece. */
-.cm-root:not([data-unstyled]) .cm-layer[data-role="exiting"] .cm-context-region {
-  fill: var(--cm-context-fill);
-  stroke: var(--cm-context-stroke);
+:where(.cm-root:not([data-unstyled])) .cm-layer[data-role="exiting"] .cm-context-region {
+  fill: var(--cm-context-fill, #e5e5e5);
+  stroke: var(--cm-context-border-color, #ffffff);
   stroke-width: 0.5px;
   vector-effect: non-scaling-stroke;
 }
-.cm-root:not([data-unstyled]) .cm-layer[data-role="exiting"] {
-  animation: cm-fade-out var(--cm-reveal-duration) ease-out both;
+:where(.cm-root:not([data-unstyled])) .cm-layer[data-role="exiting"] {
+  animation: cm-fade-out var(--cm-reveal-duration, 200ms) ease-out both;
 }
 
 /* Al empezar a bajar, el resto del mapa se atenúa y la región elegida se queda con su color. */
-.cm-root:not([data-unstyled])[data-drill-phase="flying"] .cm-region:not([data-drill-target]),
-.cm-root:not([data-unstyled])[data-drill-phase="loading"] .cm-region:not([data-drill-target]) {
-  opacity: var(--cm-drill-dim-opacity);
-  transition: opacity var(--cm-reveal-duration);
+:where(.cm-root:not([data-unstyled]))[data-drill-phase="flying"]
+  .cm-region:not([data-drill-target]),
+:where(.cm-root:not([data-unstyled]))[data-drill-phase="loading"]
+  .cm-region:not([data-drill-target]) {
+  opacity: var(--cm-drill-dim-opacity, 0.35);
+  transition: opacity var(--cm-reveal-duration, 200ms);
 }
 /* Si la carga tarda más que el vuelo, la región «respira». Nunca un spinner a pantalla completa. */
-.cm-root:not([data-unstyled])[data-drill-phase="loading"] .cm-region[data-drill-target] {
+:where(.cm-root:not([data-unstyled]))[data-drill-phase="loading"] .cm-region[data-drill-target] {
   animation: cm-breathe 1.2s ease-in-out infinite alternate;
 }
 
 /* Revelado: las regiones nuevas entran con un fundido, escalonado por la distancia al centro («explosión»). */
-.cm-root:not([data-unstyled])[data-drill-phase="revealing"] .cm-regions .cm-region {
-  animation: cm-fade-in var(--cm-reveal-duration) ease-out both;
-  animation-delay: calc(var(--cm-wave, 0) * var(--cm-reveal-stagger));
+:where(.cm-root:not([data-unstyled]))[data-drill-phase="revealing"] .cm-regions .cm-region {
+  animation: cm-fade-in var(--cm-reveal-duration, 200ms) ease-out both;
+  animation-delay: calc(var(--cm-wave, 0) * var(--cm-reveal-stagger, 250ms));
 }
 
 @keyframes cm-fade-in {
@@ -427,32 +418,32 @@
 
 /* «Reducir movimiento»: el nivel aparece sin animar (el vuelo ya es un fundido, en `use-zoom`). */
 @media (prefers-reduced-motion: reduce) {
-  .cm-root:not([data-unstyled])[data-drill-phase="revealing"] .cm-regions .cm-region,
-  .cm-root:not([data-unstyled])[data-drill-phase="loading"] .cm-region[data-drill-target],
-  .cm-root:not([data-unstyled]) .cm-layer[data-role="exiting"] {
+  :where(.cm-root:not([data-unstyled]))[data-drill-phase="revealing"] .cm-regions .cm-region,
+  :where(.cm-root:not([data-unstyled]))[data-drill-phase="loading"] .cm-region[data-drill-target],
+  :where(.cm-root:not([data-unstyled])) .cm-layer[data-role="exiting"] {
     animation: none;
   }
-  .cm-root:not([data-unstyled]) .cm-layer[data-role="exiting"] {
+  :where(.cm-root:not([data-unstyled])) .cm-layer[data-role="exiting"] {
     display: none;
   }
 }
 
 /* ── breadcrumb ───────────────────────────────────────────────────────────────────────────── */
 
-.cm-root:not([data-unstyled]) .cm-breadcrumb {
+:where(.cm-root:not([data-unstyled])) .cm-breadcrumb {
   display: flex;
   align-items: center;
   gap: 4px;
   max-width: calc(100% - 24px);
   padding: 2px 6px;
-  border: 1px solid var(--cm-breadcrumb-border);
-  border-radius: 6px;
-  background: var(--cm-breadcrumb-bg);
-  color: var(--cm-breadcrumb-color);
-  font-family: var(--cm-font-family);
-  font-size: var(--cm-font-size);
+  border: 1px solid var(--cm-control-border, #cccccc);
+  border-radius: var(--cm-control-radius, 6px);
+  background: var(--cm-control-bg, #ffffff);
+  color: var(--cm-control-color, #111111);
+  font-family: var(--cm-font-family, inherit);
+  font-size: var(--cm-font-size, 12px);
 }
-.cm-root:not([data-unstyled]) .cm-breadcrumb__list {
+:where(.cm-root:not([data-unstyled])) .cm-breadcrumb__list {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -461,12 +452,12 @@
   list-style: none;
 }
 /* El separador es decoración: va por CSS para que un lector de pantalla no lo lea. */
-.cm-root:not([data-unstyled]) .cm-breadcrumb__item + .cm-breadcrumb__item::before {
+:where(.cm-root:not([data-unstyled])) .cm-breadcrumb__item + .cm-breadcrumb__item::before {
   content: "›";
   padding: 0 4px;
-  color: var(--cm-breadcrumb-muted);
+  opacity: 0.55;
 }
-.cm-root:not([data-unstyled]) .cm-breadcrumb button {
+:where(.cm-root:not([data-unstyled])) .cm-breadcrumb button {
   padding: 2px 4px;
   border: 0;
   border-radius: 4px;
@@ -475,18 +466,21 @@
   font: inherit;
   cursor: pointer;
 }
-.cm-root:not([data-unstyled]) .cm-breadcrumb button:hover {
-  background: rgb(0 0 0 / 0.06);
+:where(.cm-root:not([data-unstyled])) .cm-breadcrumb button:hover {
+  background: var(
+    --cm-control-hover-bg,
+    color-mix(in srgb, var(--cm-control-bg, #ffffff), var(--cm-control-color, #111111) 10%)
+  );
 }
-.cm-root:not([data-unstyled]) .cm-breadcrumb button:focus-visible {
-  outline: 2px solid var(--cm-focus-ring);
+:where(.cm-root:not([data-unstyled])) .cm-breadcrumb button:focus-visible {
+  outline: var(--cm-focus-ring-width, 2px) solid var(--cm-focus-ring, #0b5fff);
 }
-.cm-root:not([data-unstyled]) .cm-breadcrumb__current {
+:where(.cm-root:not([data-unstyled])) .cm-breadcrumb__current {
   padding: 2px 4px;
   font-weight: 600;
 }
-.cm-root:not([data-unstyled]) .cm-tooltip__hint {
+:where(.cm-root:not([data-unstyled])) .cm-tooltip__hint {
   margin-top: 2px;
-  color: var(--cm-breadcrumb-muted);
+  opacity: 0.7;
   font-size: 0.9em;
 }

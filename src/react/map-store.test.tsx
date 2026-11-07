@@ -8,6 +8,7 @@ describe("map-store", () => {
     expect(store.getState()).toEqual({
       hovered: null,
       pointer: null,
+      pointerType: "mouse",
       interacting: false,
       camera: { k: 1, x: 0, y: 0 },
       gestureHint: null,
@@ -18,6 +19,23 @@ describe("map-store", () => {
       hovered: { kind: "region", id: "A" },
       pointer: { x: 1, y: 2 },
     });
+  });
+
+  it("registra y suelta la API del drill, y guarda el tipo de puntero", () => {
+    const store = createMapStore();
+    expect(store.getDrill()).toBeNull();
+    const api = {
+      drillDown: () => Promise.resolve({ completed: true }),
+      drillUp: () => Promise.resolve({ completed: true }),
+      drillTo: () => Promise.resolve({ completed: true }),
+    };
+    store.registerDrill(api);
+    expect(store.getDrill()).toBe(api);
+    store.registerDrill(null);
+    expect(store.getDrill()).toBeNull();
+
+    store.setState({ pointerType: "touch" });
+    expect(store.getState().pointerType).toBe("touch");
   });
 
   it("el aviso de gesto se apaga solo y repetirlo prolonga el aviso", () => {

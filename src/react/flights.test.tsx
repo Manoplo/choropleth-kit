@@ -90,10 +90,18 @@ const cameraOf = (container: Element) => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("handle imperativo (ref)", () => {
-  it("expone zoomTo, zoomBy, resetView y getView", () => {
+  it("expone zoomTo, zoomBy, resetView, getView y drillDown / drillUp / drillTo", () => {
     const { handle } = setup();
 
-    expect(Object.keys(handle()).sort()).toEqual(["getView", "resetView", "zoomBy", "zoomTo"]);
+    expect(Object.keys(handle()).sort()).toEqual([
+      "drillDown",
+      "drillTo",
+      "drillUp",
+      "getView",
+      "resetView",
+      "zoomBy",
+      "zoomTo",
+    ]);
   });
 
   it("en el encaje, getView da k = 1 y el centro geográfico", () => {

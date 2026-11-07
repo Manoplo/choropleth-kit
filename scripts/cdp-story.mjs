@@ -11,7 +11,9 @@
 //   p. ej.: node scripts/cdp-story.mjs drilldown-engine--uncontrolled-story ES single
 //   (los ids de las stories están en storybook-static/index.json)
 //
-// Modos: `single` un clic · `dbl` doble clic · `esc` clic y luego Escape · `drag` clic, zoom con rueda y arrastre.
+// Modos: `single` un clic · `dbl` doble clic · `esc` clic y luego Escape · `drag` clic, zoom con rueda y arrastre ·
+//        `touch` dos toques con el dedo (el 1.º previsualiza, el 2.º baja) · `tour` (story «Handle + intent»): pulsa
+//        «▶ Tour» y muestra el log cada segundo.
 // Imprime, por instantes, la fase del drill, las regiones, las burbujas, las migas, la cámara y el tooltip, además
 // de la secuencia de eventos de ratón (a qué elemento llegó cada uno) y los avisos / errores de la consola.
 // Maneja un Chrome real por CDP: abre una story, hace clic de verdad y cuenta qué pasa en el DOM y la consola.
@@ -110,10 +112,25 @@ const snapshot = () =>
       crumbs: [...document.querySelectorAll(".cm-breadcrumb__item")].map(e => e.textContent).join(" > "),
       vp: vp?.getAttribute("transform")?.slice(0, 55),
       tooltip: document.querySelector("[role=tooltip]")?.textContent,
+      log: [...document.querySelectorAll("pre")].map((p) => p.textContent).join(" ¦ ").split("\\n").slice(-6).join(" | "),
     });
   })()`);
 
 console.log("inicial", await snapshot());
+
+if (mode === "tour") {
+  await evaluate(
+    `[...document.querySelectorAll("button")].find((b) => b.textContent.includes("Tour"))?.click()`,
+  );
+  for (let i = 0; i < 14; i++) {
+    await sleep(1000);
+    console.log(`tour+${i + 1}s`, await snapshot());
+  }
+  console.log("LOGS", logs.length ? "\n" + logs.join("\n") : "(sin errores ni avisos)");
+  ws.close();
+  cleanup();
+  process.exit(0);
+}
 
 // Centro de la región en pantalla (el centroide de su caja suele caer dentro; para ES se usa un punto interior).
 const point = JSON.parse(
@@ -133,6 +150,28 @@ const point = JSON.parse(
 );
 console.log("punto", point);
 if (!point) throw new Error(`no hay región ${country}`);
+
+if (mode === "touch") {
+  const touch = (type) =>
+    send("Input.dispatchTouchEvent", {
+      type,
+      touchPoints: type === "touchEnd" ? [] : [{ x: point.x, y: point.y }],
+    });
+  for (const n of [1, 2]) {
+    await touch("touchStart");
+    await sleep(60);
+    await touch("touchEnd");
+    for (const ms of [200, 600, 1200]) {
+      await sleep(ms === 200 ? 200 : 400);
+      console.log(`toque ${n} +${ms}`, await snapshot());
+    }
+    await sleep(500); // fuera del doble toque del navegador
+  }
+  console.log("LOGS", logs.length ? "\n" + logs.join("\n") : "(sin errores ni avisos)");
+  ws.close();
+  cleanup();
+  process.exit(0);
+}
 
 const mouse = (type, extra = {}) =>
   send("Input.dispatchMouseEvent", {

@@ -7,6 +7,7 @@ export type {
   DrillNav,
   DrillNavItem,
   Region,
+  RegionStyle,
   PointProps,
   RegionProps,
   UseChoroplethOptions,
@@ -69,3 +70,6 @@ export { ChoroplethMap } from "./choropleth-map";
 export type { ChoroplethMapProps, LegendOptions, LegendPosition } from "./choropleth-map";
 export type { CameraOptions, TransitionResult, ViewState, ZoomOptions, ZoomTarget } from "../core";
 export type { DrillContext } from "../core";
+export { THEMES, defineTheme, extendTheme, themeToCssVars } from "../core";
+export type { ChoroplethTheme, ThemeName } from "../core";
+export type { ChoroplethClassNames, ClassSlot } from "./class-names";

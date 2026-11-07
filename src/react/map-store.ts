@@ -40,6 +40,17 @@ export type ZoomApi = {
   getView: () => ViewState;
 };
 
+/**
+ * Lo que el handle puede pedirle al drill (paso 34). Lo registra `useChoropleth` cuando el mapa tiene
+ * `drill`; cada navegación devuelve una `Promise` que resuelve al volver a reposo en la ruta pedida
+ * (`completed: false` si se canceló, falló, otra navegación la sustituyó o la petición no era válida).
+ */
+export type DrillApi = {
+  drillDown: (id: string) => Promise<TransitionResult>;
+  drillUp: (steps?: number) => Promise<TransitionResult>;
+  drillTo: (path: readonly string[]) => Promise<TransitionResult>;
+};
+
 export type PointerPosition = { x: number; y: number };
 
 /** Estado de interacción del mapa. Vive FUERA de React (dd.md §11.0, §12.1 y §14). */
@@ -48,6 +59,8 @@ export type MapState = {
   hovered: ItemRef | null;
   /** Posición del cursor relativa al contenedor; `null` si está fuera. */
   pointer: PointerPosition | null;
+  /** Tipo del último puntero que tocó el mapa: decide si el drill pide uno o dos toques. */
+  pointerType: "mouse" | "pen" | "touch";
   /** Hay un gesto de zoom/pan en curso (ratón, toque o rueda). No incluye vuelos programáticos. */
   interacting: boolean;
   /**
@@ -72,6 +85,10 @@ export type MapStore = {
   registerZoom: (api: ZoomApi | null) => void;
   /** La API de zoom, o `null` si el zoom está desactivado o aún no se ha instalado. */
   getZoom: () => ZoomApi | null;
+  /** `useChoropleth` registra aquí la API del drill (`null` sin `drill` o al desmontar). */
+  registerDrill: (api: DrillApi | null) => void;
+  /** La API del drill, o `null` si el mapa no tiene `drill`. */
+  getDrill: () => DrillApi | null;
   /** `Root` registra cómo calcular la vista cuando NO hay zoom (`zoom={false}`): siempre el encaje. */
   registerFallbackView: (read: (() => ViewState) | null) => void;
   /** La vista de reserva, o `null` si aún no se ha registrado. */
@@ -84,6 +101,7 @@ export const GESTURE_HINT_MS = 1500;
 const INITIAL_STATE: MapState = {
   hovered: null,
   pointer: null,
+  pointerType: "mouse",
   interacting: false,
   camera: FIT_TRANSFORM,
   gestureHint: null,
@@ -101,6 +119,7 @@ export const createMapStore = (): MapStore => {
   let state = INITIAL_STATE;
   let hintTimer: ReturnType<typeof setTimeout> | undefined;
   let zoomApi: ZoomApi | null = null;
+  let drillApi: DrillApi | null = null;
   let fallbackView: (() => ViewState) | null = null;
   const listeners = new Set<() => void>();
   const store: MapStore = {
@@ -127,6 +146,10 @@ export const createMapStore = (): MapStore => {
       zoomApi = api;
     },
     getZoom: () => zoomApi,
+    registerDrill: (api) => {
+      drillApi = api;
+    },
+    getDrill: () => drillApi,
     registerFallbackView: (read) => {
       fallbackView = read;
     },

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { LegendItem, SizeLegendItem } from "../../core";
+import { cx } from "../class-names";
 import { useChoroplethContext } from "../choropleth-context";
 import type { UseChoroplethResult } from "../use-choropleth";
 
@@ -25,12 +26,12 @@ const GRADIENT_STOPS = 5;
 
 /** Leyenda HTML. Por defecto: swatches con rangos (clases) o barra de degradado (`linear`). */
 export const Legend = ({ title, showCount = false, className, children }: LegendProps) => {
-  const { choropleth } = useChoroplethContext();
+  const { choropleth, classNames } = useChoroplethContext();
   const { legend: items, sizeLegend: sizeItems, scale, formatValue } = choropleth;
 
   if (children !== undefined) return <>{children({ items, sizeItems, scale, formatValue })}</>;
 
-  const rootClass = className === undefined ? "cm-legend" : `cm-legend ${className}`;
+  const rootClass = cx("cm-legend", classNames.legend, className);
   const [min, max] = scale?.domain ?? [0, 1];
 
   return (
@@ -58,7 +59,7 @@ export const Legend = ({ title, showCount = false, className, children }: Legend
         items.length > 0 && (
           <ul className="cm-legend__items">
             {items.map((item) => (
-              <li key={item.label} className="cm-legend__item">
+              <li key={item.label} className={cx("cm-legend__item", classNames.legendItem)}>
                 <span
                   aria-hidden
                   className="cm-legend__swatch"

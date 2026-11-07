@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { ItemContext } from "../map-item";
+import { cx } from "../class-names";
 import { useChoroplethContext } from "../choropleth-context";
 import { useMapStore } from "../map-store";
 
@@ -39,9 +40,10 @@ const DefaultContent = <TDatum,>({
  * / inferior del mapa para no salirse del contenedor.
  */
 export const Tooltip = <TDatum,>({ className, children }: TooltipProps<TDatum>) => {
-  const { choropleth, store } = useChoroplethContext<TDatum>();
+  const { choropleth, store, classNames } = useChoroplethContext<TDatum>();
   const point = useMapStore(store, (s) => s.pointer);
   const hovered = useMapStore(store, (s) => s.hovered);
+  const touch = useMapStore(store, (s) => s.pointerType === "touch");
 
   const context = hovered === null ? undefined : choropleth.getItemContext(hovered);
   if (context === undefined || point === null) return null;
@@ -52,14 +54,13 @@ export const Tooltip = <TDatum,>({ className, children }: TooltipProps<TDatum>) 
   return (
     <div
       role="tooltip"
-      className={[
+      className={cx(
         "cm-tooltip",
         // Solo el contenido por defecto lleva caja; si pasas `children`, el aspecto es tuyo.
         children === undefined && "cm-tooltip--default",
+        classNames.tooltip,
         className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
+      )}
       style={{
         position: "absolute",
         left: point.x + (flipX ? -OFFSET : OFFSET),
@@ -72,7 +73,8 @@ export const Tooltip = <TDatum,>({ className, children }: TooltipProps<TDatum>) 
         <DefaultContent
           {...context}
           noData={choropleth.labels.noData}
-          drillHint={choropleth.labels.drillHint}
+          // Con el dedo no hay clic: el primer toque enseña esto y el segundo baja.
+          drillHint={touch ? choropleth.labels.tapAgainHint : choropleth.labels.drillHint}
         />
       ) : (
         children(context)

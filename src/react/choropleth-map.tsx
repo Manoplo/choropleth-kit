@@ -6,7 +6,8 @@ import {
   type ReactNode,
   type Ref,
 } from "react";
-import { resolveControls, resolveLabels } from "../core";
+import { resolveControls, resolveLabels, type ChoroplethTheme, type ThemeName } from "../core";
+import type { ChoroplethClassNames } from "./class-names";
 import { Breadcrumb } from "./components/breadcrumb";
 import { GestureHint } from "./components/gesture-hint";
 import { Legend } from "./components/legend";
@@ -36,6 +37,10 @@ export type ChoroplethMapProps<TDatum> = UseChoroplethOptions<TDatum> & {
   className?: string;
   style?: CSSProperties;
   unstyled?: boolean;
+  /** `"light"` · `"dark"` · `"minimal"` · `"contrast"` o un objeto (`defineTheme`, `extendTheme`). */
+  theme?: ThemeName | ChoroplethTheme;
+  /** Una clase tuya por pieza, SUMADA a la `cm-*` (Tailwind, CSS Modules). */
+  classNames?: ChoroplethClassNames;
   ariaLabel?: string;
 };
 
@@ -59,6 +64,8 @@ const ChoroplethMapInner = <TDatum,>(
     className,
     style,
     unstyled,
+    theme,
+    classNames,
     ariaLabel,
     ...options
   }: ChoroplethMapProps<TDatum>,
@@ -77,6 +84,8 @@ const ChoroplethMapInner = <TDatum,>(
       className={className}
       style={style}
       unstyled={unstyled}
+      theme={theme}
+      classNames={classNames}
     >
       <Svg ariaLabel={ariaLabel} />
       {legendOptions !== null && (
