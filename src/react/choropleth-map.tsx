@@ -22,30 +22,30 @@ export type LegendPosition = "top-left" | "top-right" | "bottom-left" | "bottom-
 
 export type LegendOptions = {
   title?: string;
-  /** Esquina del mapa donde se superpone. Por defecto `bottom-left`. */
+  /** Corner of the map where it is overlaid. Defaults to `bottom-left`. */
   position?: LegendPosition;
   showCount?: boolean;
-  /** `"swatches"` (por defecto) o `"bar"`: una barra con un tramo por clase y los cortes debajo. */
+  /** `"swatches"` (default) or `"bar"`: a bar with one segment per class and the breaks underneath. */
   variant?: "swatches" | "bar";
-  /** Pasar el ratón por una clase resalta sus regiones (por defecto `true`). */
+  /** Hovering a class highlights its regions (default `true`). */
   interactive?: boolean;
 };
 
 export type ChoroplethMapProps<TDatum> = UseChoroplethOptions<TDatum> & {
-  /** `false` oculta la leyenda. */
+  /** `false` hides the legend. */
   legend?: LegendOptions | false;
-  /** Migas del drill (solo con `drill`). `false` las oculta; por defecto arriba a la izquierda. */
+  /** Drill breadcrumbs (only with `drill`). `false` hides them; top-left by default. */
   breadcrumb?: { position?: LegendPosition } | false;
-  /** Contenido del tooltip. Sin esto: nombre de la región y valor formateado. */
+  /** Tooltip content. Without this: the region's name and formatted value. */
   renderTooltip?: (context: TooltipContext<TDatum>) => ReactNode;
   className?: string;
   style?: CSSProperties;
   unstyled?: boolean;
-  /** `"light"` · `"dark"` · `"minimal"` · `"contrast"` o un objeto (`defineTheme`, `extendTheme`). */
+  /** `"light"` · `"dark"` · `"minimal"` · `"contrast"` or an object (`defineTheme`, `extendTheme`). */
   theme?: ThemeName | ChoroplethTheme;
-  /** Trama sobre las regiones sin dato (`"hatch"`, `"dots"`); gana a la del tema. */
+  /** Pattern over regions without data (`"hatch"`, `"dots"`); it beats the theme's. */
   emptyPattern?: "none" | "hatch" | "dots";
-  /** Una clase tuya por pieza, SUMADA a la `cm-*` (Tailwind, CSS Modules). */
+  /** One class of yours per piece, ADDED to the `cm-*` one (Tailwind, CSS Modules). */
   classNames?: ChoroplethClassNames;
   ariaLabel?: string;
 };
@@ -58,9 +58,9 @@ const CORNERS: Record<LegendPosition, CSSProperties> = {
 };
 
 /**
- * Nivel 1 (preset): el 90 % de los casos. Es EXACTAMENTE `Root` + `Svg` + `Legend` + `Tooltip`
- * (nivel 2) con valores por defecto: no hay lógica propia, solo composición. Si necesitas otra
- * disposición, copia este componente y cambia las piezas.
+ * Level 1 (preset): 90 % of cases. It is EXACTLY `Root` + `Svg` + `Legend` + `Tooltip` (level 2) with
+ * default values: there is no logic of its own, only composition. If you need another layout, copy
+ * this component and change the pieces.
  */
 const ChoroplethMapInner = <TDatum,>(
   {
@@ -79,14 +79,14 @@ const ChoroplethMapInner = <TDatum,>(
   ref: ForwardedRef<ChoroplethMapHandle>,
 ) => {
   const legendOptions = legend === false ? null : (legend ?? {});
-  // Los botones de zoom son opt-in: `zoom={{ controls: true }}`.
+  // Zoom buttons are opt-in: `zoom={{ controls: true }}`.
   const controls = resolveControls(options.zoom);
 
   return (
     <Root<TDatum>
       ref={ref}
       {...(options as UseChoroplethOptions<TDatum>)}
-      // La leyenda cuenta también las regiones sin dato, salvo que el consumidor ya haya decidido el texto.
+      // The legend also counts regions without data, unless the consumer has already decided the text.
       emptyLabel={options.emptyLabel ?? resolveLabels(options.labels).noData}
       className={className}
       style={style}
@@ -117,7 +117,7 @@ const ChoroplethMapInner = <TDatum,>(
 };
 
 /**
- * Nivel 1 (preset). `ref` da el handle imperativo: `ref.current.zoomTo("ES")`.
+ * Level 1 (preset). `ref` gives the imperative handle: `ref.current.zoomTo("ES")`.
  */
 export const ChoroplethMap = forwardRef(ChoroplethMapInner) as <TDatum>(
   props: ChoroplethMapProps<TDatum> & { ref?: Ref<ChoroplethMapHandle> },

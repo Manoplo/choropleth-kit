@@ -15,7 +15,7 @@ import { Tooltip } from "./components/tooltip";
 import { Viewport } from "./components/viewport";
 import { ZoomControls } from "./components/zoom-controls";
 
-/** Nivel 2 (compound): `<Choropleth.Root>` + las piezas que quieras, en el orden que quieras. */
+/** Level 2 (compound): `<Choropleth.Root>` + the pieces you want, in the order you want. */
 export const Choropleth = {
   Root,
   Svg,

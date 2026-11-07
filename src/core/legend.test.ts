@@ -9,7 +9,7 @@ const threshold = (thresholds: number[], values: (number | null)[] = []) =>
   });
 
 describe("buildLegend", () => {
-  it("un item por clase, con los colores y límites de la escala", () => {
+  it("one item per class, with the scale's colors and limits", () => {
     const scale = threshold([0, 10]);
     const items = buildLegend({ scale, values: [] });
 
@@ -20,14 +20,14 @@ describe("buildLegend", () => {
     expect(items[2]?.from).toBe(10);
   });
 
-  it("cuenta las regiones por clase y un valor en un corte va a la clase de arriba", () => {
+  it("counts regions per class and a value on a break goes to the class above", () => {
     const scale = threshold([0, 10]);
     const items = buildLegend({ scale, values: [-5, 0, 5, 10, 99] });
 
     expect(items.map((i) => i.count)).toEqual([1, 2, 2]);
   });
 
-  it("el conteo coincide con el color que pinta el mapa", () => {
+  it("the count matches the color the map paints", () => {
     const values = [3, 8, 1, 9, 4, 7, 2, 6, 5, 10];
     const scale = createColorScale({ variant: "sequential", values });
     const items = buildLegend({ scale, values });
@@ -37,7 +37,7 @@ describe("buildLegend", () => {
     }
   });
 
-  it("emptyLabel añade un item de sin dato que cuenta null/undefined/NaN pero no el 0", () => {
+  it("emptyLabel adds a no-data item that counts null/undefined/NaN but not 0", () => {
     const scale = threshold([5]);
     const items = buildLegend({
       scale,
@@ -54,24 +54,24 @@ describe("buildLegend", () => {
     expect(items[0]?.count).toBe(1);
   });
 
-  it("sin emptyLabel no hay item de sin dato", () => {
+  it("without emptyLabel there is no no-data item", () => {
     expect(buildLegend({ scale: threshold([5]), values: [null] })).toHaveLength(2);
   });
 
-  it("formatValue da forma a las etiquetas", () => {
+  it("formatValue shapes the labels", () => {
     const items = buildLegend({ scale: threshold([5]), values: [], formatValue: (v) => `${v} %` });
 
     expect(items[1]?.label).toBe(`5 % – ${items[1]?.to} %`);
     expect(items[0]?.label.endsWith("5 %")).toBe(true);
   });
 
-  it("formato por defecto: enteros sin decimales y máximo 2 decimales", () => {
+  it("default format: integers without decimals and at most 2 decimals", () => {
     const items = buildLegend({ scale: threshold([1.23456]), values: [] });
 
     expect(items[0]?.label.endsWith("1.23")).toBe(true);
   });
 
-  it("escala continua: sin clases, sin items", () => {
+  it("continuous scale: no classes, no items", () => {
     const scale = createColorScale({
       variant: "sequential",
       values: [1, 2],

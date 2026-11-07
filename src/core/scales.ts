@@ -11,11 +11,11 @@ import {
   type SequentialPaletteName,
 } from "./palettes";
 
-// Color de las regiones sin dato. Tiene que ser distinguible de TODA la rampa, incluido el 0.
+// Color of regions without data. It must be distinguishable from the WHOLE ramp, including 0.
 export const DEFAULT_EMPTY_FILL = "#d4d4d4";
 
 type CommonOptions = {
-  /** Un valor por región (o por dato). `null`/`undefined`/`NaN` se tratan como "sin dato". */
+  /** One value per region (or per datum). `null`/`undefined`/`NaN` are treated as "no data". */
   values: readonly (number | null | undefined)[];
   classification?: Classification;
   emptyFill?: string;
@@ -28,15 +28,15 @@ export type ColorScaleOptions = CommonOptions &
   );
 
 export type ColorScale = {
-  /** Valor → color CSS. `null`/`undefined`/`NaN` → `emptyFill`. El `0` es un dato y se colorea. */
+  /** Value → CSS color. `null`/`undefined`/`NaN` → `emptyFill`. `0` is a datum and gets colored. */
   getColor: (value: number | null | undefined) => string;
-  /** "classed": colores por tramos. "continuous": degradado sin clases (`linear`). */
+  /** "classed": colors by bands. "continuous": a gradient with no classes (`linear`). */
   kind: "classed" | "continuous";
-  /** Rango de datos que cubre la escala. En divergente es simétrico respecto al punto medio. */
+  /** Data range covered by the scale. In diverging it is symmetric around the midpoint. */
   domain: readonly [number, number];
-  /** Cortes entre clases (N-1). Vacío en continuous. La leyenda usará estos mismos. */
+  /** Breaks between classes (N-1). Empty in continuous. The legend will use these same ones. */
   thresholds: readonly number[];
-  /** Un color por clase (N). Vacío en continuous. */
+  /** One color per class (N). Empty in continuous. */
   colors: readonly string[];
   emptyFill: string;
 };
@@ -48,40 +48,40 @@ const extent = (values: readonly number[]): [number, number] => {
     if (v < min) min = v;
     if (v > max) max = v;
   }
-  // Sin datos no hay rango; [0, 1] evita pasar Infinity a d3 y devolver NaN en todo.
+  // With no data there is no range; [0, 1] avoids passing Infinity to d3 and getting NaN everywhere.
   return values.length === 0 ? [0, 1] : [min, max];
 };
 
 /**
- * Crea la función que decide el color de cada región.
+ * Creates the function that decides each region's color.
  *
- * El orden de los pasos importa porque cada uno alimenta al siguiente:
- * dato limpio → dominio → cortes → colores → escala.
+ * The order of the steps matters because each one feeds the next:
+ * clean data → domain → breaks → colors → scale.
  */
 export const createColorScale = (options: ColorScaleOptions): ColorScale => {
   const emptyFill = options.emptyFill ?? DEFAULT_EMPTY_FILL;
 
-  // ── PASO 1: limpiar. Antes de cualquier estadística (ver finiteValues). ───────────────────────
+  // ── STEP 1: clean. Before any statistics (see finiteValues). ─────────────────────────────────
   const values = finiteValues(options.values);
 
-  // ── PASO 2: dominio. Necesita los valores limpios y decide los cortes del paso 3. ─────────────
-  // Divergente: el dominio se hace SIMÉTRICO respecto al punto medio (de mid-d a mid+d, con d la
-  // mayor distancia al medio). Sin esto, con datos de -20 a +5 el azul y el rojo no pesarían
-  // igual y un +5 parecería tan intenso como un -20. Es la razón de ser del mapa divergente.
+  // ── STEP 2: domain. Needs the clean values and decides the breaks of step 3. ─────────────────
+  // Diverging: the domain is made SYMMETRIC around the midpoint (from mid-d to mid+d, with d the
+  // greatest distance to the middle). Without this, with data from -20 to +5, blue and red would not
+  // weigh the same and a +5 would look as intense as a -20. That is the whole point of a diverging map.
   const midpoint = options.variant === "diverging" ? (options.midpoint ?? 0) : 0;
   const [min, max] = extent(values);
   let domain: [number, number] = [min, max];
   if (options.variant === "diverging") {
-    // `|| 1`: si todos los valores son iguales al medio, d = 0 y el dominio degeneraría en un
-    // punto, donde d3 no sabe qué color dar. Con d = 1 ese valor cae justo en el centro neutro.
+    // `|| 1`: if all values equal the midpoint, d = 0 and the domain would degenerate into a point,
+    // where d3 does not know which color to give. With d = 1 that value falls exactly on the neutral center.
     const spread = Math.max(Math.abs(min - midpoint), Math.abs(max - midpoint)) || 1;
     domain = [midpoint - spread, midpoint + spread];
   }
 
-  // ── PASO 3: cortes. Necesita el dominio (quantize) y los valores (quantile). ──────────────────
-  // Por defecto: secuencial → quantile (todas las clases se usan); divergente → quantize sobre
-  // el dominio simétrico, que con número impar de clases deja el punto medio en el centro de la
-  // clase neutra. (dd.md pide "threshold simétrico"; esto es lo mismo, calculado automáticamente.)
+  // ── STEP 3: breaks. Needs the domain (quantize) and the values (quantile). ───────────────────
+  // By default: sequential → quantile (every class is used); diverging → quantize over the
+  // symmetric domain, which with an odd number of classes leaves the midpoint at the center of the
+  // neutral class. (dd.md asks for "symmetric threshold"; this is the same thing, computed automatically.)
   const classification: Classification =
     options.classification ??
     (options.variant === "diverging"
@@ -89,7 +89,7 @@ export const createColorScale = (options: ColorScaleOptions): ColorScale => {
       : { method: "quantile", classes: DEFAULT_CLASSES });
   const thresholds = computeThresholds({ values, classification, domain });
 
-  // ── PASO 4: construir la escala según haya o no clases. ───────────────────────────────────────
+  // ── STEP 4: build the scale depending on whether there are classes. ──────────────────────────
   const interpolate =
     options.variant === "diverging"
       ? DIVERGING_PALETTES[options.palette ?? DEFAULT_DIVERGING_PALETTE]
@@ -99,8 +99,8 @@ export const createColorScale = (options: ColorScaleOptions): ColorScale => {
     typeof v === "number" && Number.isFinite(v);
 
   if (classification.method === "linear") {
-    // Degradado continuo. `clamp(true)` evita que un valor fuera del dominio (por ejemplo un
-    // dato nuevo con una escala ya creada) extrapole a colores fuera de la paleta.
+    // Continuous gradient. `clamp(true)` prevents a value outside the domain (for example a new
+    // datum with an already-created scale) from extrapolating to colors outside the palette.
     const continuous =
       options.variant === "diverging"
         ? scaleDiverging(interpolate).domain([domain[0], midpoint, domain[1]]).clamp(true)
@@ -115,7 +115,7 @@ export const createColorScale = (options: ColorScaleOptions): ColorScale => {
     };
   }
 
-  // Colores discretos: SIEMPRE uno más que cortes (N clases = N-1 cortes + 1).
+  // Discrete colors: ALWAYS one more than breaks (N classes = N-1 breaks + 1).
   const classes = thresholds.length + 1;
   const colors =
     options.variant === "diverging"

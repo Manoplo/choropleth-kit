@@ -13,7 +13,7 @@ describe("createIntentTimer", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it("avisa tras 150 ms sobre la misma región, una sola vez", () => {
+  it("notifies after 150 ms over the same region, only once", () => {
     const onIntent = vi.fn<(key: string) => void>();
     const timer = createIntentTimer({ onIntent });
     timer.hover("ES");
@@ -25,7 +25,7 @@ describe("createIntentTimer", () => {
     expect(onIntent).toHaveBeenCalledTimes(1);
   });
 
-  it("repetir la misma clave no reinicia la espera", () => {
+  it("repeating the same key does not restart the wait", () => {
     const onIntent = vi.fn<(key: string) => void>();
     const timer = createIntentTimer({ onIntent });
     timer.hover("ES");
@@ -35,7 +35,7 @@ describe("createIntentTimer", () => {
     expect(onIntent).toHaveBeenCalledTimes(1);
   });
 
-  it("salir antes de tiempo cancela", () => {
+  it("leaving early cancels", () => {
     const onIntent = vi.fn<(key: string) => void>();
     const timer = createIntentTimer({ onIntent });
     timer.hover("ES");
@@ -45,7 +45,7 @@ describe("createIntentTimer", () => {
     expect(onIntent).not.toHaveBeenCalled();
   });
 
-  it("cambiar de región reinicia la espera y solo avisa de la última", () => {
+  it("changing region restarts the wait and only notifies about the last one", () => {
     const onIntent = vi.fn<(key: string) => void>();
     const timer = createIntentTimer({ onIntent });
     timer.hover("ES");
@@ -57,7 +57,7 @@ describe("createIntentTimer", () => {
     expect(onIntent).toHaveBeenCalledExactlyOnceWith("FR");
   });
 
-  it("volver a entrar tras salir es una permanencia nueva", () => {
+  it("re-entering after leaving is a new dwell", () => {
     const onIntent = vi.fn<(key: string) => void>();
     const timer = createIntentTimer({ onIntent });
     timer.hover("ES");
@@ -68,7 +68,7 @@ describe("createIntentTimer", () => {
     expect(onIntent).toHaveBeenCalledTimes(2);
   });
 
-  it("respeta un retraso propio y dispose cancela", () => {
+  it("respects a custom delay and dispose cancels", () => {
     const onIntent = vi.fn<(key: string) => void>();
     const timer = createIntentTimer({ onIntent, delay: 500 });
     timer.hover("ES");
@@ -82,32 +82,32 @@ describe("createIntentTimer", () => {
 
 describe("checkDrillStep", () => {
   const base = { id: "ES", depth: 0, levelId: "country" };
-  it("un id que no está en el nivel cargado es desconocido", () => {
+  it("an id that is not in the loaded level is unknown", () => {
     expect(checkDrillStep({ ...base, knownIds: new Set(["FR"]), drillable: true })).toEqual({
       kind: "unknown-id",
       ...base,
     });
   });
-  it("sin nivel cargado no se puede juzgar el id", () => {
+  it("without a loaded level the id cannot be judged", () => {
     expect(checkDrillStep({ ...base, knownIds: undefined, drillable: true })).toBeNull();
   });
-  it("canDrill en false avisa", () => {
+  it("canDrill set to false warns", () => {
     expect(checkDrillStep({ ...base, knownIds: new Set(["ES"]), drillable: false })?.kind).toBe(
       "cannot-drill",
     );
   });
-  it("canDrill sin evaluar (undefined) no avisa", () => {
+  it("canDrill not evaluated (undefined) does not warn", () => {
     expect(checkDrillStep({ ...base, knownIds: new Set(["ES"]), drillable: undefined })).toBeNull();
   });
-  it("el id desconocido manda sobre canDrill", () => {
+  it("the unknown id wins over canDrill", () => {
     expect(checkDrillStep({ ...base, knownIds: new Set(), drillable: false })?.kind).toBe(
       "unknown-id",
     );
   });
 });
 
-describe("textos de aviso", () => {
-  it("describen id, nivel y qué se hizo", () => {
+describe("warning texts", () => {
+  it("describe the id, the level and what was done", () => {
     const unknown = formatDrillRequestProblem(
       { kind: "unknown-id", id: "XX", depth: 1, levelId: "region" },
       "drillTo()",
@@ -123,7 +123,7 @@ describe("textos de aviso", () => {
     expect(cannot).toContain("canDrill");
   });
 
-  it("formatTooDeepRequest: dice la profundidad máxima y que se ignoró", () => {
+  it("formatTooDeepRequest: states the maximum depth and that it was ignored", () => {
     const text = formatTooDeepRequest(["A", "B", "C"], 2, "drillTo()");
     expect(text).toContain("drillTo()");
     expect(text).toContain('["A","B","C"]');
@@ -131,7 +131,7 @@ describe("textos de aviso", () => {
     expect(text).toContain("ignored");
   });
 
-  it("formatNoIdsDiagnostic: solo si hay regiones y ninguna tiene id", () => {
+  it("formatNoIdsDiagnostic: only if there are regions and none has an id", () => {
     const args = { featureCount: 5, idCount: 0, levelId: "country", customGetFeatureId: false };
     expect(formatNoIdsDiagnostic(args)).toContain("none of the 5 region(s)");
     expect(formatNoIdsDiagnostic(args)).toContain("feature.id");
@@ -143,7 +143,7 @@ describe("textos de aviso", () => {
     expect(formatNoIdsDiagnostic({ ...args, levelId: null })).not.toContain("in level");
   });
 
-  it("formatWrongLevelDataHint: solo con drill, lista fija y NADA cruzado", () => {
+  it("formatWrongLevelDataHint: only with drill, a fixed list and NOTHING joined", () => {
     const args = {
       drillActive: true,
       dataIsSelector: false,

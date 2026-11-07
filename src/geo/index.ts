@@ -2,15 +2,15 @@ import type { Topology } from "topojson-specification";
 import world from "./world-110m.json";
 
 /**
- * Mundo a 1:110m (Natural Earth, dominio público) en TopoJSON, con **ISO 3166-1 alpha-2 en `id`**
- * (`"ES"`) y el nombre en inglés en `properties.name`. Usa el objeto `countries`.
+ * World at 1:110m (Natural Earth, public domain) as TopoJSON, with **ISO 3166-1 alpha-2 in `id`**
+ * (`"ES"`) and the English name in `properties.name`. Use the `countries` object.
  *
- * Es `world-atlas` con los ids convertidos (ver `scripts/build-geo/build-world-110m.mjs`), más
- * Kosovo como `"XK"`. Chipre del Norte y Somalilandia siguen sin id: se pintan como capa no
- * interactiva. A esta escala faltan los microestados: usa `worldFallbackPoints`.
+ * It is `world-atlas` with the ids converted (see `scripts/build-geo/build-world-110m.mjs`), plus
+ * Kosovo as `"XK"`. Northern Cyprus and Somaliland still have no id: they are painted as a
+ * non-interactive layer. At this scale microstates are missing: use `worldFallbackPoints`.
  *
- * ⚠️ Las fronteras disputadas (Sáhara Occidental, Crimea, Cachemira…) son las de Natural Earth.
- * Valídalas con Legal/Comunicación antes de mostrar un mapa (dd.md §6.2).
+ * ⚠️ Disputed borders (Western Sahara, Crimea, Kashmir…) are Natural Earth's.
+ * Validate them with Legal/Communications before showing a map (dd.md §6.2).
  */
 export const world110m = world as unknown as Topology;
 

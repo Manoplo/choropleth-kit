@@ -1,33 +1,42 @@
 # AGENTS.md
 
-Instrucciones para cualquier agente de código que trabaje en este repositorio.
+Instructions for any coding agent working in this repository.
 
-## Reglas (por orden de prioridad)
+## Rules (in priority order)
 
-1. **Commit y push solo bajo petición explícita del usuario.** Nunca hacer `git commit`, `git push`,
-   `git commit --amend` ni abrir PRs por iniciativa propia, ni al terminar un paso, ni aunque los tests
-   pasen. Deja los cambios sin commitear en el árbol de trabajo para que el usuario los revise
-   (`git status` / `git diff`). Una aprobación anterior no autoriza commits posteriores.
-2. **Un paso cada vez**, acotado y verificable. No empezar el siguiente hasta que el usuario lo confirme.
-3. **Verificación visual**: ningún paso con efecto visible se marca ✅ sin abrir su story en un
-   navegador. Si no es posible, decirlo explícitamente y pedir al usuario que lo revise.
-4. **Lo puro, a `src/core`** con tests, sin React ni DOM. `src/react` solo orquesta.
+1. **Commit and push only on the user's explicit request.** Never run `git commit`, `git push`,
+   `git commit --amend` or open PRs on your own initiative, neither when finishing a step nor even if
+   the tests pass. Leave the changes uncommitted in the working tree so the user can review them
+   (`git status` / `git diff`). A previous approval does not authorize later commits.
+2. **One step at a time**, bounded and verifiable. Do not start the next one until the user confirms.
+3. **Visual verification**: no step with a visible effect is marked ✅ without opening its story in a
+   browser. If that is not possible, say so explicitly and ask the user to review it.
+4. **Pure logic goes in `src/core`** with tests, with no React or DOM. `src/react` only orchestrates.
 
-## Fuentes de verdad
+## Sources of truth
 
-- `coropleth-library.md` (alias `dd.md`): diseño y handoff (`§21` es el vigente).
-- `choropleth-build-proccess.md`: diario de construcción. Cada paso se documenta ahí (qué, por qué,
-  orden interno, decisiones, tests, preguntas de comprobación). **Empieza por su sección «Estado actual y
-  handoff»**: dice dónde estamos, qué decidió el humano, las trampas conocidas y qué leer para el siguiente
-  paso. **No leas los dos documentos enteros** (casi 5.000 líneas): lee solo lo que gobierna el paso.
+- `evolution-and-issues/`: **since the MVP closed (step 37)**, new features (`features/FEAT-NNN-*.md`)
+  and issues (`issues/ISSUE-NNN-*.md`) live here, one document per item. Start with its `README.md`.
+- `coropleth-library.md` (alias `dd.md`): design and handoff (`§21` was the last one in force). Written in Spanish.
+- `choropleth-build-proccess.md`: the MVP's build diary, now a **historical record** (written in Spanish).
+  Its section «Estado actual y handoff» says where the MVP ended, what the human decided and the known
+  traps. **Do not read the two documents in full** (almost 5,000 lines): read only what governs the task.
 
-## Comandos
+## Commands
 
 `pnpm typecheck` · `pnpm lint` · `pnpm test` · `pnpm test:coverage` (core ≥ 90 %) · `pnpm build` ·
-`pnpm storybook`. Solo pnpm; npm y yarn están bloqueados.
+`pnpm storybook` · `pnpm size` (bundle size, `size-limit`) · `pnpm verify` (everything above + `publint`
+and `attw`; it is what `prepublishOnly` runs).
+`pnpm smoke:package` (packs the library, installs it with npm in an empty project and renders a map).
+CI (`.github/workflows/`) runs on every PR to `develop`/`master`: Verify, Quality (coverage, Storybook, package smoke test),
+Size, Dependency review, CodeQL and PR title (Conventional Commits). Dependabot opens weekly update PRs against `develop`.
+pnpm only; npm and yarn are blocked (the guard is in `prepare`, not in `preinstall`: a `preinstall`
+would be published and would break `npm install choropleth-kit` for consumers).
 
-## Convenciones
+## Conventions
 
-- Idioma: documentación y comentarios en español; mensajes de consola y textos de UI en inglés.
-- Pre-1.0 se puede romper la API sin alias de compatibilidad, actualizando tests y stories en el mismo paso.
-- Pasar `pnpm typecheck`, `pnpm lint` y `pnpm test` antes de dar un paso por terminado.
+- **Language: English for everything** — code comments, JSDoc, READMEs, docs, stories, test titles,
+  console messages, UI texts and defaults. (The two historical documents above are the exception.)
+  Console messages are prefixed `[choropleth]`.
+- Pre-1.0 the API may break without a compatibility alias, updating tests and stories in the same step.
+- Pass `pnpm typecheck`, `pnpm lint` and `pnpm test` before declaring a step done.

@@ -1,8 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 
-// El diagnóstico (`console.warn`) se dispara con los datos de prueba que tienen ids huérfanos a
-// propósito. Se silencia para que la salida de los tests sea legible; los tests del diagnóstico
-// vuelven a espiarlo y comprueban el mensaje.
+// The diagnostic (`console.warn`) fires with test data that has orphan ids on purpose. It is silenced
+// so the test output is readable; the diagnostics tests spy on it again and check the message.
 beforeEach(() => {
   vi.spyOn(console, "warn").mockImplementation(() => {});
 });

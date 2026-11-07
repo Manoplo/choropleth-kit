@@ -3,7 +3,7 @@ import { DEFAULT_EMPTY_FILL, createColorScale } from "./scales";
 describe("createColorScale · sequential", () => {
   const values = [10, 20, 30, 40, 50];
 
-  it("sin datos (null/undefined/NaN) devuelve emptyFill", () => {
+  it("without data (null/undefined/NaN) it returns emptyFill", () => {
     const scale = createColorScale({ variant: "sequential", values });
 
     expect(scale.getColor(null)).toBe(DEFAULT_EMPTY_FILL);
@@ -11,19 +11,19 @@ describe("createColorScale · sequential", () => {
     expect(scale.getColor(NaN)).toBe(DEFAULT_EMPTY_FILL);
   });
 
-  it("el 0 es un dato: se colorea, no es emptyFill", () => {
+  it("0 is a datum: it is colored, it is not emptyFill", () => {
     const scale = createColorScale({ variant: "sequential", values: [0, 5, 10] });
 
     expect(scale.getColor(0)).not.toBe(DEFAULT_EMPTY_FILL);
   });
 
-  it("acepta un emptyFill propio", () => {
+  it("accepts a custom emptyFill", () => {
     expect(
       createColorScale({ variant: "sequential", values, emptyFill: "#fff" }).getColor(null),
     ).toBe("#fff");
   });
 
-  it("por defecto usa quantile con 5 clases: 4 cortes y 5 colores", () => {
+  it("by default uses quantile with 5 classes: 4 breaks and 5 colors", () => {
     const scale = createColorScale({ variant: "sequential", values });
 
     expect(scale.kind).toBe("classed");
@@ -31,14 +31,14 @@ describe("createColorScale · sequential", () => {
     expect(scale.colors).toHaveLength(5);
   });
 
-  it("valores bajos y altos reciben colores distintos, y la clase más alta es la última", () => {
+  it("low and high values get different colors, and the highest class is the last", () => {
     const scale = createColorScale({ variant: "sequential", values });
 
     expect(scale.getColor(10)).toBe(scale.colors[0]);
     expect(scale.getColor(50)).toBe(scale.colors[4]);
   });
 
-  it("un valor justo en un corte pertenece a la clase de arriba", () => {
+  it("a value exactly on a break belongs to the class above", () => {
     const scale = createColorScale({
       variant: "sequential",
       values: [],
@@ -51,7 +51,7 @@ describe("createColorScale · sequential", () => {
     expect(scale.getColor(10)).toBe(scale.colors[2]);
   });
 
-  it("threshold con N cortes produce N+1 colores", () => {
+  it("threshold with N breaks produces N+1 colors", () => {
     const scale = createColorScale({
       variant: "sequential",
       values: [],
@@ -61,14 +61,14 @@ describe("createColorScale · sequential", () => {
     expect(scale.colors).toHaveLength(4);
   });
 
-  it("la paleta elegida cambia los colores", () => {
+  it("the chosen palette changes the colors", () => {
     const blues = createColorScale({ variant: "sequential", values, palette: "blues" });
     const reds = createColorScale({ variant: "sequential", values, palette: "reds" });
 
     expect(blues.colors).not.toEqual(reds.colors);
   });
 
-  it("linear es continua y recorta valores fuera del dominio", () => {
+  it("linear is continuous and clamps values outside the domain", () => {
     const scale = createColorScale({
       variant: "sequential",
       values,
@@ -82,14 +82,14 @@ describe("createColorScale · sequential", () => {
     expect(scale.getColor(null)).toBe(DEFAULT_EMPTY_FILL);
   });
 
-  it("sin ningún valor no falla: todo es emptyFill salvo lo que se consulte", () => {
+  it("without any value it does not fail: everything is emptyFill except what is queried", () => {
     const scale = createColorScale({ variant: "sequential", values: [null, undefined] });
 
     expect(scale.domain).toEqual([0, 1]);
     expect(scale.getColor(null)).toBe(DEFAULT_EMPTY_FILL);
   });
 
-  it("ignora null y NaN al calcular el dominio", () => {
+  it("ignores null and NaN when computing the domain", () => {
     const scale = createColorScale({ variant: "sequential", values: [null, 4, NaN, 8] });
 
     expect(scale.domain).toEqual([4, 8]);
@@ -97,40 +97,40 @@ describe("createColorScale · sequential", () => {
 });
 
 describe("createColorScale · diverging", () => {
-  it("el dominio es simétrico respecto al punto medio", () => {
+  it("the domain is symmetric around the midpoint", () => {
     const scale = createColorScale({ variant: "diverging", values: [-20, 5] });
 
     expect(scale.domain).toEqual([-20, 20]);
   });
 
-  it("respeta un midpoint distinto de 0", () => {
+  it("respects a midpoint other than 0", () => {
     const scale = createColorScale({ variant: "diverging", values: [90, 120], midpoint: 100 });
 
     expect(scale.domain).toEqual([80, 120]);
   });
 
-  it("por defecto: 5 clases simétricas, con el midpoint dentro de la clase central", () => {
+  it("by default: 5 symmetric classes, with the midpoint inside the middle class", () => {
     const scale = createColorScale({ variant: "diverging", values: [-20, 20] });
 
     expect(scale.thresholds).toEqual([-12, -4, 4, 12]);
     expect(scale.getColor(0)).toBe(scale.colors[2]);
   });
 
-  it("-x y +x reciben colores opuestos, no el mismo", () => {
+  it("-x and +x get opposite colors, not the same one", () => {
     const scale = createColorScale({ variant: "diverging", values: [-20, 20] });
 
     expect(scale.getColor(-20)).toBe(scale.colors[0]);
     expect(scale.getColor(20)).toBe(scale.colors[4]);
   });
 
-  it("si todos los valores son el midpoint, el dominio no degenera", () => {
+  it("if all values are the midpoint, the domain does not degenerate", () => {
     const scale = createColorScale({ variant: "diverging", values: [0, 0] });
 
     expect(scale.domain).toEqual([-1, 1]);
     expect(scale.getColor(0)).toBe(scale.colors[2]);
   });
 
-  it("linear divergente: el midpoint recibe el color neutro de la paleta", () => {
+  it("diverging linear: the midpoint gets the palette's neutral color", () => {
     const scale = createColorScale({
       variant: "diverging",
       values: [-10, 10],
@@ -143,7 +143,7 @@ describe("createColorScale · diverging", () => {
     expect(scale.getColor(null)).toBe(DEFAULT_EMPTY_FILL);
   });
 
-  it("acepta una paleta divergente por nombre", () => {
+  it("accepts a diverging palette by name", () => {
     const rdbu = createColorScale({ variant: "diverging", values: [-1, 1] });
     const piyg = createColorScale({ variant: "diverging", values: [-1, 1], palette: "piyg" });
 
@@ -152,11 +152,11 @@ describe("createColorScale · diverging", () => {
 });
 
 describe("createColorScale · tipos", () => {
-  it("rechaza en compilación una paleta divergente en un mapa secuencial", () => {
-    // La comprobación real es del compilador (`pnpm typecheck` falla si desaparece el error).
-    // La función no se ejecuta: en runtime esa paleta no existe y daría error.
+  it("rejects at compile time a diverging palette on a sequential map", () => {
+    // The real check belongs to the compiler (`pnpm typecheck` fails if the error disappears).
+    // The function is not run: at runtime that palette does not exist and would throw.
     const compileTimeOnly = () =>
-      // @ts-expect-error "rdbu" es divergente: no existe entre las paletas secuenciales.
+      // @ts-expect-error "rdbu" is diverging: it does not exist among the sequential palettes.
       createColorScale({ variant: "sequential", values: [1, 2], palette: "rdbu" });
 
     expect(compileTimeOnly).toBeTypeOf("function");

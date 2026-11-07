@@ -10,9 +10,9 @@ import type { RootProps } from "./components/root";
 import { defineDrillLevels } from "./drill-levels";
 import type { Region } from "./use-choropleth";
 
-// Paso 35: theming mínimo. `theme`, `classNames`, `getRegionStyle` y el contrato `data-*`. jsdom no resuelve
-// `styles.css`: aquí se prueba lo que la LIBRERÍA escribe (variables en línea, clases, atributos); que las
-// reglas CSS se apliquen se comprueba en un navegador (ver el diario).
+// Step 35: minimal theming. `theme`, `classNames`, `getRegionStyle` and the `data-*` contract. jsdom does not resolve
+// `styles.css`: what the LIBRARY writes is tested here (inline variables, classes, attributes); that the CSS
+// rules apply is checked in a browser (see the diary).
 
 type Row = { code: string; v: number | null; estimated?: boolean };
 const data: Row[] = [
@@ -34,7 +34,7 @@ const preset = (props: Partial<ChoroplethMapProps<Row>> = {}) =>
   render(<ChoroplethMap<Row> {...({ ...baseProps, ...props } as ChoroplethMapProps<Row>)} />);
 
 describe("theme", () => {
-  it("un nombre escribe sus variables EN LÍNEA en `.cm-root` y marca `data-theme`", () => {
+  it("a name writes its variables INLINE on `.cm-root` and sets `data-theme`", () => {
     const { container } = preset({ theme: "dark" });
     const root = rootOf(container);
 
@@ -44,7 +44,7 @@ describe("theme", () => {
     }
   });
 
-  it("un objeto escribe solo lo que define y se marca `custom`", () => {
+  it("an object writes only what it defines and is marked `custom`", () => {
     const mine = defineTheme({ border: { color: "#ff0000", width: 2 } });
     const { container } = preset({ theme: mine });
     const root = rootOf(container);
@@ -52,32 +52,32 @@ describe("theme", () => {
     expect(root.getAttribute("data-theme")).toBe("custom");
     expect(root.style.getPropertyValue("--cm-border-color")).toBe("#ff0000");
     expect(root.style.getPropertyValue("--cm-border-width")).toBe("2px");
-    expect(root.style.getPropertyValue("--cm-empty-fill")).toBe(""); // lo demás sigue siendo del CSS
+    expect(root.style.getPropertyValue("--cm-empty-fill")).toBe(""); // the rest is still up to the CSS
   });
 
-  it("sin `theme` no se escribe ninguna variable ni `data-theme` (el CSS manda)", () => {
+  it("without `theme` no variable or `data-theme` is written (the CSS rules)", () => {
     const { container } = preset();
     const root = rootOf(container);
 
     expect(root.hasAttribute("data-theme")).toBe(false);
-    // (`--cm-k` y compañeras son internas de la cámara y siempre están.)
+    // (`--cm-k` and companions are internal to the camera and are always there.)
     for (const name of Object.keys(themeToCssVars(THEMES.light))) {
       expect(root.style.getPropertyValue(name), `variable ${name}`).toBe("");
     }
   });
 
-  it("un tema extendido conserva lo de la base y aplica los ajustes", () => {
+  it("an extended theme keeps the base's content and applies the adjustments", () => {
     const { container } = preset({
       theme: extendTheme("dark", { border: { color: "#00ff00" } }),
     });
     const root = rootOf(container);
 
     expect(root.style.getPropertyValue("--cm-border-color")).toBe("#00ff00");
-    expect(root.style.getPropertyValue("--cm-border-width")).toBe("0.5px"); // de `dark`
+    expect(root.style.getPropertyValue("--cm-border-width")).toBe("0.5px"); // from `dark`
     expect(root.style.getPropertyValue("--cm-background")).toBe(THEMES.dark.background);
   });
 
-  it("`style` del consumidor gana al tema (es la vía para tocar una variable a mano)", () => {
+  it("the consumer's `style` beats the theme (it is the way to tweak a variable by hand)", () => {
     const { container } = preset({
       theme: "dark",
       style: { "--cm-border-color": "#123456" } as React.CSSProperties,
@@ -89,7 +89,7 @@ describe("theme", () => {
     );
   });
 
-  it("cambiar de tema en caliente cambia las variables", () => {
+  it("switching theme on the fly changes the variables", () => {
     const Harness = () => {
       const [theme, setTheme] = useState<"light" | "dark">("light");
       return (
@@ -106,13 +106,13 @@ describe("theme", () => {
     expect(rootOf(container).getAttribute("data-theme")).toBe("dark");
   });
 
-  it("con `unstyled` el tema sigue escribiendo sus variables", () => {
+  it("with `unstyled` the theme still writes its variables", () => {
     const { container } = preset({ theme: "contrast", unstyled: true });
     expect(rootOf(container).hasAttribute("data-unstyled")).toBe(true);
     expect(rootOf(container).style.getPropertyValue("--cm-border-width")).toBe("1px");
   });
 
-  it("funciona también en el compound (`Choropleth.Root`)", () => {
+  it("also works in the compound (`Choropleth.Root`)", () => {
     const { container } = render(
       <Choropleth.Root {...({ ...baseProps, theme: "minimal" } as RootProps<Row>)}>
         <Choropleth.Svg />
@@ -163,7 +163,7 @@ describe("classNames", () => {
   const has = (container: HTMLElement, selector: string, cls: string) =>
     container.querySelector(selector)?.classList.contains(cls) === true;
 
-  it("cada pieza lleva SU clase junto a la `cm-*` (nunca la sustituye)", async () => {
+  it("each piece carries ITS class next to the `cm-*` one (it never replaces it)", async () => {
     const { container } = render(
       <ChoroplethMap<Row>
         {...({
@@ -200,7 +200,7 @@ describe("classNames", () => {
       expect(has(container, selector, `mine-${slot}`), `${slot} en ${selector}`).toBe(true);
     }
 
-    // La capa de contexto aparece al bajar.
+    // The context layer appears when going down.
     vi.stubGlobal(
       "matchMedia",
       (q: string) =>
@@ -214,7 +214,7 @@ describe("classNames", () => {
     vi.unstubAllGlobals();
   });
 
-  it("fronteras, burbujas y tooltip", () => {
+  it("borders, bubbles and tooltip", () => {
     const { container } = render(
       <ChoroplethMap<Row>
         {...({
@@ -229,12 +229,12 @@ describe("classNames", () => {
     expect(has(container, ".cm-bubbles", "mine-bubbles")).toBe(true);
     expect(has(container, ".cm-bubble", "mine-bubble")).toBe(true);
 
-    fireEvent.pointerMove(rootOf(container), { clientX: 10, clientY: 10 }); // el tooltip necesita posición
+    fireEvent.pointerMove(rootOf(container), { clientX: 10, clientY: 10 }); // the tooltip needs a position
     fireEvent.pointerOver(container.querySelector(".cm-regions [data-region-id='A']") as Element);
     expect(has(container, ".cm-tooltip", "mine-tooltip")).toBe(true);
   });
 
-  it("se suma a `className` de la pieza, no lo pisa", () => {
+  it("is added to the piece's `className`, it does not overwrite it", () => {
     const { container } = render(
       <Choropleth.Root
         {...({ ...baseProps } as RootProps<Row>)}
@@ -250,14 +250,14 @@ describe("classNames", () => {
     expect(container.querySelector(".cm-legend")?.className).toBe("cm-legend legend-extra");
   });
 
-  it("sin `classNames` no se añade ninguna clase suelta (ni «undefined»)", () => {
+  it("without `classNames` no stray class is added (nor undefined)", () => {
     const { container } = preset();
     expect(rootOf(container).className).toBe("cm-root");
     expect(container.querySelector(".cm-region")?.getAttribute("class")).toBe("cm-region");
     expect(container.innerHTML).not.toContain("undefined");
   });
 
-  it("las clases de las regiones no rompen el `memo`: no re-renderizan al pasar el ratón", () => {
+  it("the regions' classes do not break `memo`: they do not re-render on hover", () => {
     const getId = vi.fn<(r: Row) => string>((r) => r.code);
     const { container } = preset({ getId, classNames: { region: "r" } });
     const before = getId.mock.calls.length;
@@ -272,7 +272,7 @@ describe("getRegionStyle", () => {
   const path = (c: HTMLElement, id: string) =>
     c.querySelector(`.cm-regions [data-region-id="${id}"]`) as SVGElement;
 
-  it("sustituye el color, la opacidad y suma una clase; el resto no se toca", () => {
+  it("replaces the color and the opacity and adds a class; the rest is untouched", () => {
     const { container } = preset({
       getRegionStyle: (r) =>
         r.datum?.estimated === true
@@ -290,18 +290,18 @@ describe("getRegionStyle", () => {
     expect(a.getAttribute("class")).toBe("cm-region");
   });
 
-  it("prioridad: getRegionStyle > color de la escala > emptyFill", () => {
+  it("priority: getRegionStyle > scale color > emptyFill", () => {
     const { container } = preset({
       data: [{ code: "A", v: 1 }],
       emptyFill: "#111111",
       getRegionStyle: (r) => (r.id === "B" ? { fill: "#222222" } : undefined),
     });
-    // B no tiene dato (emptyFill) pero getRegionStyle gana.
+    // B has no datum (emptyFill) but getRegionStyle wins.
     expect(path(container, "B").style.fill).toBe("#222222");
     expect(path(container, "A").style.fill).not.toBe("#111111");
   });
 
-  it("recibe la región ya construida (dato, valor, color de la escala)", () => {
+  it("receives the already-built region (datum, value, scale color)", () => {
     const seen: Region<Row>[] = [];
     preset({
       getRegionStyle: (r) => {
@@ -316,7 +316,7 @@ describe("getRegionStyle", () => {
     expect(b?.opacity).toBeUndefined();
   });
 
-  it("la copia de hover/selección y el tooltip usan el color propio", () => {
+  it("the hover/selection copy and the tooltip use the custom color", () => {
     const { container } = preset({
       selectedId: "B",
       getRegionStyle: (r) => (r.id === "B" ? { fill: "#ff00ff" } : undefined),
@@ -325,7 +325,7 @@ describe("getRegionStyle", () => {
     expect((selected as SVGElement).style.fill).toBe("#ff00ff");
   });
 
-  it("no cambiar nada (devolver undefined) no cambia el DOM", () => {
+  it("changing nothing (returning undefined) does not change the DOM", () => {
     const plain = preset();
     const withFn = preset({ getRegionStyle: () => undefined });
     expect(path(withFn.container, "A").outerHTML).toBe(path(plain.container, "A").outerHTML);
@@ -333,13 +333,13 @@ describe("getRegionStyle", () => {
 });
 
 describe("contrato data-*", () => {
-  it("las regiones sin dato llevan `data-empty`; las que tienen dato, no", () => {
+  it("regions without data carry `data-empty`; those with data, do not", () => {
     const { container } = preset({ data: [{ code: "A", v: 1 }] });
     expect(container.querySelector("[data-region-id='A']")?.hasAttribute("data-empty")).toBe(false);
     expect(container.querySelector("[data-region-id='B']")?.hasAttribute("data-empty")).toBe(true);
   });
 
-  it("un dato con valor nulo también es «vacío»: se pinta con `emptyFill`, así que se puede estilar igual", () => {
+  it("a datum with a null value is also empty: it is painted with `emptyFill`, so it can be styled the same way", () => {
     const { container } = preset({
       data: [
         { code: "A", v: null },
@@ -350,7 +350,7 @@ describe("contrato data-*", () => {
     expect(container.querySelector("[data-region-id='B']")?.hasAttribute("data-empty")).toBe(false);
   });
 
-  it("`data-empty` no depende de getRegionStyle (es del dato, no del color)", () => {
+  it("`data-empty` does not depend on getRegionStyle (it belongs to the datum, not the color)", () => {
     const { container } = preset({
       data: [{ code: "A", v: 1 }],
       getRegionStyle: () => ({ fill: "#ff0000" }),
@@ -358,7 +358,7 @@ describe("contrato data-*", () => {
     expect(container.querySelector("[data-region-id='B']")?.hasAttribute("data-empty")).toBe(true);
   });
 
-  it("el root publica el estado como atributos (status, dim, theme)", () => {
+  it("the root publishes the state as attributes (status, dim, theme)", () => {
     const { container } = preset({ theme: "light" });
     const root = rootOf(container);
     expect(root.getAttribute("data-status")).toBe("ready");
@@ -366,11 +366,11 @@ describe("contrato data-*", () => {
     expect(root.getAttribute("data-theme")).toBe("light");
   });
 
-  it("tras seleccionar, el root lleva `data-has-selection`", () => {
+  it("after selecting, the root carries `data-has-selection`", () => {
     const { container } = preset({ selectedId: "A" });
     expect(rootOf(container).hasAttribute("data-has-selection")).toBe(true);
   });
 });
 
-// `act` se importa por si un test futuro lo necesita; evita un import sin uso si se borra el último uso.
+// `act` is imported in case a future test needs it; it avoids an unused import if the last use is deleted.
 void act;

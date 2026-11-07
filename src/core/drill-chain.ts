@@ -8,36 +8,36 @@ import {
   type ProjectionName,
 } from "./projection";
 
-/** Lo que se dibuja a cada profundidad: las features (ya filtradas) y cómo se identifican. */
+/** What is drawn at each depth: the (already filtered) features and how they are identified. */
 export type ChainLevel = {
   features: readonly Feature[];
   idOf: (feature: Feature) => string | undefined;
 };
 
 export type BuildProjectionChainParams = {
-  /** `levels[d]` = lo que se muestra a profundidad `d`. Tiene `path.length + 1` elementos. */
+  /** `levels[d]` = what is shown at depth `d`. It has `path.length + 1` elements. */
   levels: readonly ChainLevel[];
-  /** Ids desde la raíz: `path[d]` es la región de `levels[d]` en la que se entra. */
+  /** Ids from the root: `path[d]` is the region of `levels[d]` that is entered. */
   path: readonly string[];
   name?: ProjectionName;
   width: number;
   height: number;
   padding?: number | Padding;
-  /** Encuadres explícitos por id en lon/lat (España con Canarias). Anula el cuerpo principal. */
+  /** Explicit framings by id in lon/lat (Spain with the Canary Islands). Overrides the main body. */
   focusBounds?: Readonly<Record<string, LonLatBounds | null | undefined>>;
 };
 
 export type ProjectionChain = {
-  /** `projections[d]` encuadra la región `path[d − 1]` dentro de `projections[d − 1]` (la 0, el mundo). */
+  /** `projections[d]` frames region `path[d − 1]` within `projections[d − 1]` (0 being the world). */
   projections: GeoProjection[];
   /**
-   * Id de la región que no se pudo encuadrar (no está en el nivel padre, o no tiene extensión).
-   * Desde ahí las proyecciones repiten la última válida, para no romper el mapa.
+   * Id of the region that could not be framed (it is not in the parent level, or has no extent).
+   * From there on, the projections repeat the last valid one, so the map does not break.
    */
   missing: string | null;
 };
 
-/** Unos límites lon/lat como un objeto que `fitExtent` entiende: 4 esquinas y 4 puntos medios. */
+/** Lon/lat bounds as an object `fitExtent` understands: 4 corners and 4 midpoints. */
 const boundsToObject = ([[west, south], [east, north]]: LonLatBounds): MultiPoint => ({
   type: "MultiPoint",
   coordinates: [
@@ -53,9 +53,9 @@ const boundsToObject = ([[west, south], [east, north]]: LonLatBounds): MultiPoin
 });
 
 /**
- * Si unos límites cruzan el antimeridiano (`oeste > este`: Rusia, Fiyi), en un mapa plano no existe un
- * rectángulo que contenga las dos mitades —saldría uno del ancho del mundo—. Se queda la mitad más ancha,
- * igual que `getFocusExtent` para `zoomTo`.
+ * If some bounds cross the antimeridian (`west > east`: Russia, Fiji), on a flat map there is no
+ * rectangle containing both halves —it would be as wide as the world—. The wider half is kept,
+ * just like `getFocusExtent` does for `zoomTo`.
  */
 const widerHalf = ([[west, south], [east, north]]: LonLatBounds): LonLatBounds => {
   if (west <= east)
@@ -74,7 +74,7 @@ const widerHalf = ([[west, south], [east, north]]: LonLatBounds): LonLatBounds =
       ];
 };
 
-/** El foco de una geometría: ella misma, o (si cruza el antimeridiano) la caja de su mitad más ancha. */
+/** A geometry's focus: itself, or (if it crosses the antimeridian) the box of its wider half. */
 const mainBody = (geometry: GeoPermissibleObjects | null): GeoPermissibleObjects | null => {
   if (geometry === null) return null;
   const [[west, south], [east, north]] = geoBounds(geometry);
@@ -89,10 +89,10 @@ const mainBody = (geometry: GeoPermissibleObjects | null): GeoPermissibleObjects
 };
 
 /**
- * La cadena de proyecciones de toda la ruta (dd.md §11.2.4): la raíz se ajusta al mundo y cada nivel
- * es la del padre con `scale`/`translate` reajustados al cuerpo principal de la región elegida
- * (`rebaseProjection`). Función pura de (niveles, ruta, tamaño, padding). Al redimensionar se recalcula
- * entera: es un `fitExtent` por nivel.
+ * The projection chain for the whole route (dd.md §11.2.4): the root is fitted to the world and each
+ * level is its parent's with `scale`/`translate` readjusted to the chosen region's main body
+ * (`rebaseProjection`). A pure function of (levels, route, size, padding). On resize it is
+ * recomputed entirely: one `fitExtent` per level.
  */
 export const buildProjectionChain = ({
   levels,

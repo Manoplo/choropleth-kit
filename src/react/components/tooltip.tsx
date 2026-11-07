@@ -4,12 +4,12 @@ import { cx } from "../class-names";
 import { useChoroplethContext } from "../choropleth-context";
 import { useMapStore } from "../map-store";
 
-/** Lo que recibe el tooltip: el `MapItem` (región o punto) + valor, color y nombre. */
+/** What the tooltip receives: the `MapItem` (region or point) + value, color and name. */
 export type TooltipContext<TDatum> = ItemContext<TDatum>;
 
 export type TooltipProps<TDatum> = {
   className?: string;
-  /** Contenido del tooltip. Por defecto: nombre de la región y valor formateado. */
+  /** Tooltip content. By default: the region's name and formatted value. */
   children?: (context: TooltipContext<TDatum>) => ReactNode;
 };
 
@@ -26,18 +26,18 @@ const DefaultContent = <TDatum,>({
     <>
       <strong>{label}</strong>
       <div>{formattedValue === "" ? noData : formattedValue}</div>
-      {/* Solo se promete lo que es verdad: el pie aparece únicamente si se puede bajar desde aquí. */}
+      {/* Only what is true is promised: the footer appears only if you can go down from here. */}
       {drillable && <div className="cm-tooltip__hint">{drillHint}</div>}
     </>
   );
 };
 
 /**
- * Tooltip HTML junto al cursor. La librería decide QUÉ (contexto tipado) y DÓNDE; tú, el aspecto.
+ * HTML tooltip next to the cursor. The library decides WHAT (typed context) and WHERE; you, the look.
  *
- * Se suscribe él solo al hover y al cursor (`useMapStore`): moverlo no re-renderiza `Root` ni
- * las regiones. Sin medir su tamaño, se voltea hacia el otro lado del cursor en la mitad derecha
- * / inferior del mapa para no salirse del contenedor.
+ * It subscribes by itself to the hover and the cursor (`useMapStore`): moving it re-renders neither
+ * `Root` nor the regions. Without measuring its size, it flips to the other side of the cursor in the
+ * right / bottom half of the map so as not to overflow the container.
  */
 export const Tooltip = <TDatum,>({ className, children }: TooltipProps<TDatum>) => {
   const { choropleth, store, classNames } = useChoroplethContext<TDatum>();
@@ -56,7 +56,7 @@ export const Tooltip = <TDatum,>({ className, children }: TooltipProps<TDatum>) 
       role="tooltip"
       className={cx(
         "cm-tooltip",
-        // Solo el contenido por defecto lleva caja; si pasas `children`, el aspecto es tuyo.
+        // Only the default content has a box; if you pass `children`, the look is yours.
         children === undefined && "cm-tooltip--default",
         classNames.tooltip,
         className,
@@ -73,7 +73,7 @@ export const Tooltip = <TDatum,>({ className, children }: TooltipProps<TDatum>) 
         <DefaultContent
           {...context}
           noData={choropleth.labels.noData}
-          // Con el dedo no hay clic: el primer toque enseña esto y el segundo baja.
+          // With a finger there is no click: the first tap shows this and the second drills down.
           drillHint={touch ? choropleth.labels.tapAgainHint : choropleth.labels.drillHint}
         />
       ) : (

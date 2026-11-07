@@ -10,9 +10,9 @@ import { defineDrillLevels } from "./drill-levels";
 import type { ChoroplethMapHandle } from "./handle";
 import { useDrillDown } from "./use-drill-down";
 
-// Paso 34: cierre del drill. Handle (`drillDown` / `drillUp` / `drillTo` con Promise), prefetch por intención
-// (`onDrillIntent`), modo táctil de dos toques y avisos de desarrollo. «Reducir movimiento» simulado: el vuelo
-// es un salto y el revelado dura 0, así los tests no esperan vuelos de d3.
+// Step 34: drill closing. Handle (`drillDown` / `drillUp` / `drillTo` with Promise), intent prefetch
+// (`onDrillIntent`), two-tap touch mode and development warnings. Simulated "reduce motion": the flight
+// is a jump and the reveal lasts 0, so the tests do not wait for d3 flights.
 
 const square = (id: string, west: number, south: number, size: number): Feature => ({
   type: "Feature",
@@ -110,8 +110,8 @@ afterEach(() => {
 
 type Result = { completed: boolean };
 /**
- * Lanza una navegación del handle y espera su resultado. NO se puede hacer `await` dentro de `act(async)`: `act`
- * retiene los renders hasta que el callback acaba, y la Promise depende de esos renders (se quedaría colgada).
+ * Launches a handle navigation and waits for its result. `await` CANNOT be used inside `act(async)`: `act`
+ * holds renders until the callback ends, and the Promise depends on those renders (it would hang).
  */
 const call = async (start: () => Promise<Result>): Promise<Result> => {
   let result: Result | undefined;
@@ -126,8 +126,8 @@ const call = async (start: () => Promise<Result>): Promise<Result> => {
 
 const warnings = () => warn.mock.calls.map((call) => String(call[0]));
 
-describe("handle del drill", () => {
-  it("drillDown resuelve cuando el nivel nuevo está en reposo", async () => {
+describe("drill handle", () => {
+  it("drillDown resolves when the new level is at rest", async () => {
     const { handle, ids } = mount();
 
     const result = await call(() => handle().drillDown("A"));
@@ -136,7 +136,7 @@ describe("handle del drill", () => {
     expect(ids()).toEqual(["A1", "A2"]);
   });
 
-  it("encadena: bajar, subir y saltar con await (guion sin temporizadores)", async () => {
+  it("chains: going down, up and jumping with await (a script without timers)", async () => {
     const { handle, ids } = mount({ drill: threeLevels });
 
     expect(await call(() => handle().drillDown("A"))).toEqual({ completed: true });
@@ -146,18 +146,18 @@ describe("handle del drill", () => {
     expect(await call(() => handle().drillTo(["B"]))).toEqual({ completed: true });
     expect(ids()).toEqual(["B1", "B2"]);
     expect(await call(() => handle().drillDown("B1"))).toEqual({ completed: true });
-    expect(await call(() => handle().drillUp(5))).toEqual({ completed: true }); // de más = a la raíz
+    expect(await call(() => handle().drillUp(5))).toEqual({ completed: true }); // too many = to the root
     expect(ids()).toEqual(["A", "B", "C"]);
   });
 
-  it("drillTo con una ruta profunda de golpe", async () => {
+  it("drillTo with a deep route at once", async () => {
     const { handle, ids } = mount({ drill: threeLevels });
     expect(await call(() => handle().drillTo(["A", "A1"]))).toEqual({ completed: true });
-    // El último nivel hereda la geometría de las regiones (tiendas sobre la región).
+    // The last level inherits the regions' geometry (stores over the region).
     expect(ids()).toEqual(["A1", "A2"]);
   });
 
-  it("estar ya allí resuelve `completed: true` sin tocar nada (también subir desde la raíz)", async () => {
+  it("already being there resolves `completed: true` without touching anything (also going up from the root)", async () => {
     const { handle, ids } = mount();
     expect(await call(() => handle().drillUp())).toEqual({ completed: true });
     expect(await call(() => handle().drillTo([]))).toEqual({ completed: true });
@@ -165,7 +165,7 @@ describe("handle del drill", () => {
     expect(warnings()).toEqual([]);
   });
 
-  it("un id que no existe en el nivel no navega: `completed: false` y aviso en inglés", async () => {
+  it("an id that does not exist at the level does not navigate: `completed: false` and a warning in English", async () => {
     const { handle, ids } = mount();
     const result = await call(() => handle().drillDown("ZZ"));
 
@@ -174,13 +174,13 @@ describe("handle del drill", () => {
     expect(warnings().join("\n")).toMatch(/\[choropleth\] drillDown\(\).*"ZZ".*does not exist/);
   });
 
-  it("un id inexistente en un tramo intermedio de drillTo también se rechaza", async () => {
+  it("a nonexistent id in an intermediate stretch of drillTo is also rejected", async () => {
     const { handle } = mount({ drill: threeLevels });
     expect(await call(() => handle().drillTo(["ZZ", "A1"]))).toEqual({ completed: false });
     expect(warnings().join("\n")).toContain('"ZZ"');
   });
 
-  it("`canDrill: false` rechaza la bajada con su aviso", async () => {
+  it("`canDrill: false` rejects the descent with its warning", async () => {
     const noC = defineDrillLevels<Row>([
       { id: "country", geography: world, canDrill: (item) => item.id !== "C" },
       { id: "region", geography: geographyOf },
@@ -192,19 +192,19 @@ describe("handle del drill", () => {
     expect(await call(() => handle().drillDown("A"))).toEqual({ completed: true });
   });
 
-  it("más profundo que los niveles definidos: rechazado, con aviso", async () => {
+  it("deeper than the defined levels: rejected, with a warning", async () => {
     const { handle } = mount();
     expect(await call(() => handle().drillTo(["A", "A1"]))).toEqual({ completed: false });
     expect(warnings().join("\n")).toMatch(/only 2 level\(s\) are defined/);
   });
 
-  it("sin la prop `drill`: `completed: false` y un aviso que lo explica", async () => {
+  it("without the `drill` prop: `completed: false` and a warning explaining it", async () => {
     const { handle } = mount({ drill: undefined, data: rows, geography: world });
     expect(await call(() => handle().drillDown("A"))).toEqual({ completed: false });
     expect(warnings().join("\n")).toMatch(/drillDown\(\) needs the `drill` prop/);
   });
 
-  it("una navegación nueva sustituye a la anterior: la primera resuelve `false`", async () => {
+  it("a new navigation replaces the previous one: the first resolves `false`", async () => {
     const { handle, ids } = mount();
     let first: Result | undefined;
     let second: Result | undefined;
@@ -226,7 +226,7 @@ describe("handle del drill", () => {
     expect(ids()).toEqual(["B1", "B2"]);
   });
 
-  it("un error de carga deshace la bajada: `completed: false` y `onDrillError`", async () => {
+  it("a load error undoes the descent: `completed: false` and `onDrillError`", async () => {
     const onDrillError = vi.fn<(event: { error: unknown; ctx: DrillContext }) => void>();
     const failing = defineDrillLevels<Row>([
       { id: "country", geography: world },
@@ -240,11 +240,11 @@ describe("handle del drill", () => {
     expect(ids()).toEqual(["A", "B", "C"]);
   });
 
-  it("modo controlado: si el padre rechaza la ruta, resuelve `false` sin quedarse colgada", async () => {
+  it("controlled mode: if the parent rejects the route, it resolves `false` without hanging", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const ref = createRef<ChoroplethMapHandle>();
     const Harness = () => {
-      // El padre ignora `onPathChange`: la ruta se queda en [].
+      // The parent ignores `onPathChange`: the route stays at [].
       const drill = useDrillDown<Row>({ levels, path: [], onPathChange: () => {} });
       return (
         <Choropleth.Root {...({ ...baseProps, drill } as RootProps<Row>)} ref={ref}>
@@ -266,7 +266,7 @@ describe("handle del drill", () => {
     expect(result).toEqual({ completed: false });
   });
 
-  it("al desmontar, las promesas pendientes resuelven `false`", async () => {
+  it("on unmount, the pending promises resolve `false`", async () => {
     const slow = defineDrillLevels<Row>([
       { id: "country", geography: world },
       { id: "region", geography: () => new Promise<never>(() => {}) },
@@ -283,7 +283,7 @@ describe("handle del drill", () => {
     expect(result).toEqual({ completed: false });
   });
 
-  it("`useChoroplethApi` ofrece lo mismo desde un hijo del compound", async () => {
+  it("`useChoroplethApi` offers the same from a child of the compound", async () => {
     const Button = () => {
       const api = useChoroplethApi();
       return <button onClick={() => void api.drillDown("B")}>go</button>;
@@ -304,7 +304,7 @@ describe("handle del drill", () => {
   });
 });
 
-describe("intención de bajar (onDrillIntent y prefetch)", () => {
+describe("intent to go down (onDrillIntent and prefetch)", () => {
   const spyLevels = () => {
     const geography = vi.fn<(ctx: DrillContext) => Promise<never>>(geographyOf);
     return {
@@ -318,7 +318,7 @@ describe("intención de bajar (onDrillIntent y prefetch)", () => {
   const leave = (container: HTMLElement) =>
     fireEvent.pointerOver(container.querySelector(".cm-regions") as Element);
 
-  it("150 ms sobre una región navegable: avisa con el contexto del nivel destino y precarga su geometría", async () => {
+  it("150 ms over a drillable region: notifies with the target level's context and preloads its geometry", async () => {
     const { geography, drill } = spyLevels();
     const onDrillIntent = vi.fn<(ctx: DrillContext) => void>();
     const { path, ids, container } = mount({ drill, onDrillIntent });
@@ -328,16 +328,16 @@ describe("intención de bajar (onDrillIntent y prefetch)", () => {
     await waitFor(() => expect(onDrillIntent).toHaveBeenCalledTimes(1));
 
     expect(onDrillIntent).toHaveBeenCalledWith({ path: ["A"], parentId: "A", depth: 1 });
-    expect(geography).toHaveBeenCalledTimes(1); // precargada antes del clic
+    expect(geography).toHaveBeenCalledTimes(1); // preloaded before the click
 
-    // Cuando llega el clic, la geometría ya está: no se vuelve a pedir.
+    // When the click arrives, the geometry is already there: it is not requested again.
     fireEvent.click(path("A"));
     await waitFor(() => expect(ids()).toEqual(["A1", "A2"]));
     expect(geography).toHaveBeenCalledTimes(1);
     leave(container);
   });
 
-  it("un paso fugaz (< 150 ms) no es intención", async () => {
+  it("a fleeting pass (< 150 ms) is not intent", async () => {
     const { geography, drill } = spyLevels();
     const onDrillIntent = vi.fn<(ctx: DrillContext) => void>();
     const { path, container } = mount({ drill, onDrillIntent });
@@ -350,7 +350,7 @@ describe("intención de bajar (onDrillIntent y prefetch)", () => {
     expect(geography).not.toHaveBeenCalled();
   });
 
-  it("una región que no se puede perforar (`canDrill: false`) no genera intención", async () => {
+  it("a region that cannot be drilled (`canDrill: false`) generates no intent", async () => {
     const { geography, drill } = spyLevels();
     const onDrillIntent = vi.fn<(ctx: DrillContext) => void>();
     const { path } = mount({ drill, onDrillIntent });
@@ -362,7 +362,7 @@ describe("intención de bajar (onDrillIntent y prefetch)", () => {
     expect(geography).not.toHaveBeenCalled();
   });
 
-  it("sin `onDrillIntent` también precarga la geometría", async () => {
+  it("without `onDrillIntent` it also preloads the geometry", async () => {
     const { geography, drill } = spyLevels();
     const { path } = mount({ drill });
 
@@ -370,7 +370,7 @@ describe("intención de bajar (onDrillIntent y prefetch)", () => {
     await waitFor(() => expect(geography).toHaveBeenCalledTimes(1));
   });
 
-  it("volver a entrar tras salir es otra permanencia (avisa de nuevo; la geometría no se repite)", async () => {
+  it("re-entering after leaving is another dwell (it notifies again; the geometry is not repeated)", async () => {
     const { geography, drill } = spyLevels();
     const onDrillIntent = vi.fn<(ctx: DrillContext) => void>();
     const { path, container } = mount({ drill, onDrillIntent });
@@ -383,7 +383,7 @@ describe("intención de bajar (onDrillIntent y prefetch)", () => {
     expect(geography).toHaveBeenCalledTimes(1);
   });
 
-  it("no re-renderiza `Root`: el hover y la intención no llaman a `getId` de nuevo", async () => {
+  it("does not re-render `Root`: hover and intent do not call `getId` again", async () => {
     const { drill } = spyLevels();
     const getId = vi.fn<(row: Row) => string>((r) => r.id);
     const { path } = mount({ drill, getId, onDrillIntent: () => {} });
@@ -392,11 +392,11 @@ describe("intención de bajar (onDrillIntent y prefetch)", () => {
     fireEvent.pointerOver(path("A"));
     await new Promise((resolve) => setTimeout(resolve, 300));
 
-    // La geometría precargada llega (un render legítimo del motor), pero ni el hover ni el temporizador renderizan.
+    // The preloaded geometry arrives (a legitimate engine render), but neither the hover nor the timer render.
     expect(getId.mock.calls.length - before).toBeLessThan(rows.length * 3);
   });
 
-  it("un prefetch que falla no condena el clic: se reintenta", async () => {
+  it("a failing prefetch does not doom the click: it is retried", async () => {
     let calls = 0;
     const flaky = defineDrillLevels<Row>([
       { id: "country", geography: world },
@@ -419,7 +419,7 @@ describe("intención de bajar (onDrillIntent y prefetch)", () => {
   });
 });
 
-describe("táctil: dos toques", () => {
+describe("touch: two taps", () => {
   const touch = { pointerType: "touch" };
   const tap = (el: Element) => {
     fireEvent.pointerDown(el, touch);
@@ -428,17 +428,17 @@ describe("táctil: dos toques", () => {
     fireEvent.click(el);
   };
 
-  // Bajar es asíncrono (la geometría llega en un microtask): para afirmar que NO ha bajado hay que dejar pasar tiempo.
+  // Going down is asynchronous (the geometry arrives in a microtask): to assert it did NOT go down, time must pass.
   const quiet = () => act(() => new Promise<void>((resolve) => setTimeout(resolve, 60)));
 
-  it("el primer toque previsualiza (tooltip con «Tap again») y el segundo baja", async () => {
+  it("the first tap previews (tooltip with Tap again) and the second goes down", async () => {
     const onItemHover = vi.fn<(item: unknown) => void>();
     const onDrill = vi.fn<(event: unknown) => void>();
     const { path, ids, container } = mount({ onItemHover, onDrill });
 
     tap(path("A"));
     await quiet();
-    expect(ids()).toEqual(["A", "B", "C"]); // sigue en el mundo
+    expect(ids()).toEqual(["A", "B", "C"]); // still in the world
     expect(onDrill).not.toHaveBeenCalled();
     expect(onItemHover).toHaveBeenCalledTimes(1);
     expect(container.querySelector(".cm-tooltip")?.textContent).toContain("Tap again to enter");
@@ -448,7 +448,7 @@ describe("táctil: dos toques", () => {
     await waitFor(() => expect(ids()).toEqual(["A1", "A2"]));
   });
 
-  it("tocar otra región mueve la vista previa: hacen falta dos toques en ELLA", async () => {
+  it("tapping another region moves the preview: two taps are needed on IT", async () => {
     const { path, ids } = mount();
     tap(path("A"));
     tap(path("B"));
@@ -458,7 +458,7 @@ describe("táctil: dos toques", () => {
     await waitFor(() => expect(ids()).toEqual(["B1", "B2"]));
   });
 
-  it("tocar fuera (el océano) retira la vista previa: el siguiente toque vuelve a ser el primero", async () => {
+  it("tapping outside (the ocean) withdraws the preview: the next tap is the first again", async () => {
     const { path, ids, container } = mount();
     tap(path("A"));
     fireEvent.pointerOver(container.querySelector(".cm-regions") as Element, touch);
@@ -467,7 +467,7 @@ describe("táctil: dos toques", () => {
     expect(ids()).toEqual(["A", "B", "C"]);
   });
 
-  it("los textos de la pista salen de `labels`", () => {
+  it("the hint texts come from `labels`", () => {
     const { path, container } = mount({ labels: es });
     tap(path("A"));
     expect(container.querySelector(".cm-tooltip")?.textContent).toContain(
@@ -475,14 +475,14 @@ describe("táctil: dos toques", () => {
     );
   });
 
-  it("con ratón un solo clic baja (nada cambia)", async () => {
+  it("with a mouse a single click goes down (nothing changes)", async () => {
     const { path, ids } = mount();
     fireEvent.pointerDown(path("A"), { pointerType: "mouse" });
     fireEvent.click(path("A"));
     await waitFor(() => expect(ids()).toEqual(["A1", "A2"]));
   });
 
-  it("una región que no se puede perforar se selecciona con un toque, como siempre", () => {
+  it("a region that cannot be drilled is selected with one tap, as always", () => {
     const onItemClick = vi.fn<(item: unknown) => void>();
     const noC = defineDrillLevels<Row>([
       { id: "country", geography: world, canDrill: (item) => item.id !== "C" },
@@ -494,8 +494,8 @@ describe("táctil: dos toques", () => {
   });
 });
 
-describe("avisos de desarrollo del drill", () => {
-  it("una ruta de la URL con un id que no existe avisa (sin romper)", async () => {
+describe("drill development warnings", () => {
+  it("a URL route with an id that does not exist warns (without breaking)", async () => {
     const Harness = () => {
       const drill = useDrillDown<Row>({ levels, path: ["ZZ"] });
       return (
@@ -508,7 +508,7 @@ describe("avisos de desarrollo del drill", () => {
     await waitFor(() => expect(warnings().join("\n")).toMatch(/drill path.*"ZZ".*does not exist/));
   });
 
-  it("datos de otro nivel sobre la geometría actual: pista de usar un selector", () => {
+  it("data from another level over the current geometry: hint to use a selector", () => {
     const stores = [{ id: "S1", v: 1 }];
     mount({ data: stores });
     const text = warnings().join("\n");
@@ -516,17 +516,17 @@ describe("avisos de desarrollo del drill", () => {
     expect(text).toMatch(/Pass `data` as a selector/);
   });
 
-  it("con selector no se da esa pista", () => {
+  it("with a selector that hint is not given", () => {
     mount({ data: () => [{ id: "S1", v: 1 }] });
     expect(warnings().join("\n")).not.toMatch(/as a selector/);
   });
 
-  it("`getFeatureId` que no devuelve nada: avisa de que ninguna región tiene id", () => {
+  it("a `getFeatureId` that returns nothing: warns that no region has an id", () => {
     mount({ drill: undefined, data: rows, geography: world, getFeatureId: () => undefined });
     expect(warnings().join("\n")).toMatch(/none of the 3 region\(s\).*returned `undefined`/);
   });
 
-  it("con `diagnostics={false}` no se avisa de ids", () => {
+  it("with `diagnostics={false}` there is no warning about ids", () => {
     mount({
       drill: undefined,
       data: rows,

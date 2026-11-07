@@ -1,4 +1,4 @@
-// Nivel 1 (preset): el caso del 90 %. Fíjate en lo corto que es frente a las stories headless/compound.
+// Level 1 (preset): the 90 % case. Notice how short it is compared with the headless/compound stories.
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { toFeatureCollection } from "../src/core";
@@ -8,12 +8,12 @@ import { ChoroplethMap } from "../src/react";
 
 type Row = { id: string; value: number | null };
 
-// Geodatos propios de la librería: ids ISO alpha-2 ("ES") y Kosovo incluido.
+// The library's own geodata: ISO alpha-2 ids ("ES") and Kosovo included.
 const world = world110m;
 const ids = toFeatureCollection({ geography: world, objectName: "countries" }).features.flatMap(
   (f) => (f.id === undefined ? [] : [String(f.id)]),
 );
-// Datos SINTÉTICOS deterministas (ver la story headless).
+// Deterministic SYNTHETIC data (see the headless story).
 const data: Row[] = ids.map((id) => {
   const n = seed(id);
   if (n % 7 === 0) return { id, value: null };
@@ -36,7 +36,7 @@ const Preset = ({ variant, legend, legendPosition, themed }: Props) => {
       style={
         {
           maxWidth: 1100,
-          // Theming: basta con sobrescribir variables --cm-* en cualquier ancestro del mapa.
+          // Theming: just override --cm-* variables on any ancestor of the map.
           ...(themed && {
             "--cm-empty-fill": "#fde68a",
             "--cm-border-color": "#1f2937",
@@ -58,10 +58,10 @@ const Preset = ({ variant, legend, legendPosition, themed }: Props) => {
         getValue={(r) => r.value}
         variant={variant}
         formatValue={(v) => `${v} %`}
-        legend={legend ? { title: "Variación vs A-1", position: legendPosition } : false}
+        legend={legend ? { title: "Change vs prior year", position: legendPosition } : false}
         selectedId={selectedId}
         onItemClick={({ id }) => setSelectedId((cur) => (cur === id ? null : id))}
-        ariaLabel="Variación por país (datos sintéticos)"
+        ariaLabel="Change by country (synthetic data)"
       />
     </div>
   );

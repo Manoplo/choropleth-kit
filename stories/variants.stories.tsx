@@ -1,4 +1,4 @@
-// Presets por variant (dd.md §10): el mismo <ChoroplethMap>, distinto `variant`.
+// Presets per variant (dd.md §10): the same <ChoroplethMap>, a different `variant`.
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { toFeatureCollection } from "../src/core";
 import { world110m } from "../src/geo";
@@ -7,13 +7,13 @@ import { ChoroplethMap } from "../src/react";
 
 type Row = { id: string; value: number | null; growth: number };
 
-// Geodatos propios de la librería: ids ISO alpha-2 ("ES") y Kosovo incluido.
+// The library's own geodata: ISO alpha-2 ids ("ES") and Kosovo included.
 const world = world110m;
 const ids = toFeatureCollection({ geography: world, objectName: "countries" }).features.flatMap(
   (f) => (f.id === undefined ? [] : [String(f.id)]),
 );
 
-// Datos SINTÉTICOS deterministas por id.
+// Deterministic SYNTHETIC data per id.
 const pseudo = (n: number, salt: number) => ((n * 9301 + 49297 + salt) % 233280) / 233280;
 const rows: Row[] = ids.map((id) => ({
   id,
@@ -24,7 +24,7 @@ const rows: Row[] = ids.map((id) => ({
 const REGIONS = ["Norte", "Sur", "Este", "Oeste"] as const;
 const regionOf = (id: string) => REGIONS[seed(id) % 4] ?? "Norte";
 
-// Tiendas SINTÉTICAS en ciudades (lon, lat): la posición es real, las ventas son inventadas.
+// SYNTHETIC stores in cities (lon, lat): the position is real, the sales are made up.
 type Shop = { id: string; sales: number; growth: number; at: [number, number] };
 const shops: Shop[] = [
   ["madrid", -3.7, 40.4],
@@ -80,12 +80,12 @@ export const Categorical: Story = {
         { id: "Este" },
         { id: "Oeste", color: "#e11d48" },
       ]}
-      legend={{ title: "Zona (sintética)", showCount: true }}
+      legend={{ title: "Zone (synthetic)", showCount: true }}
     />
   ),
 };
 
-/** Valores ABSOLUTOS → burbujas en el centroide de cada país. Las regiones quedan neutras. */
+/** ABSOLUTE values → bubbles at each country's centroid. The regions stay neutral. */
 export const BubbleOnCountries: Story = {
   render: () => (
     <ChoroplethMap
@@ -96,12 +96,12 @@ export const BubbleOnCountries: Story = {
       getValue={(r) => r.value}
       maxRadius={28}
       formatValue={(v) => `${v} M€`}
-      legend={{ title: "Ventas" }}
+      legend={{ title: "Sales" }}
     />
   ),
 };
 
-/** Bivariante: tamaño = ventas, color = variación. */
+/** Bivariate: size = sales, color = change. */
 export const BubbleBivariate: Story = {
   render: () => (
     <ChoroplethMap
@@ -112,12 +112,12 @@ export const BubbleBivariate: Story = {
       getValue={(r) => r.value}
       getColorValue={(r) => r.growth}
       formatValue={(v) => `${v}`}
-      legend={{ title: "Tamaño: ventas · Color: variación", position: "bottom-left" }}
+      legend={{ title: "Size: sales · Color: change", position: "bottom-left" }}
     />
   ),
 };
 
-/** Puntos con coordenadas propias (tiendas): no necesitan corresponder a ninguna región. */
+/** Points with their own coordinates (stores): they do not need to match any region. */
 export const BubbleStores: Story = {
   render: () => (
     <ChoroplethMap
@@ -129,7 +129,7 @@ export const BubbleStores: Story = {
       getColorValue={(s) => s.growth}
       getCoordinates={(s) => s.at}
       maxRadius={20}
-      legend={{ title: "Tiendas (ventas sintéticas)" }}
+      legend={{ title: "Stores (synthetic sales)" }}
     />
   ),
 };

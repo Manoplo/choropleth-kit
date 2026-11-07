@@ -3,7 +3,7 @@ import { twoSquares } from "../../tests/fixtures";
 import { createBorders } from "./borders";
 
 describe("createBorders", () => {
-  it("devuelve solo la frontera compartida (una línea), sin la costa", () => {
+  it("returns only the shared border (one line), without the coast", () => {
     const borders = createBorders({ geography: twoSquares });
 
     expect(borders?.type).toBe("MultiLineString");
@@ -16,13 +16,13 @@ describe("createBorders", () => {
   });
 
   describe("filterFeatures", () => {
-    it("conserva la frontera si se conservan los dos lados", () => {
+    it("keeps the border if both sides are kept", () => {
       const borders = createBorders({ geography: twoSquares, filterFeatures: () => true });
 
       expect(borders?.coordinates).toHaveLength(1);
     });
 
-    it("quita la frontera si se descarta cualquiera de los dos lados", () => {
+    it("removes the border if either side is discarded", () => {
       const withoutB = createBorders({
         geography: twoSquares,
         filterFeatures: (f) => f.id !== "B",
@@ -37,17 +37,17 @@ describe("createBorders", () => {
     });
   });
 
-  it("con GeoJSON no hay topología: devuelve null", () => {
+  it("with GeoJSON there is no topology: it returns null", () => {
     const fc: FeatureCollection = { type: "FeatureCollection", features: [] };
 
     expect(createBorders({ geography: fc })).toBeNull();
   });
 
-  it("un objectName inexistente devuelve null en vez de lanzar", () => {
+  it("a nonexistent objectName returns null instead of throwing", () => {
     expect(createBorders({ geography: twoSquares, objectName: "nope" })).toBeNull();
   });
 
-  it("una topología sin objetos devuelve null", () => {
+  it("a topology without objects returns null", () => {
     expect(createBorders({ geography: { type: "Topology", objects: {}, arcs: [] } })).toBeNull();
   });
 });

@@ -41,7 +41,7 @@ const renderMap = (
 };
 
 describe("Choropleth (compound)", () => {
-  it("Svg por defecto: una ruta por región con su color, fronteras y capa de selección", () => {
+  it("default Svg: one path per region with its color, borders and selection layer", () => {
     const { path, container } = renderMap();
 
     expect(path("A").getAttribute("d")).toMatch(/^M/);
@@ -51,7 +51,7 @@ describe("Choropleth (compound)", () => {
     expect(container.querySelector("svg")?.getAttribute("viewBox")).toBe("0 0 200 100");
   });
 
-  it("con TopoJSON las regiones no llevan trazo propio; con GeoJSON sí y no hay Borders", () => {
+  it("with TopoJSON the regions carry no stroke of their own; with GeoJSON they do and there is no Borders", () => {
     const topo = renderMap();
     expect(topo.container.querySelector(".cm-regions")?.hasAttribute("data-outlined")).toBe(false);
     topo.unmount();
@@ -82,7 +82,7 @@ describe("Choropleth (compound)", () => {
     expect(flat.container.querySelector(".cm-borders")).toBeNull();
   });
 
-  it("permite componer solo las piezas que se quieren, en cualquier orden", () => {
+  it("lets you compose only the pieces you want, in any order", () => {
     const { container } = renderMap(
       {},
       <Choropleth.Svg>
@@ -95,7 +95,7 @@ describe("Choropleth (compound)", () => {
     expect(container.querySelector(".cm-legend")).toBeNull();
   });
 
-  it("clic en una región llama a onItemClick con el evento tipado", () => {
+  it("a click on a region calls onItemClick with the typed event", () => {
     const onItemClick = vi.fn<(e: { id: string; datum: Row | undefined }) => void>();
     const { path } = renderMap({ onItemClick });
 
@@ -106,7 +106,7 @@ describe("Choropleth (compound)", () => {
     );
   });
 
-  it("clic fuera de una región no hace nada; sin onItemClick no falla", () => {
+  it("a click outside a region does nothing; without onItemClick it does not fail", () => {
     const onItemClick = vi.fn<() => void>();
     const { container } = renderMap({ onItemClick });
     fireEvent.click(container.querySelector(".cm-regions") as Element);
@@ -116,7 +116,7 @@ describe("Choropleth (compound)", () => {
     fireEvent.click(plain.path("A"));
   });
 
-  it("cursor pointer solo si hay onItemClick", () => {
+  it("pointer cursor only if there is onItemClick", () => {
     const withClick = renderMap({ onItemClick: () => {} });
     expect((withClick.container.querySelector(".cm-regions") as HTMLElement).style.cursor).toBe(
       "pointer",
@@ -127,8 +127,8 @@ describe("Choropleth (compound)", () => {
     expect((without.container.querySelector(".cm-regions") as HTMLElement).style.cursor).toBe("");
   });
 
-  describe("hover y Selection", () => {
-    it("hover dibuja la región resaltada encima; salir del mapa la quita", () => {
+  describe("hover and Selection", () => {
+    it("hover draws the highlighted region on top; leaving the map removes it", () => {
       const onItemHover = vi.fn<(e: { id: string } | null) => void>();
       const { path, container } = renderMap({ onItemHover });
 
@@ -143,7 +143,7 @@ describe("Choropleth (compound)", () => {
       expect(onItemHover).toHaveBeenLastCalledWith(null);
     });
 
-    it("pasar a otra región cambia el hover; volver a entrar en la misma no repite el evento", () => {
+    it("moving to another region changes the hover; re-entering the same one does not repeat the event", () => {
       const onItemHover = vi.fn<(e: { id: string } | null) => void>();
       const { path, container } = renderMap({ onItemHover });
 
@@ -157,7 +157,7 @@ describe("Choropleth (compound)", () => {
       );
     });
 
-    it("el cursor sobre el océano (dentro del grupo) quita el hover", () => {
+    it("the cursor over the ocean (inside the group) removes the hover", () => {
       const { path, container } = renderMap();
       fireEvent.pointerOver(path("A"));
       fireEvent.pointerOver(container.querySelector(".cm-regions") as Element);
@@ -165,13 +165,13 @@ describe("Choropleth (compound)", () => {
       expect(container.querySelector('[data-selection="hover"]')).toBeNull();
     });
 
-    it("pointerLeave sin hover previo no falla", () => {
+    it("pointerLeave without a previous hover does not fail", () => {
       const { container } = renderMap();
       fireEvent.pointerLeave(container.querySelector(".cm-regions") as Element);
       expect(container.querySelector("[data-selection]")).toBeNull();
     });
 
-    it("selectedId pinta la capa de selección; con hover en la misma, los dos trazos coexisten", () => {
+    it("selectedId draws the selection layer; with hover on the same one, both strokes coexist", () => {
       const { path, container } = renderMap({ selectedId: "B" });
       expect(container.querySelector('[data-selection="selected"]')?.getAttribute("d")).toBe(
         path("B").getAttribute("d"),
@@ -181,14 +181,14 @@ describe("Choropleth (compound)", () => {
       expect(container.querySelectorAll("[data-selection]")).toHaveLength(2);
     });
 
-    it("un selectedId que no existe no pinta nada", () => {
+    it("a selectedId that does not exist draws nothing", () => {
       const { container } = renderMap({ selectedId: "ZZ" });
       expect(container.querySelector("[data-selection]")).toBeNull();
     });
   });
 
   describe("Legend", () => {
-    it("por defecto muestra un swatch por clase, con título y conteos opcionales", () => {
+    it("by default shows one swatch per class, with optional title and counts", () => {
       renderMap({}, <Choropleth.Legend title="Ventas" showCount />);
 
       expect(screen.getByText("Ventas")).toBeTruthy();
@@ -196,14 +196,14 @@ describe("Choropleth (compound)", () => {
       expect(screen.getAllByText(/^\(\d+\)$/)).toHaveLength(5);
     });
 
-    it("sin showCount no muestra conteos, y acepta className", () => {
+    it("without showCount it shows no counts, and accepts className", () => {
       const { container } = renderMap({}, <Choropleth.Legend className="mia" />);
 
       expect(screen.queryAllByText(/^\(\d+\)$/)).toHaveLength(0);
       expect(container.querySelector(".cm-legend.mia")).not.toBeNull();
     });
 
-    it("render prop: recibe items, escala y formatValue", () => {
+    it("render prop: receives items, scale and formatValue", () => {
       renderMap(
         { formatValue: (v) => `${v}%` },
         <Choropleth.Legend>
@@ -216,7 +216,7 @@ describe("Choropleth (compound)", () => {
       expect(screen.getByText("5|classed|7%")).toBeTruthy();
     });
 
-    it("escala continua: barra de degradado con mínimo y máximo", () => {
+    it("continuous scale: gradient bar with minimum and maximum", () => {
       const { container } = renderMap(
         { classification: { method: "linear" } },
         <Choropleth.Legend />,
@@ -229,10 +229,10 @@ describe("Choropleth (compound)", () => {
     });
   });
 
-  describe("rendimiento: la interacción no re-renderiza Root", () => {
-    // `getId` se llama una vez por fila en CADA render de `useChoropleth` (join): contarlas es un
-    // contador de renders de `Root` sin tocar el código de producción.
-    it("hover entre regiones y movimiento del cursor no recalculan el mapa", () => {
+  describe("performance: interaction does not re-render Root", () => {
+    // `getId` is called once per row on EVERY render of `useChoropleth` (join): counting them is a
+    // render counter for `Root` without touching production code.
+    it("hover between regions and cursor movement do not recompute the map", () => {
       const getId = vi.fn<(r: Row) => string>((r) => r.code);
       const { path } = renderMap({ getId });
       const before = getId.mock.calls.length;
@@ -246,7 +246,7 @@ describe("Choropleth (compound)", () => {
       expect(getId.mock.calls.length).toBe(before);
     });
 
-    it("sí se re-renderiza cuando cambia algo del consumidor (control del test)", () => {
+    it("does re-render when something from the consumer changes (test control)", () => {
       const getId = vi.fn<(r: Row) => string>((r) => r.code);
       const { rerender } = renderMap({ getId });
       const before = getId.mock.calls.length;
@@ -265,12 +265,12 @@ describe("Choropleth (compound)", () => {
       fireEvent.pointerMove(path, { clientX: x, clientY: y });
     };
 
-    it("no se muestra sin hover", () => {
+    it("is not shown without hover", () => {
       renderMap();
       expect(screen.queryByRole("tooltip")).toBeNull();
     });
 
-    it("por defecto muestra nombre y valor formateado junto al cursor", () => {
+    it("by default shows name and formatted value next to the cursor", () => {
       const { path } = renderMap({ formatValue: (v) => `${v} u.` });
       hover(path("A"), 30, 20);
 
@@ -281,13 +281,13 @@ describe("Choropleth (compound)", () => {
       expect(tip.style.top).toBe("32px");
     });
 
-    it("región sin dato: «No data»; sin name en properties usa el id", () => {
+    it("region without data: No data; without a name in properties it uses the id", () => {
       const { path } = renderMap({ data: [{ code: "B", v: null }] });
       hover(path("A"), 10, 10);
       expect(screen.getByRole("tooltip").textContent).toContain("No data");
     });
 
-    it("sin properties.name cae al id de la región", () => {
+    it("without properties.name it falls back to the region's id", () => {
       const geo: FeatureCollection = {
         type: "FeatureCollection",
         features: [
@@ -314,7 +314,7 @@ describe("Choropleth (compound)", () => {
       expect(screen.getByRole("tooltip").textContent).toContain("Z");
     });
 
-    it("se voltea en la mitad derecha/inferior para no salirse del contenedor", () => {
+    it("flips in the right/bottom half so as not to overflow the container", () => {
       const { path } = renderMap();
       hover(path("A"), 150, 80);
 
@@ -324,7 +324,7 @@ describe("Choropleth (compound)", () => {
       expect(tip.style.transform).toBe("translate(-100%, -100%)");
     });
 
-    it("render prop con el contexto tipado (datum, value, color)", () => {
+    it("render prop with the typed context (datum, value, color)", () => {
       const { path } = renderMap(
         {},
         <>
@@ -341,7 +341,7 @@ describe("Choropleth (compound)", () => {
       expect(screen.getByText("B|9|9|true")).toBeTruthy();
     });
 
-    it("al salir del contenedor desaparece", () => {
+    it("disappears on leaving the container", () => {
       const { path, container } = renderMap();
       hover(path("A"), 10, 10);
       fireEvent.pointerLeave(container.querySelector(".cm-root") as Element);
@@ -351,19 +351,19 @@ describe("Choropleth (compound)", () => {
   });
 
   describe("estilos (paso 12)", () => {
-    it("las regiones sin dato usan la variable --cm-empty-fill con respaldo", () => {
+    it("regions without data use the --cm-empty-fill variable with a fallback", () => {
       const { path } = renderMap({ data: [{ code: "A", v: 1 }] });
 
       expect((path("B") as SVGElement).style.fill).toBe("var(--cm-empty-fill, #d4d4d4)");
     });
 
-    it("un emptyFill explícito tiene prioridad sobre la variable", () => {
+    it("an explicit emptyFill takes priority over the variable", () => {
       const { path } = renderMap({ data: [{ code: "A", v: 1 }], emptyFill: "#eee" });
 
       expect((path("B") as SVGElement).style.fill).toBe("#eee");
     });
 
-    it("unstyled marca el Root para que styles.css no se aplique", () => {
+    it("unstyled marks the Root so styles.css does not apply", () => {
       const styled = renderMap();
       expect(styled.container.querySelector(".cm-root")?.hasAttribute("data-unstyled")).toBe(false);
       styled.unmount();
@@ -372,7 +372,7 @@ describe("Choropleth (compound)", () => {
       expect(bare.container.querySelector(".cm-root")?.hasAttribute("data-unstyled")).toBe(true);
     });
 
-    it("el tooltip por defecto lleva clase de caja; el personalizado no", () => {
+    it("the default tooltip carries a box class; the custom one does not", () => {
       const def = renderMap();
       fireEvent.pointerOver(def.path("A"));
       fireEvent.pointerMove(def.path("A"), { clientX: 5, clientY: 5 });
@@ -394,7 +394,7 @@ describe("Choropleth (compound)", () => {
     });
   });
 
-  it("Root acepta className y style", () => {
+  it("Root accepts className and style", () => {
     const { container } = renderMap({ className: "x", style: { height: 50 } });
     const root = container.querySelector(".cm-root.x") as HTMLElement;
 
@@ -402,15 +402,15 @@ describe("Choropleth (compound)", () => {
     expect(root.style.height).toBe("50px");
   });
 
-  it("una pieza fuera de Root lanza un error claro", () => {
+  it("a piece outside Root throws a clear error", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     expect(() => render(<Choropleth.Regions />)).toThrow(/inside <Choropleth.Root>/);
     spy.mockRestore();
   });
 });
 
-describe("Choropleth (compound) · variants categorical y bubble", () => {
-  it("categorical: leyenda de categorías y tooltip con la etiqueta", () => {
+describe("Choropleth (compound) · categorical and bubble variants", () => {
+  it("categorical: category legend and tooltip with the label", () => {
     const { path } = renderMap(
       {
         variant: "categorical",
@@ -436,7 +436,7 @@ describe("Choropleth (compound) · variants categorical y bubble", () => {
     expect(screen.getByRole("tooltip").textContent).toContain("Bajo");
   });
 
-  it("bubble: dibuja círculos, no capturan el ratón y la leyenda muestra los tamaños", () => {
+  it("bubble: draws circles, they do not capture the mouse and the legend shows the sizes", () => {
     const { container, path } = renderMap({
       variant: "bubble",
       getValue: (r: Row) => r.v,
@@ -449,31 +449,31 @@ describe("Choropleth (compound) · variants categorical y bubble", () => {
     expect(container.querySelectorAll(".cm-legend__size")).toHaveLength(3);
     expect(screen.getByText("9 €")).toBeTruthy();
 
-    // el hover sigue funcionando a través de la región
+    // the hover keeps working through the region
     fireEvent.pointerOver(path("B"));
     expect(container.querySelector('[data-selection="hover"]')).not.toBeNull();
   });
 
-  it("sin burbujas (variant numérica) no hay capa de burbujas ni tamaños", () => {
+  it("without bubbles (numeric variant) there is no bubble layer or sizes", () => {
     const { container } = renderMap();
 
     expect(container.querySelector(".cm-bubbles")).toBeNull();
     expect(container.querySelector(".cm-legend__sizes")).toBeNull();
   });
 
-  it("la leyenda headless recibe sizeItems", () => {
+  it("the headless legend receives sizeItems", () => {
     renderMap(
       { variant: "bubble", getValue: (r: Row) => r.v } as never,
       <Choropleth.Legend>
-        {({ sizeItems }) => <p>{`tamaños:${sizeItems.length}`}</p>}
+        {({ sizeItems }) => <p>{`sizes:${sizeItems.length}`}</p>}
       </Choropleth.Legend>,
     );
 
-    expect(screen.getByText("tamaños:3")).toBeTruthy();
+    expect(screen.getByText("sizes:3")).toBeTruthy();
   });
 });
 
-describe("Choropleth (compound) · items: regiones y puntos, Pointer Events", () => {
+describe("Choropleth (compound) · items: regions and points, Pointer Events", () => {
   type Shop = { code: string; sales: number; at: [number, number] };
   const shops: Shop[] = [
     { code: "S1", sales: 10, at: [0.5, 0.5] },
@@ -491,7 +491,7 @@ describe("Choropleth (compound) · items: regiones y puntos, Pointer Events", ()
   const point = (container: Element, id: string) =>
     container.querySelector(`[data-point-id="${id}"]`) as Element;
 
-  it("las burbujas con coordenadas propias son items `point` con su hover, clic y tooltip", () => {
+  it("bubbles with their own coordinates are `point` items with their hover, click and tooltip", () => {
     const onItemClick = vi.fn<(item: unknown) => void>();
     const onItemHover = vi.fn<(item: unknown) => void>();
     const { container } = renderShops({ onItemClick, onItemHover });
@@ -514,7 +514,7 @@ describe("Choropleth (compound) · items: regiones y puntos, Pointer Events", ()
     expect(container.querySelector('[data-selection="hover"]')).toBeNull();
   });
 
-  it("las burbujas en el centroide de una región siguen sin capturar el ratón", () => {
+  it("bubbles at a region's centroid still do not capture the mouse", () => {
     const { container } = renderMap({
       variant: "bubble",
       getValue: (r: Row) => r.v,
@@ -523,21 +523,21 @@ describe("Choropleth (compound) · items: regiones y puntos, Pointer Events", ()
     expect(container.querySelector("circle.cm-bubble")?.getAttribute("pointer-events")).toBeNull();
   });
 
-  it("un punto no se confunde con una región del mismo id", () => {
+  it("a point is not confused with a region of the same id", () => {
     const onItemHover = vi.fn<(item: unknown) => void>();
     const { container, path } = renderShops({
       onItemHover,
-      // Una tienda cuyo id coincide con la región «A».
+      // A store whose id matches region A.
       data: [{ code: "A", sales: 5, at: [0.5, 0.5] }],
     });
     fireEvent.pointerEnter(point(container, "A"));
     expect(onItemHover).toHaveBeenLastCalledWith(expect.objectContaining({ kind: "point" }));
-    // Moverse a la región pasa a un item `region`.
+    // Moving to the region becomes a `region` item.
     fireEvent.pointerOver(path("A"));
     expect(onItemHover).toHaveBeenLastCalledWith(expect.objectContaining({ kind: "region" }));
   });
 
-  it("un punto con el mismo id que una región enlaza su `feature`", () => {
+  it("a point with the same id as a region links its `feature`", () => {
     const onItemHover = vi.fn<(item: { feature?: { id?: string } }) => void>();
     const { container } = renderShops({
       onItemHover,
@@ -547,7 +547,7 @@ describe("Choropleth (compound) · items: regiones y puntos, Pointer Events", ()
     expect(onItemHover.mock.calls.at(-1)?.[0].feature?.id).toBe("B");
   });
 
-  it("táctil: el primer toque deja la vista previa y `pointerleave` no la quita", () => {
+  it("touch: the first tap leaves the preview and `pointerleave` does not remove it", () => {
     const { container, path } = renderMap();
     fireEvent.pointerOver(path("A"), { pointerType: "touch" });
     fireEvent.pointerDown(container.querySelector(".cm-root") as Element, {
@@ -557,7 +557,7 @@ describe("Choropleth (compound) · items: regiones y puntos, Pointer Events", ()
     });
     expect(screen.getByRole("tooltip")).toBeTruthy();
 
-    // El navegador manda «leave» al levantar el dedo.
+    // The browser sends "leave" when the finger lifts.
     fireEvent.pointerLeave(container.querySelector(".cm-regions") as Element, {
       pointerType: "touch",
     });
@@ -567,14 +567,14 @@ describe("Choropleth (compound) · items: regiones y puntos, Pointer Events", ()
     expect(screen.getByRole("tooltip")).toBeTruthy();
     expect(container.querySelector('[data-selection="hover"]')).not.toBeNull();
 
-    // Tocar el «océano» (dentro del grupo, fuera de toda región) la quita.
+    // Tapping the "ocean" (inside the group, outside every region) removes it.
     fireEvent.pointerOver(container.querySelector(".cm-regions") as Element, {
       pointerType: "touch",
     });
     expect(container.querySelector('[data-selection="hover"]')).toBeNull();
   });
 
-  it("con ratón, `pointerleave` sí quita el hover", () => {
+  it("with a mouse, `pointerleave` does remove the hover", () => {
     const { container, path } = renderMap();
     fireEvent.pointerOver(path("A"), { pointerType: "mouse" });
     fireEvent.pointerLeave(container.querySelector(".cm-regions") as Element, {

@@ -32,7 +32,7 @@ const run = (config: ResolveVariantOptions<Row>["config"], extra = {}) =>
   resolveVariant<Row>({ ...common, config, ...extra });
 
 describe("resolveVariant · sequential / diverging", () => {
-  it("colorea, formatea y construye la leyenda; sin dato → emptyFill", () => {
+  it("colors, formats and builds the legend; no data → emptyFill", () => {
     const r = run({ variant: "sequential", getValue: (d) => d.v });
 
     expect(r.fills[2]).toBe("#ddd");
@@ -44,7 +44,7 @@ describe("resolveVariant · sequential / diverging", () => {
     expect(r.bubbles).toEqual([]);
   });
 
-  it("diverging usa dominio simétrico", () => {
+  it("diverging uses a symmetric domain", () => {
     const r = run({ variant: "diverging", getValue: (d) => d.cv ?? null, midpoint: 0 });
 
     expect(r.scale?.domain).toEqual([-5, 5]);
@@ -52,7 +52,7 @@ describe("resolveVariant · sequential / diverging", () => {
 });
 
 describe("resolveVariant · categorical", () => {
-  it("colores por categoría, etiquetas y leyenda con conteos", () => {
+  it("colors by category, labels and legend with counts", () => {
     const r = run(
       {
         variant: "categorical",
@@ -78,7 +78,7 @@ describe("resolveVariant · categorical", () => {
 describe("resolveVariant · bubble", () => {
   const bubble = { variant: "bubble", getValue: (d: Row) => d.v, maxRadius: 20 } as const;
 
-  it("regiones neutras y una burbuja por región con dato, en su centroide", () => {
+  it("neutral regions and one bubble per region with data, at its centroid", () => {
     const r = run(bubble);
 
     expect(r.fills).toEqual(["#ddd", "#ddd", "#ddd"]);
@@ -90,7 +90,7 @@ describe("resolveVariant · bubble", () => {
     expect(r.labels).toEqual(["100u", "25u", ""]);
   });
 
-  it("área ∝ valor y las grandes van primero", () => {
+  it("area ∝ value and the big ones go first", () => {
     const r = run({ ...bubble, getValue: (d: Row) => (d.id === "A" ? 400 : 100) });
 
     expect(r.bubbles[0]?.id).toBe("A");
@@ -98,7 +98,7 @@ describe("resolveVariant · bubble", () => {
     expect(r.bubbles[1]?.r).toBeCloseTo(10);
   });
 
-  it("color único por defecto o el indicado; sin escala ni leyenda de color", () => {
+  it("single color by default or the given one; no scale or color legend", () => {
     expect(run(bubble).bubbles[0]?.fill).toBe("#2563eb");
     const r = run({ ...bubble, color: "red" });
 
@@ -108,7 +108,7 @@ describe("resolveVariant · bubble", () => {
     expect(r.sizeLegend).toHaveLength(3);
   });
 
-  it("bivariante: getColorValue colorea con escala divergente y da leyenda de color", () => {
+  it("bivariate: getColorValue colors with a diverging scale and gives a color legend", () => {
     const r = run(
       { ...bubble, getColorValue: (d: Row) => d.cv ?? null },
       { emptyLabel: "Sin dato" },
@@ -121,14 +121,14 @@ describe("resolveVariant · bubble", () => {
     expect(r.legend.length).toBeGreaterThan(0);
   });
 
-  it("valores null, 0 o negativos no dibujan burbuja", () => {
+  it("null, 0 or negative values draw no bubble", () => {
     const r = run({ ...bubble, getValue: (d: Row) => (d.id === "A" ? 0 : -3) });
 
     expect(r.bubbles).toEqual([]);
     expect(r.sizeLegend).toEqual([]);
   });
 
-  it("getCoordinates: posiciona por [lon, lat] proyectado, sin pasar por las regiones", () => {
+  it("getCoordinates: positions by projected [lon, lat], without going through the regions", () => {
     const stores: Row[] = [
       { id: "s1", v: 10, at: [1, 2] },
       { id: "s2", v: 20, at: [3, 4] },
@@ -148,20 +148,20 @@ describe("resolveVariant · bubble", () => {
       ["s1", 2, 4],
       ["s2", 6, 8],
     ]);
-    // Las coordenadas propias viajan con la burbuja: así la UI sabe que es un punto, no una región.
+    // Own coordinates travel with the bubble: that way the UI knows it is a point, not a region.
     expect(r.bubbles.map((b) => b.coordinates).sort()).toEqual([
       [1, 2],
       [3, 4],
     ]);
   });
 
-  it("región sin centroide no recibe burbuja", () => {
+  it("a region without a centroid gets no bubble", () => {
     const r = run(bubble, { centroids: [null, [20, 20], null] });
 
     expect(r.bubbles.map((b) => b.id)).toEqual(["B"]);
   });
 
-  it("burbuja en el centroide de una región: `coordinates` es null", () => {
+  it("bubble at a region's centroid: `coordinates` is null", () => {
     const r = run(bubble);
 
     expect(r.bubbles.length).toBeGreaterThan(0);

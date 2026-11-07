@@ -1,29 +1,30 @@
 /**
- * Tema (dd.md §12.5.3): un objeto tipado que se traduce a variables CSS `--cm-*`. **Las variables siguen
- * siendo la única fuente de verdad**: el objeto es azúcar para que haya autocompletado y temas reutilizables.
+ * Theme (dd.md §12.5.3): a typed object that is translated into `--cm-*` CSS variables. **The
+ * variables remain the single source of truth**: the object is sugar so there is autocompletion and
+ * reusable themes.
  *
- * Es puro (sin React ni DOM) y vive en `core` aunque `dd.md` lo ponga en `react/theme.ts`: así se prueba
- * sin renderizar y un consumidor sin React puede usar `themeToCssVars`.
+ * It is pure (no React or DOM) and lives in `core` even though `dd.md` puts it in `react/theme.ts`:
+ * that way it is tested without rendering and a consumer without React can use `themeToCssVars`.
  *
- * Solo hay campos de lo que EXISTE hoy. `sphere`, `graticule`, `hover.effect`, `selected.glow`, `motion` y
- * `empty.pattern` de `dd.md §12.5.3` llegan con las capas y los efectos que los consumen (añadir un campo no
- * rompe a nadie; tener uno que no hace nada sí engaña).
+ * It only has fields for what EXISTS today. `sphere`, `graticule`, `hover.effect`, `selected.glow`,
+ * `motion` and `empty.pattern` from `dd.md §12.5.3` arrive with the layers and effects that consume
+ * them (adding a field breaks nobody; having one that does nothing does mislead).
  */
 
 export type ChoroplethTheme = {
-  /** Fondo del mapa (el `.cm-root`). Por defecto, transparente. */
+  /** Map background (the `.cm-root`). Transparent by default. */
   background?: string;
-  /** Regiones sin dato. `pattern`: trama sobre las regiones sin dato (no solo color: se distingue también sin verlo). Por defecto, ninguna. */
+  /** Regions without data. `pattern`: a pattern over regions without data (not just color: they can be told apart without seeing it either). None by default. */
   empty?: { fill?: string; pattern?: "none" | "hatch" | "dots" };
-  /** Los niveles de arriba en un drill: gris, sin color de dato. */
+  /** The levels above in a drill: gray, with no data color. */
   context?: { fill?: string; border?: string };
-  /** Fronteras entre regiones. */
+  /** Borders between regions. */
   border?: { color?: string; width?: number };
   hover?: { stroke?: string; width?: number };
   selected?: { stroke?: string; width?: number };
-  /** Anillo de foco del teclado: color y grosor (px). */
+  /** Keyboard focus ring: color and thickness (px). */
   focus?: { ring?: string; width?: number };
-  /** Opacidad del resto del mapa con `dimOthers`. */
+  /** Opacity of the rest of the map with `dimOthers`. */
   dim?: { opacity?: number };
   bubble?: { fill?: string; stroke?: string; opacity?: number };
   font?: { family?: string; size?: number; color?: string };
@@ -33,21 +34,21 @@ export type ChoroplethTheme = {
     border?: string;
     /** px */
     radius?: number;
-    /** Un valor de `box-shadow`. */
+    /** A `box-shadow` value. */
     shadow?: string;
   };
-  /** Botones de zoom y migas del drill. */
+  /** Zoom buttons and drill breadcrumbs. */
   controls?: { background?: string; color?: string; border?: string; radius?: number };
 };
 
 export type ThemeName = "light" | "dark" | "minimal" | "contrast";
 
-/** Identidad: existe para inferir el tipo con autocompletado y para reutilizar un tema entre mapas. */
+/** Identity: it exists to infer the type with autocompletion and to reuse a theme across maps. */
 export const defineTheme = (theme: ChoroplethTheme): ChoroplethTheme => theme;
 
 /**
- * La luz es el aspecto por defecto, escrito en explícito: `theme="light"` garantiza ese aspecto aunque la
- * página ponga sus propias variables más arriba.
+ * Light is the default look, written out explicitly: `theme="light"` guarantees that look even if the
+ * page sets its own variables higher up.
  */
 const light: ChoroplethTheme = {
   background: "transparent",
@@ -71,9 +72,9 @@ const light: ChoroplethTheme = {
 };
 
 /**
- * Oscuro: fondo oscuro, «sin dato» gris medio, fronteras oscuras y tooltip invertido. Ojo con la paleta: las rampas
- * claras en un extremo («blues») se confunden con el fondo; `viridis` se lee bien. (La inversión de rampas,
- * `{ name, reverse: true }` de `dd.md §12.5.3`, no existe todavía.)
+ * Dark: dark background, mid-gray "no data", dark borders and an inverted tooltip. Mind the palette: ramps
+ * that are light at one end ("blues") blend into the background; `viridis` reads well. (Ramp reversal,
+ * `{ name, reverse: true }` from `dd.md §12.5.3`, does not exist yet.)
  */
 const dark: ChoroplethTheme = {
   background: "#0f172a",
@@ -96,7 +97,7 @@ const dark: ChoroplethTheme = {
   controls: { background: "#1e293b", color: "#e2e8f0", border: "#334155", radius: 6 },
 };
 
-/** Mínimo: casi sin tinta. Fronteras finísimas, tooltip y controles sin caja marcada. */
+/** Minimal: almost no ink. Hairline borders, tooltip and controls without a marked box. */
 const minimal: ChoroplethTheme = {
   background: "transparent",
   empty: { fill: "#eeeeee" },
@@ -119,8 +120,8 @@ const minimal: ChoroplethTheme = {
 };
 
 /**
- * Alto contraste: fronteras y resaltes gruesos, anillo de foco reforzado, colores que cumplen AA y «sin dato»
- * rayado (no depende solo del color).
+ * High contrast: thick borders and highlights, reinforced focus ring, colors that meet AA and a hatched
+ * "no data" (it does not rely on color alone).
  */
 const contrast: ChoroplethTheme = {
   background: "#ffffff",
@@ -153,14 +154,14 @@ export const THEMES: Readonly<Record<ThemeName, ChoroplethTheme>> = {
 export const isThemeName = (value: unknown): value is ThemeName =>
   typeof value === "string" && Object.hasOwn(THEMES, value);
 
-/** El objeto de un tema por nombre, o el mismo objeto si ya lo es. `undefined` = sin tema. */
+/** A theme's object by name, or the same object if it already is one. `undefined` = no theme. */
 export const resolveTheme = (
   theme: ThemeName | ChoroplethTheme | undefined,
 ): ChoroplethTheme | undefined => (isThemeName(theme) ? THEMES[theme] : theme);
 
 /**
- * Parte de un tema (por nombre u objeto) y le superpone ajustes, grupo a grupo: lo que pongas en
- * `border` sustituye solo esos campos de `border`, no el resto del tema.
+ * Starts from a theme (by name or object) and overlays adjustments, group by group: whatever you put in
+ * `border` replaces only those `border` fields, not the rest of the theme.
  */
 export const extendTheme = (
   base: ThemeName | ChoroplethTheme,
@@ -182,8 +183,8 @@ export const extendTheme = (
 const px = (value: number) => `${value}px`;
 
 /**
- * El objeto `theme` → variables CSS (`{ "--cm-border-color": "#fff", … }`), listas para un `style`. Pura:
- * sin DOM. Los campos sin definir no producen variable (se queda lo que hubiera: el CSS base o tu CSS).
+ * The `theme` object → CSS variables (`{ "--cm-border-color": "#fff", … }`), ready for a `style`. Pure:
+ * no DOM. Undefined fields produce no variable (whatever was there stays: the base CSS or yours).
  */
 export const themeToCssVars = (theme: ChoroplethTheme | undefined): Record<string, string> => {
   const vars: Record<string, string> = {};

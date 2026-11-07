@@ -8,8 +8,8 @@ import { world110m, worldFallbackPoints } from "../geo";
 import { clearGeographyCache } from "./use-geography";
 import { useChoropleth, type UseChoroplethOptions } from "./use-choropleth";
 
-// Pruebas de la fase A (pasos 17-22 del diario): selección, dimOthers, labels, geometría robusta,
-// geografía asíncrona, `data: undefined`, microestados y anclas.
+// Phase A tests (diary steps 17-22): selection, dimOthers, labels, robust geometry,
+// asynchronous geography, `data: undefined`, microstates and anchors.
 
 type Row = { code: string; v: number | null };
 const rows: Row[] = [
@@ -73,8 +73,8 @@ const collection = (...features: Feature[]): FeatureCollection => ({
   features,
 });
 
-describe("paso 17 · selección", () => {
-  it("sin ninguna prop de selección, un clic no selecciona ni cambia el cursor", () => {
+describe("step 17 · selection", () => {
+  it("without any selection prop, a click neither selects nor changes the cursor", () => {
     const { path, root, container } = renderMap();
     fireEvent.click(path("A"));
 
@@ -83,7 +83,7 @@ describe("paso 17 · selección", () => {
     expect(container.querySelector<HTMLElement>(".cm-regions")?.style.cursor).toBe("");
   });
 
-  it("no controlada: defaultSelectedId, clic cambia, clic en la seleccionada la quita", () => {
+  it("uncontrolled: defaultSelectedId, a click changes, a click on the selected one removes it", () => {
     const onSelectedIdChange = vi.fn<(id: string | null) => void>();
     const { path, container, root } = renderMap({ defaultSelectedId: "A", onSelectedIdChange });
     const selected = () => container.querySelector('[data-selection="selected"]');
@@ -101,7 +101,7 @@ describe("paso 17 · selección", () => {
     expect(root.hasAttribute("data-has-selection")).toBe(false);
   });
 
-  it("controlada: solo avisa; el valor lo manda el consumidor (null = nada)", () => {
+  it("controlled: it only notifies; the consumer dictates the value (null = nothing)", () => {
     const onSelectedIdChange = vi.fn<(id: string | null) => void>();
     const { path, container, rerender } = renderMap({ selectedId: null, onSelectedIdChange });
 
@@ -117,7 +117,7 @@ describe("paso 17 · selección", () => {
     expect(container.querySelector('[data-selection="selected"]')).not.toBeNull();
   });
 
-  it("onItemClick sigue llamándose, también con selección", () => {
+  it("onItemClick is still called, also with selection", () => {
     const onItemClick = vi.fn<(item: unknown) => void>();
     const { path } = renderMap({ defaultSelectedId: null, onItemClick });
     fireEvent.click(path("A"));
@@ -125,7 +125,7 @@ describe("paso 17 · selección", () => {
     expect(onItemClick).toHaveBeenCalledWith(expect.objectContaining({ kind: "region", id: "A" }));
   });
 
-  it("setSelectedId del hook cambia (o avisa) sin pasar por un clic", () => {
+  it("the hook's setSelectedId changes (or notifies) without going through a click", () => {
     const { result } = hook({ defaultSelectedId: "A" });
     expect(result.current.selectedId).toBe("A");
     act(() => result.current.setSelectedId("B"));
@@ -134,7 +134,7 @@ describe("paso 17 · selección", () => {
     expect(result.current.selectedId).toBeNull();
   });
 
-  it("los puntos no se seleccionan, aunque su id coincida con el de una región", () => {
+  it("points are not selected, even if their id matches a region's", () => {
     const { container, root } = renderMap({
       defaultSelectedId: null,
       variant: "bubble",
@@ -149,7 +149,7 @@ describe("paso 17 · selección", () => {
 });
 
 describe("paso 17 · dimOthers", () => {
-  it("por defecto «selection»; la copia resaltada lleva el color de su región", () => {
+  it("selection by default; the highlighted copy carries its region's color", () => {
     const { root, container, path } = renderMap({ defaultSelectedId: "A" });
 
     expect(root.getAttribute("data-dim")).toBe("selection");
@@ -157,27 +157,27 @@ describe("paso 17 · dimOthers", () => {
     expect(copy?.style.fill).toBe((path("A") as SVGElement).style.fill);
   });
 
-  it("el modo llega al contenedor", () => {
+  it("the mode reaches the container", () => {
     expect(renderMap({ dimOthers: "never" }).root.getAttribute("data-dim")).toBe("never");
     expect(renderMap({ dimOthers: "hover-and-selection" }).root.getAttribute("data-dim")).toBe(
       "hover-and-selection",
     );
   });
 
-  it("atenuar no re-renderiza las regiones: solo cambia un atributo del contenedor", () => {
+  it("dimming does not re-render the regions: only a container attribute changes", () => {
     const getId = vi.fn<(r: Row) => string>((r) => r.code);
     const { path, root } = renderMap({ getId, defaultSelectedId: null });
     const before = path("A");
 
     fireEvent.click(path("A"));
     expect(root.hasAttribute("data-has-selection")).toBe(true);
-    // El mismo <path> sigue en el DOM (no se recreó) y conserva su color.
+    // The same <path> is still in the DOM (it was not recreated) and keeps its color.
     expect(path("A")).toBe(before);
   });
 });
 
 describe("paso 18 · labels", () => {
-  it("inglés por defecto; `es` y textos sueltos se aplican al tooltip", () => {
+  it("English by default; `es` and loose texts apply to the tooltip", () => {
     const geo = collection(feature("Z", polygon(0, 0, 1, 1)));
     const props = { geography: geo, data: [] as Row[] };
 
@@ -200,21 +200,21 @@ describe("paso 18 · labels", () => {
   });
 });
 
-describe("paso 19 · geometría robusta", () => {
+describe("step 19 · robust geometry", () => {
   const withAnonymous = collection(
     feature("A", polygon(0, 0, 1, 1)),
     feature(undefined, polygon(1, 0, 2, 1)),
     feature("B", polygon(2, 0, 3, 1)),
   );
 
-  it("las regiones sin id se pintan (sin agujeros) pero no son regiones", () => {
+  it("regions without an id are painted (no holes) but are not regions", () => {
     const { result } = hook({ geography: withAnonymous, data: [] });
 
     expect(result.current.regions.map((r) => r.id)).toEqual(["A", "B"]);
     expect(result.current.anonymousPaths).toHaveLength(1);
   });
 
-  it("capa no interactiva: en emptyFill, sin data-region-id y sin cursor de clic", () => {
+  it("non-interactive layer: in emptyFill, without data-region-id and without a click cursor", () => {
     const { container, path } = renderMap({
       geography: withAnonymous,
       data: [],
@@ -227,21 +227,21 @@ describe("paso 19 · geometría robusta", () => {
     expect(anon?.style.fill).toContain("--cm-empty-fill");
     expect(anon?.style.cursor).toBe("default");
 
-    // Pasar el cursor por ella quita el hover de la región anterior.
+    // Moving the cursor over it removes the previous region's hover.
     fireEvent.pointerOver(path("A"));
     expect(container.querySelector('[data-selection="hover"]')).not.toBeNull();
     fireEvent.pointerOver(anon as Element);
     expect(container.querySelector('[data-selection="hover"]')).toBeNull();
   });
 
-  it("filterFeatures descarta regiones y sus fronteras, aunque la función sea en línea", () => {
+  it("filterFeatures discards regions and their borders, even if the function is inline", () => {
     const { result, rerender } = hook({
       filterFeatures: (f) => f.id !== "B",
     });
     expect(result.current.regions.map((r) => r.id)).toEqual(["A"]);
-    expect(result.current.borders).toBeNull(); // sin frontera compartida no queda línea
+    expect(result.current.borders).toBeNull(); // without a shared border no line remains
 
-    // Nueva identidad de la función con el mismo resultado: la geometría no se recalcula.
+    // New function identity with the same result: the geometry is not recomputed.
     const before = result.current.regions[0]?.feature;
     rerender({ filterFeatures: (f) => f.id !== "B" });
     expect(result.current.regions[0]?.feature).toBe(before);
@@ -250,7 +250,7 @@ describe("paso 19 · geometría robusta", () => {
     expect(result.current.regions.map((r) => r.id)).toEqual(["A", "B"]);
   });
 
-  it("aspectRatio «auto»: una geometría alta da un mapa alto, y una ancha, uno ancho", () => {
+  it("aspectRatio auto: a tall geometry gives a tall map, and a wide one, a wide map", () => {
     const tall = hook({
       geography: collection(feature("T", polygon(0, 0, 2, 20))),
       aspectRatio: "auto",
@@ -268,7 +268,7 @@ describe("paso 19 · geometría robusta", () => {
     expect(wide.result.current.width).toBeGreaterThan(wide.result.current.height * 3);
   });
 
-  it("aspectRatio numérico y por defecto se respetan", () => {
+  it("numeric and default aspectRatio are respected", () => {
     const numeric = hook({ aspectRatio: 4, width: undefined, height: undefined });
     expect(numeric.result.current.height).toBe(numeric.result.current.width / 4);
     const byDefault = hook({ width: undefined, height: undefined });
@@ -276,8 +276,8 @@ describe("paso 19 · geometría robusta", () => {
   });
 });
 
-describe("paso 20 · anclas de burbuja en el cuerpo principal", () => {
-  it("la burbuja de una región con un territorio lejano cae en el cuerpo principal", () => {
+describe("step 20 · bubble anchors on the main body", () => {
+  it("the bubble of a region with a distant territory lands on the main body", () => {
     const fr = feature("FR", polygon(0, 40, 10, 50), polygon(-55, 3, -52, 5));
     const geo = collection(fr);
     const { result } = hook({
@@ -294,10 +294,10 @@ describe("paso 20 · anclas de burbuja en el cuerpo principal", () => {
   });
 });
 
-describe("paso 21 · geografía asíncrona", () => {
+describe("step 21 · asynchronous geography", () => {
   beforeEach(() => clearGeographyCache());
 
-  it("promesa: esqueleto con la proporción del mapa, y luego el mapa", async () => {
+  it("promise: skeleton with the map's proportion, and then the map", async () => {
     const { container, root } = renderMap({ geography: Promise.resolve(twoSquares) });
 
     expect(root.getAttribute("data-status")).toBe("loading");
@@ -310,7 +310,7 @@ describe("paso 21 · geografía asíncrona", () => {
     expect(container.querySelector(".cm-skeleton")).toBeNull();
   });
 
-  it("función que importa un módulo: acepta `{ default }` y el estado pasa a ready", async () => {
+  it("function that imports a module: accepts `{ default }` and the status becomes ready", async () => {
     const loader = () => Promise.resolve({ default: twoSquares });
     const { result } = hook({ geography: loader });
 
@@ -320,17 +320,17 @@ describe("paso 21 · geografía asíncrona", () => {
     expect(result.current.regions.map((r) => r.id)).toEqual(["A", "B"]);
   });
 
-  it("geographyKey: dos mapas con la misma clave cargan UNA vez, y el segundo no parpadea", async () => {
+  it("geographyKey: two maps with the same key load ONCE, and the second does not flicker", async () => {
     const loader = vi.fn<() => Promise<typeof twoSquares>>(() => Promise.resolve(twoSquares));
     const first = hook({ geography: loader, geographyKey: "squares" });
     await waitFor(() => expect(first.result.current.status).toBe("ready"));
 
     const second = hook({ geography: loader, geographyKey: "squares" });
-    expect(second.result.current.status).toBe("ready"); // ya en caché: sin esqueleto
+    expect(second.result.current.status).toBe("ready"); // already cached: no skeleton
     expect(loader).toHaveBeenCalledTimes(1);
   });
 
-  it("un cargador en línea (identidad nueva en cada render) no entra en bucle", async () => {
+  it("an inline loader (new identity on every render) does not loop", async () => {
     const { result, rerender } = renderHook(() =>
       useChoropleth<Row>({
         ...base,
@@ -343,7 +343,7 @@ describe("paso 21 · geografía asíncrona", () => {
     expect(result.current.status).toBe("ready");
   });
 
-  it("si falla: estado error, onGeographyError y mensaje accesible", async () => {
+  it("if it fails: error status, onGeographyError and an accessible message", async () => {
     const onGeographyError = vi.fn<(error: Error) => void>();
     const { container, root } = renderMap({
       geography: () => Promise.reject(new Error("boom")),
@@ -357,7 +357,7 @@ describe("paso 21 · geografía asíncrona", () => {
     );
   });
 
-  it("sin onGeographyError, el fallo se avisa por consola (en inglés)", async () => {
+  it("without onGeographyError, the failure is reported on the console (in English)", async () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     const { result } = hook({ geography: () => Promise.reject("nope") });
     await waitFor(() => expect(result.current.status).toBe("error"));
@@ -366,7 +366,7 @@ describe("paso 21 · geografía asíncrona", () => {
     spy.mockRestore();
   });
 
-  it("si se descarta antes de resolver, no actualiza un componente desmontado", async () => {
+  it("if discarded before resolving, it does not update an unmounted component", async () => {
     let resolve: (value: typeof twoSquares) => void = () => {};
     const loader = () => new Promise<typeof twoSquares>((r) => (resolve = r));
     const { unmount } = hook({ geography: loader });
@@ -376,7 +376,7 @@ describe("paso 21 · geografía asíncrona", () => {
 });
 
 describe("paso 21 · data undefined = cargando", () => {
-  it("sin datos aún: mapa en gris, pulso (data-loading) y sin avisos de consola", () => {
+  it("no data yet: gray map, pulse (data-loading) and no console warnings", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { root, container } = renderMap({ data: undefined });
 
@@ -386,7 +386,7 @@ describe("paso 21 · data undefined = cargando", () => {
     warn.mockRestore();
   });
 
-  it("al volver a undefined se mantiene el último dato y no se avisa", () => {
+  it("when going back to undefined the last data is kept and there is no warning", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { result, rerender } = hook();
     const fills = result.current.regions.map((r) => r.fill);
@@ -407,7 +407,7 @@ describe("paso 21 · data undefined = cargando", () => {
     warn.mockRestore();
   });
 
-  it("loading fuerza el estado de carga aunque haya datos", () => {
+  it("loading forces the loading state even if there is data", () => {
     expect(renderMap({ loading: true }).root.hasAttribute("data-loading")).toBe(true);
     expect(renderMap({ loading: false, data: undefined }).root.hasAttribute("data-loading")).toBe(
       false,
@@ -427,7 +427,7 @@ describe("paso 22 · fallbackPoints (microestados)", () => {
     fallbackPoints: { AD: [5, 5] as [number, number] },
   };
 
-  it("un dato sin región pero con punto de respaldo se pinta como punto con su color", () => {
+  it("a datum without a region but with a fallback point is painted as a point with its color", () => {
     const { result } = hook(props);
 
     expect(result.current.fallbackPoints).toHaveLength(1);
@@ -436,13 +436,13 @@ describe("paso 22 · fallbackPoints (microestados)", () => {
     expect(point?.fill).not.toBe(result.current.emptyFill);
   });
 
-  it("deja de avisar de ese id, pero sigue avisando de los demás huérfanos", () => {
+  it("stops warning about that id, but keeps warning about the other orphans", () => {
     const { result } = hook(props);
 
     expect(result.current.joinReport.unmatchedData).toEqual(["ZZ"]);
   });
 
-  it("el punto es un item `point` con hover, tooltip y clic; no se confunde con una región", () => {
+  it("the point is a `point` item with hover, tooltip and click; it is not confused with a region", () => {
     const onItemClick = vi.fn<(item: unknown) => void>();
     const { container } = renderMap({ ...props, onItemClick } as never);
     const circle = container.querySelector('[data-point-id="AD"]') as Element;
@@ -458,12 +458,12 @@ describe("paso 22 · fallbackPoints (microestados)", () => {
     );
   });
 
-  it("el microestado entra en la leyenda (cuenta como una región más)", () => {
+  it("the microstate enters the legend (it counts as one more region)", () => {
     const withLegend = hook({ ...props, data: [{ code: "AD", v: 9 }] });
     expect(withLegend.result.current.legend.reduce((n, item) => n + item.count, 0)).toBe(1);
   });
 
-  it("en `bubble` es una burbuja con sus coordenadas, y no hay puntos aparte", () => {
+  it("in `bubble` it is a bubble at its coordinates, and there are no separate points", () => {
     const { result } = hook({ ...props, variant: "bubble" });
 
     expect(result.current.fallbackPoints).toEqual([]);
@@ -472,7 +472,7 @@ describe("paso 22 · fallbackPoints (microestados)", () => {
     });
   });
 
-  it("sin fallbackPoints no hay puntos; un punto no proyectable se ignora", () => {
+  it("without fallbackPoints there are no points; a point that cannot be projected is ignored", () => {
     expect(hook({ ...props, fallbackPoints: undefined }).result.current.fallbackPoints).toEqual([]);
     expect(
       hook({ ...props, fallbackPoints: { AD: [Number.NaN, Number.NaN] } }).result.current
@@ -482,7 +482,7 @@ describe("paso 22 · fallbackPoints (microestados)", () => {
 });
 
 describe("paso 22 · world110m + worldFallbackPoints, integrados", () => {
-  it("datos alpha-2 cruzan con el mapa del mundo y Andorra aparece como punto", () => {
+  it("alpha-2 data joins with the world map and Andorra appears as a point", () => {
     const { result } = renderHook(() =>
       useChoropleth<Row>({
         geography: world110m,
@@ -502,7 +502,7 @@ describe("paso 22 · world110m + worldFallbackPoints, integrados", () => {
     expect(result.current.joinReport.unmatchedData).toEqual([]);
     expect(result.current.regions.find((r) => r.id === "ES")?.datum).toEqual({ code: "ES", v: 1 });
     expect(result.current.fallbackPoints.map((p) => p.id)).toEqual(["AD"]);
-    // Kosovo (XK) y las dos regiones sin id ya no dejan agujeros.
+    // Kosovo (XK) and the two regions without an id no longer leave holes.
     expect(result.current.regions.some((r) => r.id === "XK")).toBe(true);
     expect(result.current.anonymousPaths).toHaveLength(2);
   });

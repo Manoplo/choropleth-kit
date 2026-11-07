@@ -6,36 +6,36 @@ import type { UseChoroplethResult } from "../use-choropleth";
 
 export type LegendRenderContext = {
   items: LegendItem[];
-  /** Círculos de referencia del tamaño (solo `bubble`). */
+  /** Size reference circles (`bubble` only). */
   sizeItems: SizeLegendItem[];
-  /** `null` en `categorical` y en `bubble` sin `getColorValue`. */
+  /** `null` in `categorical` and in `bubble` without `getColorValue`. */
   scale: UseChoroplethResult<unknown>["scale"];
   formatValue: (value: number) => string;
 };
 
 export type LegendProps = {
   title?: string;
-  /** Mostrar el nº de regiones de cada clase. */
+  /** Show the number of regions in each class. */
   showCount?: boolean;
   className?: string;
   /**
-   * `"swatches"` (por defecto): una fila por clase. `"bar"`: una barra con un tramo por clase y los cortes debajo
-   * (estilo prensa; más compacta). `"bar"` solo vale con clases numéricas: con categorías o escala continua se
-   * dibuja como siempre.
+   * `"swatches"` (default): one row per class. `"bar"`: a bar with one segment per class and the breaks
+   * underneath (newspaper style; more compact). `"bar"` only works with numeric classes: with categories
+   * or a continuous scale it is drawn as usual.
    */
   variant?: "swatches" | "bar";
   /**
-   * Pasar el ratón por una clase resalta sus regiones y atenúa el resto (por defecto `true`). Sin re-renderizar
-   * regiones: la leyenda escribe `data-highlight-class` en el root y el CSS hace el resto.
+   * Hovering a class highlights its regions and dims the rest (default `true`). Without re-rendering
+   * regions: the legend writes `data-highlight-class` on the root and the CSS does the rest.
    */
   interactive?: boolean;
-  /** Leyenda headless: recibes los items y la dibujas tú con tu sistema de diseño. */
+  /** Headless legend: you receive the items and draw it yourself with your design system. */
   children?: (context: LegendRenderContext) => ReactNode;
 };
 
 const GRADIENT_STOPS = 5;
 
-/** Leyenda HTML. Por defecto: swatches con rangos (clases) o barra de degradado (`linear`). */
+/** HTML legend. By default: swatches with ranges (classes) or a gradient bar (`linear`). */
 export const Legend = ({
   title,
   showCount = false,
@@ -47,8 +47,8 @@ export const Legend = ({
   const { choropleth, classNames, emptyPattern } = useChoroplethContext();
   const { legend: items, sizeLegend: sizeItems, scale, formatValue, containerRef } = choropleth;
 
-  // Resaltar una clase = un atributo en el root (no cambia ninguna prop de las regiones). Solo si alguna región
-  // pertenece a una clase: con `bubble` o escala continua no hay nada que resaltar.
+  // Highlighting a class = an attribute on the root (it changes no region prop). Only if some region
+  // belongs to a class: with `bubble` or a continuous scale there is nothing to highlight.
   const canHighlight = interactive && choropleth.regions.some((r) => r.classIndex !== null);
   const highlight = (key: string | null) => {
     const root = containerRef.current;
@@ -70,7 +70,7 @@ export const Legend = ({
           onPointerLeave: () => highlight(null),
         }
       : {};
-  /** El swatch de «sin dato» lleva la misma trama que el mapa (`data-pattern`, la dibuja el CSS). */
+  /** The "no data" swatch carries the same pattern as the map (`data-pattern`, drawn by the CSS). */
   const swatchProps = (item: LegendItem) => ({
     style: { backgroundColor: item.color },
     "data-pattern": item.empty === true && emptyPattern !== null ? emptyPattern : undefined,
@@ -80,7 +80,7 @@ export const Legend = ({
 
   const rootClass = cx("cm-legend", classNames.legend, className);
 
-  // `bar`: solo clases numéricas (con `from` y `to`). Las categorías no tienen cortes que poner debajo.
+  // `bar`: numeric classes only (with `from` and `to`). Categories have no breaks to put underneath.
   const indexed = items.map((item, index) => ({ item, index }));
   const classRows = indexed.filter(({ item }) => item.empty !== true);
   const emptyItem = indexed.find(({ item }) => item.empty === true) ?? null;
@@ -91,7 +91,7 @@ export const Legend = ({
     classRows.every(({ item }) => item.from !== undefined && item.to !== undefined)
       ? classRows
       : null;
-  // Los cortes: el inicio de cada clase y el final de la última.
+  // The breaks: the start of each class and the end of the last one.
   const barTicks =
     barItems === null
       ? []
@@ -106,7 +106,7 @@ export const Legend = ({
           <div
             className="cm-legend__gradient"
             data-legend-gradient
-            // El degradado depende de la escala (datos), por eso va en línea y no en el CSS.
+            // The gradient depends on the scale (data), which is why it goes inline and not in the CSS.
             style={{
               background: `linear-gradient(to right, ${Array.from(
                 { length: GRADIENT_STOPS },

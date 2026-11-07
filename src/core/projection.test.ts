@@ -33,7 +33,7 @@ const boundsOf = (name: ProjectionName | undefined, width: number, height: numbe
 
 describe("createProjection", () => {
   it.each<ProjectionName>(["equalEarth", "naturalEarth", "mercator"])(
-    "%s: la geometría cabe en el contenedor",
+    "%s: the geometry fits the container",
     (name) => {
       const { x0, y0, x1, y1 } = boundsOf(name, 960, 500);
       const tolerance = 1e-6;
@@ -45,7 +45,7 @@ describe("createProjection", () => {
     },
   );
 
-  it("encaja justo: ocupa todo el ancho o todo el alto", () => {
+  it("fits exactly: takes up the full width or the full height", () => {
     const { x0, y0, x1, y1 } = boundsOf("equalEarth", 960, 500);
 
     const fillsWidth = Math.abs(x1 - x0 - 960) < 1e-6;
@@ -53,21 +53,21 @@ describe("createProjection", () => {
     expect(fillsWidth || fillsHeight).toBe(true);
   });
 
-  it("la escala depende del tamaño del contenedor", () => {
+  it("the scale depends on the container's size", () => {
     const small = boundsOf("equalEarth", 400, 300).projection.scale();
     const large = boundsOf("equalEarth", 1200, 900).projection.scale();
 
     expect(large).toBeGreaterThan(small);
   });
 
-  it("usa equalEarth por defecto", () => {
+  it("uses equalEarth by default", () => {
     const byDefault = boundsOf(undefined, 960, 500).projection([10, 40]);
     const explicit = boundsOf("equalEarth", 960, 500).projection([10, 40]);
 
     expect(byDefault).toEqual(explicit);
   });
 
-  it("cada proyección da una posición distinta para el mismo punto", () => {
+  it("each projection gives a different position for the same point", () => {
     const point = [100, 60] as [number, number];
     const equalEarth = boundsOf("equalEarth", 960, 500).projection(point);
     const mercator = boundsOf("mercator", 960, 500).projection(point);
@@ -75,7 +75,7 @@ describe("createProjection", () => {
     expect(equalEarth).not.toEqual(mercator);
   });
 
-  it("devuelve instancias independientes: ajustar una no mueve la otra", () => {
+  it("returns independent instances: fitting one does not move the other", () => {
     const first = createProjection({ width: 960, height: 500, featureCollection: world });
     const scaleBefore = first.scale();
 
@@ -84,7 +84,7 @@ describe("createProjection", () => {
     expect(first.scale()).toBe(scaleBefore);
   });
 
-  it("con una colección vacía no falla y mantiene una escala finita", () => {
+  it("with an empty collection it does not fail and keeps a finite scale", () => {
     const projection = createProjection({
       width: 960,
       height: 500,
@@ -100,13 +100,13 @@ describe("createProjection", () => {
     [-1, 500],
     [NaN, 500],
     [960, Infinity],
-  ])("lanza un error con tamaño %s × %s", (width, height) => {
+  ])("throws an error with size %s × %s", (width, height) => {
     expect(() => createProjection({ width, height, featureCollection: world })).toThrow(
       /finite numbers > 0/,
     );
   });
 
-  it("produce rutas SVG válidas (sin NaN) para todos los países", () => {
+  it("produces valid SVG paths (no NaN) for all countries", () => {
     const projection = createProjection({ width: 960, height: 500, featureCollection: world });
     const path = geoPath(projection);
 
@@ -124,14 +124,14 @@ describe("computeAspectRatio", () => {
     features: world.features.filter((f) => f.id === id),
   });
 
-  it("el mundo en Equal Earth es apaisado, cerca de 2:1", () => {
+  it("the world in Equal Earth is landscape, close to 2:1", () => {
     const ratio = computeAspectRatio({ featureCollection: world });
 
     expect(ratio).toBeGreaterThan(1.8);
     expect(ratio).toBeLessThan(2.2);
   });
 
-  it("Chile es mucho más alto que ancho; Noruega, al revés", () => {
+  it("Chile is much taller than wide; Norway, the other way round", () => {
     expect(computeAspectRatio({ name: "mercator", featureCollection: only("152") })).toBeLessThan(
       1,
     );
@@ -140,7 +140,7 @@ describe("computeAspectRatio", () => {
     ).toBeGreaterThan(computeAspectRatio({ name: "mercator", featureCollection: only("152") }));
   });
 
-  it("es consistente con lo que ocupa el mapa al ajustarlo a ese tamaño", () => {
+  it("is consistent with what the map takes up when fitted to that size", () => {
     const fc = only("152");
     const ratio = computeAspectRatio({ name: "mercator", featureCollection: fc });
     const { x0, y0, x1, y1 } = (() => {
@@ -157,7 +157,7 @@ describe("computeAspectRatio", () => {
     expect((x1 - x0) / (y1 - y0)).toBeCloseTo(ratio, 1);
   });
 
-  it("sin features, o con geometría vacía, usa la proporción por defecto", () => {
+  it("without features, or with empty geometry, it uses the default ratio", () => {
     expect(
       computeAspectRatio({ featureCollection: { type: "FeatureCollection", features: [] } }),
     ).toBe(DEFAULT_ASPECT_RATIO);
@@ -171,7 +171,7 @@ describe("computeAspectRatio", () => {
   });
 });
 
-// ── rebase (paso 29) ───────────────────────────────────────────────────────────────────────────────
+// ── rebase (step 29) ───────────────────────────────────────────────────────────────────────────────
 
 const featureNamed = (name: string) => {
   const found = world.features.find((f) => (f.properties as { name?: string }).name === name);
@@ -182,7 +182,7 @@ const spain = featureNamed("Spain");
 const france = featureNamed("France");
 const padding = { top: 24, right: 24, bottom: 24, left: 24 };
 
-/** Puntos [lon, lat] repartidos dentro de los límites de `feature` (determinista). */
+/** [lon, lat] points spread inside `feature`'s bounds (deterministic). */
 const pointsIn = (feature: typeof spain, count: number): [number, number][] => {
   const [[w, s], [e, n]] = geoBounds(feature);
   let state = 12345;
@@ -194,7 +194,7 @@ const factories: [string, () => GeoProjection][] = [
   ["equalEarth", geoEqualEarth],
   ["naturalEarth", geoNaturalEarth1],
   ["mercator", geoMercator],
-  ["albers (cónica)", geoAlbers],
+  ["albers (conic)", geoAlbers],
   ["orthographic", geoOrthographic],
 ];
 
@@ -202,13 +202,13 @@ const parentOf = (factory: () => GeoProjection, width = 960, height = 500) =>
   factory().fitSize([width, height], world);
 
 describe("relativeTransform", () => {
-  it("entre una proyección y ella misma es la identidad", () => {
+  it("between a projection and itself it is the identity", () => {
     const p = parentOf(geoEqualEarth);
 
     expect(relativeTransform(p, p)).toEqual({ k: 1, x: 0, y: 0 });
   });
 
-  it("es la afín escala + traslación que separa las dos proyecciones", () => {
+  it("is the scale + translation affine map that separates the two projections", () => {
     const from = geoMercator().scale(100).translate([10, 20]);
     const to = geoMercator().scale(300).translate([50, -40]);
     const r = relativeTransform(from, to);
@@ -222,10 +222,10 @@ describe("relativeTransform", () => {
 });
 
 describe("rebaseProjection", () => {
-  // El test que manda (dd.md §11.2.4): el vuelo termina en `relative`, y cambiar a la proyección hija
-  // con cámara identidad debe pintar los MISMOS píxeles. Si falla, el rebase se vería como un salto.
-  describe.each(factories)("equivalencia afín: %s", (_name, factory) => {
-    it("child(p) = relative(parent(p)) con error < 1e-6 para 200 puntos", () => {
+  // The test that rules (dd.md §11.2.4): the flight ends at `relative`, and switching to the child
+  // projection with an identity camera must paint the SAME pixels. If it fails, the rebase would look like a jump.
+  describe.each(factories)("affine equivalence: %s", (_name, factory) => {
+    it("child(p) = relative(parent(p)) with error < 1e-6 for 200 points", () => {
       const parent = parentOf(factory);
       const { projection, relative } = rebaseProjection({
         parent,
@@ -246,7 +246,7 @@ describe("rebaseProjection", () => {
     });
   });
 
-  it("también con la proyección del padre rotada y centrada (se hereda)", () => {
+  it("also with the parent's projection rotated and centered (it is inherited)", () => {
     const factory = () => geoMercator();
     const parent = factory().rotate([-20, 5]).center([3, 10]).fitSize([800, 600], world);
     const { projection, relative } = rebaseProjection({
@@ -268,7 +268,7 @@ describe("rebaseProjection", () => {
     }
   });
 
-  it("hereda las paralelas de una cónica personalizada", () => {
+  it("inherits the parallels of a custom conic", () => {
     const factory = () => geoAlbers();
     const parent = factory().parallels([20, 50]).fitSize([960, 500], world);
     const { projection, relative } = rebaseProjection({
@@ -287,7 +287,7 @@ describe("rebaseProjection", () => {
     expect(Math.abs(p[0] * relative.k + relative.x - c[0])).toBeLessThan(1e-6);
   });
 
-  it("hereda también el recorte (clipAngle) y la precisión del remuestreo", () => {
+  it("also inherits the clipping (clipAngle) and the resampling precision", () => {
     const factory = () => geoOrthographic();
     const parent = factory().clipAngle(60).precision(0.2).fitSize([960, 500], world);
     const { projection } = rebaseProjection({
@@ -303,7 +303,7 @@ describe("rebaseProjection", () => {
     expect(projection.precision()).toBeCloseTo(0.2, 9);
   });
 
-  it("el hijo encuadra el foco dentro del padding, llenando el lado limitante", () => {
+  it("the child frames the focus within the padding, filling the limiting side", () => {
     const { projection } = rebaseProjection({
       parent: parentOf(geoEqualEarth),
       factory: geoEqualEarth,
@@ -324,7 +324,7 @@ describe("rebaseProjection", () => {
     expect(fillsWidth || fillsHeight).toBe(true);
   });
 
-  it("acerca: la `k` relativa es > 1 al enfocar un país dentro del mundo", () => {
+  it("zooms in: the relative `k` is > 1 when focusing a country within the world", () => {
     const { relative } = rebaseProjection({
       parent: parentOf(geoEqualEarth),
       factory: geoEqualEarth,
@@ -337,7 +337,7 @@ describe("rebaseProjection", () => {
     expect(relative.k).toBeGreaterThan(5);
   });
 
-  it("no modifica la proyección del padre", () => {
+  it("does not modify the parent's projection", () => {
     const parent = parentOf(geoEqualEarth);
     const before = {
       scale: parent.scale(),
@@ -360,7 +360,7 @@ describe("rebaseProjection", () => {
     }).toEqual(before);
   });
 
-  it("encadenar dos rebases sigue siendo afín: R_total = R2 ∘ R1", () => {
+  it("chaining two rebases is still affine: R_total = R2 ∘ R1", () => {
     const root = parentOf(geoEqualEarth);
     const one = rebaseProjection({
       parent: root,
@@ -392,7 +392,7 @@ describe("rebaseProjection", () => {
     expect(p[0] * r.k + r.x).toBeCloseTo(c[0], 6);
   });
 
-  it("tamaño no válido o foco sin extensión: error claro en inglés", () => {
+  it("invalid size or focus with no extent: a clear error in English", () => {
     const parent = parentOf(geoEqualEarth);
     const base = { parent, factory: geoEqualEarth, focus: spain, padding };
 

@@ -1,4 +1,4 @@
-// Nivel 2 (compound): mismas piezas que usará el preset, pero tú eliges cuáles y en qué orden.
+// Level 2 (compound): the same pieces the preset will use, but you choose which ones and in what order.
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { toFeatureCollection } from "../src/core";
@@ -8,12 +8,12 @@ import { Choropleth } from "../src/react";
 
 type Row = { id: string; value: number | null };
 
-// Geodatos propios de la librería: ids ISO alpha-2 ("ES") y Kosovo incluido.
+// The library's own geodata: ISO alpha-2 ids ("ES") and Kosovo included.
 const world = world110m;
 const ids = toFeatureCollection({ geography: world, objectName: "countries" }).features.flatMap(
   (f) => (f.id === undefined ? [] : [String(f.id)]),
 );
-// Datos SINTÉTICOS deterministas (ver la story headless).
+// Deterministic SYNTHETIC data (see the headless story).
 const data: Row[] = ids.map((id) => {
   const n = seed(id);
   if (n % 7 === 0) return { id, value: null };
@@ -39,10 +39,10 @@ const CompoundMap = ({ variant, customTooltip, showCount }: Props) => {
         selectedId={selectedId}
         onItemClick={({ id }) => setSelectedId((cur) => (cur === id ? null : id))}
       >
-        <Choropleth.Svg ariaLabel="Mapa del mundo con datos sintéticos" />
-        {/* La leyenda es HTML: va fuera del <svg>, como hermana, y se posiciona con CSS. */}
+        <Choropleth.Svg ariaLabel="World map with synthetic data" />
+        {/* The legend is HTML: it goes outside the <svg>, as a sibling, and is positioned with CSS. */}
         <div style={{ position: "absolute", left: 12, bottom: 12 }}>
-          <Choropleth.Legend title="Variación" showCount={showCount} />
+          <Choropleth.Legend title="Change" showCount={showCount} />
         </div>
         {customTooltip ? (
           <Choropleth.Tooltip<Row>>
@@ -51,7 +51,7 @@ const CompoundMap = ({ variant, customTooltip, showCount }: Props) => {
                 <span
                   style={{ background: color, display: "inline-block", width: 10, height: 10 }}
                 />{" "}
-                país {datum?.id ?? "?"}: {formattedValue || "sin dato"}
+                country {datum?.id ?? "?"}: {formattedValue || "no data"}
               </div>
             )}
           </Choropleth.Tooltip>

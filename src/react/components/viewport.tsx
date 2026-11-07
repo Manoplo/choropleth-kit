@@ -2,12 +2,12 @@ import type { ReactNode } from "react";
 import { useChoroplethContext } from "../choropleth-context";
 
 /**
- * La cámara (dd.md §11.0): el `<g>` al que `d3-zoom` aplica el `transform` de zoom y pan. Todo lo
- * que deba moverse con el mapa (regiones, fronteras, burbujas, selección) va dentro.
+ * The camera (dd.md §11.0): the `<g>` to which `d3-zoom` applies the zoom and pan `transform`.
+ * Everything that must move with the map (regions, borders, bubbles, selection) goes inside.
  *
- * ⚠️ **React nunca escribe el atributo `transform` de este `<g>`**; por eso no hay ninguna prop que
- * lo toque. Lo escribe `d3-zoom` en cada frame (dd.md §11.1.3). Si lo escribiera React, cualquier
- * render pisaría el estado interno de d3 y el mapa saltaría.
+ * ⚠️ **React never writes this `<g>`'s `transform` attribute**; that is why no prop touches it. It is
+ * written by `d3-zoom` every frame (dd.md §11.1.3). If React wrote it, any render would overwrite d3's
+ * internal state and the map would jump.
  */
 export const Viewport = ({ children }: { children?: ReactNode }) => {
   const { viewportRef } = useChoroplethContext();

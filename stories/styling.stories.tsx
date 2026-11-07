@@ -1,4 +1,4 @@
-// Estilado (dd.md §12.5): del `theme="dark"` de una línea a las clases propias con `classNames`.
+// Styling (dd.md §12.5): from a one-line `theme="dark"` to custom classes with `classNames`.
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { toFeatureCollection } from "../src/core";
@@ -17,7 +17,7 @@ type Row = { id: string; value: number | null; estimated: boolean };
 const ids = toFeatureCollection({ geography: world110m, objectName: "countries" }).features.flatMap(
   (f) => (f.id === undefined || f.id === "AQ" ? [] : [String(f.id)]),
 );
-// Datos SINTÉTICOS deterministas. Cada ~5.º país es «estimado» (para `getRegionStyle`).
+// Deterministic SYNTHETIC data. Roughly every 5th country is "estimated" (for `getRegionStyle`).
 const data: Row[] = ids.map((id) => {
   const n = seed(id);
   return {
@@ -38,12 +38,12 @@ const common = {
   aspectRatio: 2,
   zoom: { controls: true },
   formatValue: (v: number) => `${v} %`,
-  legend: { title: "Índice (sintético)", position: "bottom-left" },
+  legend: { title: "Index (synthetic)", position: "bottom-left" },
 } as const;
 
 // ── Themes ────────────────────────────────────────────────────────────────────────────────────────
 
-/** Un tema propio: parte de `dark` y cambia lo que importa (reutilizable entre mapas con `defineTheme`). */
+/** A custom theme: starts from `dark` and changes what matters (reusable across maps with `defineTheme`). */
 const sunset = defineTheme(
   extendTheme("dark", {
     background: "#2b1b17",
@@ -63,7 +63,7 @@ const ThemeCell = ({ name, theme }: { name: string; theme: ThemeName | typeof su
       <figcaption style={{ font: "600 13px sans-serif", margin: "0 0 6px" }}>{name}</figcaption>
       <ChoroplethMap<Row>
         {...common}
-        // En oscuro, «viridis» se lee mejor que «blues» (el extremo claro no se confunde con el fondo).
+        // In dark, "viridis" reads better than "blues" (the light end does not blend into the background).
         palette={theme === "dark" || theme === sunset ? "viridis" : "blues"}
         theme={theme}
         selectedId={selected}
@@ -92,15 +92,15 @@ const Themes = () => (
   </div>
 );
 
-// ── Variables desde un ancestro y desde clases propias ────────────────────────────────────────────
+// ── Variables from an ancestor and from your own classes ────────────────────────────────────────────
 
 const AncestorVariables = () => (
   <div
     style={
       {
         padding: 16,
-        // Nivel 3 de dd.md §12.5.1: variables `--cm-*` en CUALQUIER ancestro. (Hasta el paso 35 esto no
-        // hacía nada: `.cm-root` declaraba las suyas y ganaban a las heredadas.)
+        // Level 3 of dd.md §12.5.1: `--cm-*` variables on ANY ancestor. (Until step 35 this did nothing:
+        // `.cm-root` declared its own and they beat the inherited ones.)
         "--cm-empty-fill": "#fde68a",
         "--cm-border-color": "#1f2937",
         "--cm-border-width": "0.8px",
@@ -112,15 +112,15 @@ const AncestorVariables = () => (
       } as React.CSSProperties
     }
   >
-    <ChoroplethMap<Row> {...common} selectedId="FR" ariaLabel="Variables desde un ancestro" />
+    <ChoroplethMap<Row> {...common} selectedId="FR" ariaLabel="Variables from an ancestor" />
   </div>
 );
 
 // ── Tailwind-like ─────────────────────────────────────────────────────────────────────────────────
 
 /**
- * Clases de utilidad como las de Tailwind, definidas aquí a mano para no depender de él. Lo que enseña la story es
- * `classNames`: una clase TUYA en cada pieza, sumada a la `cm-*`, con el CSS base de la librería intacto debajo.
+ * Utility classes like Tailwind's, defined here by hand so as not to depend on it. What the story teaches is
+ * `classNames`: a class of YOURS on each piece, added to the `cm-*` one, with the library's base CSS intact underneath.
  */
 const UTILITIES = `
 .tw-rounded-xl { border-radius: 14px; }
@@ -158,9 +158,9 @@ const TailwindLike = () => (
   </div>
 );
 
-// ── Leyenda y tramas (paso 36) ─────────────────────────────────────────────────────────────────
+// ── Legend and patterns (step 36) ─────────────────────────────────────────────────────────────────
 
-/** Dos mapas en la misma página: cada uno con SUS tramas (ids por instancia) y su leyenda interactiva. */
+/** Two maps on the same page: each with ITS patterns (per-instance ids) and its interactive legend. */
 const LegendAndPatterns = () => (
   <div
     style={{
@@ -172,25 +172,25 @@ const LegendAndPatterns = () => (
   >
     <figure style={{ margin: 0 }}>
       <figcaption style={{ font: "600 13px sans-serif", margin: "0 0 6px" }}>
-        legend=&#123;&#123; variant: "bar" &#125;&#125; · estimados rayados · «sin dato» con puntos
+        legend=&#123;&#123; variant: "bar" &#125;&#125; · estimated hatched · "no data" dotted
       </figcaption>
       <ChoroplethMap<Row>
         {...common}
-        legend={{ title: "Índice (sintético)", position: "bottom-left", variant: "bar" }}
+        legend={{ title: "Index (synthetic)", position: "bottom-left", variant: "bar" }}
         emptyPattern="dots"
         getRegionStyle={(r) => (r.datum?.estimated === true ? { pattern: "hatch" } : undefined)}
-        ariaLabel="Leyenda en barra y tramas"
+        ariaLabel="Bar legend and patterns"
       />
     </figure>
     <figure style={{ margin: 0 }}>
       <figcaption style={{ font: "600 13px sans-serif", margin: "0 0 6px" }}>
-        theme="contrast" (el «sin dato» va rayado) · leyenda en filas
+        theme="contrast" ("no data" is hatched) · legend in rows
       </figcaption>
       <ChoroplethMap<Row>
         {...common}
         theme="contrast"
         getRegionStyle={(r) => (r.datum?.estimated === true ? { pattern: "dots" } : undefined)}
-        ariaLabel="Contraste con tramas"
+        ariaLabel="Contrast with patterns"
       />
     </figure>
   </div>
@@ -204,26 +204,26 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /**
- * Los cuatro temas predefinidos lado a lado y uno propio (`extendTheme`). Comprueba: fondo, fronteras, «sin dato»
- * (los países sin valor), selección (España), el tooltip (pasa el ratón), los botones de zoom y la leyenda en cada
- * uno. Los países «estimados» van con `getRegionStyle` a opacidad .6. `contrast` engorda fronteras, resaltes y el
- * anillo de foco (pulsa Tab hasta el mapa).
+ * The four predefined themes side by side and a custom one (`extendTheme`). Check: background, borders, "no data"
+ * (countries without a value), selection (Spain), the tooltip (hover), the zoom buttons and the legend in each
+ * one. "Estimated" countries get `getRegionStyle` at .6 opacity. `contrast` thickens borders, highlights and the
+ * focus ring (press Tab until the map).
  */
 export const ThemesStory: Story = { name: "Themes", render: () => <Themes /> };
 
-/** Variables `--cm-*` en un ancestro (nivel 3): la forma «de CSS puro» de tematizar sin tocar props. */
+/** `--cm-*` variables on an ancestor (level 3): the "pure CSS" way of theming without touching props. */
 export const AncestorVariablesStory: Story = {
   name: "Ancestor variables",
   render: () => <AncestorVariables />,
 };
 
-/** `classNames` con utilidades al estilo Tailwind: tu clase en cada pieza, sumada a la `cm-*`. */
+/** `classNames` with Tailwind-style utilities: your class on each piece, added to the `cm-*` one. */
 export const TailwindLikeStory: Story = { name: "Tailwind-like", render: () => <TailwindLike /> };
 
 /**
- * Pasa el ratón por una clase de la leyenda (tramo de la barra o fila): sus regiones se destacan y el resto se
- * atenúa, sin re-renderizar regiones. Los países «estimados» llevan una trama encima de su color; «sin dato» se
- * ve con puntos (izquierda) o rayado (`contrast`, derecha). Hay DOS mapas: cada uno referencia sus propias tramas.
+ * Hover a legend class (a segment of the bar or a row): its regions stand out and the rest dims, without
+ * re-rendering regions. "Estimated" countries carry a pattern over their color; "no data" shows as dots
+ * (left) or hatching (`contrast`, right). There are TWO maps: each references its own patterns.
  */
 export const LegendAndPatternsStory: Story = {
   name: "Legend + patterns",

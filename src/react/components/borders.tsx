@@ -1,7 +1,7 @@
 import { cx } from "../class-names";
 import { useChoroplethContext } from "../choropleth-context";
 
-/** Fronteras interiores (una sola ruta). No se pinta con GeoJSON: ahí cada región lleva su trazo. */
+/** Interior borders (a single path). Not drawn with GeoJSON: there each region carries its own stroke. */
 export const Borders = () => {
   const { choropleth, classNames } = useChoroplethContext();
   if (choropleth.borders === null) return null;

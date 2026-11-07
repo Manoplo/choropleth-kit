@@ -2,13 +2,13 @@ import { cx } from "../class-names";
 import { useChoroplethContext } from "../choropleth-context";
 
 /**
- * Burbujas (variant `bubble`). Ya vienen ordenadas de mayor a menor, así que las pequeñas quedan
- * encima.
+ * Bubbles (`bubble` variant). They already come sorted from largest to smallest, so the small ones end
+ * up on top.
  *
- * Dos tipos, con interacción distinta (dd.md §12.1):
- *  - **En el centroide de una región** (`coordinates: null`): no capturan el ratón; el hover y el
- *    clic los gestiona la región que tienen debajo (item `region`).
- *  - **Con coordenadas propias** (tiendas): son items `point`, con su propio hover, clic y tooltip.
+ * Two kinds, with different interaction (dd.md §12.1):
+ *  - **At a region's centroid** (`coordinates: null`): they do not capture the mouse; hover and click
+ *    are handled by the region underneath (a `region` item).
+ *  - **With their own coordinates** (stores): they are `point` items, with their own hover, click and tooltip.
  */
 export const Bubbles = () => {
   const { choropleth, classNames } = useChoroplethContext();
@@ -28,7 +28,7 @@ export const Bubbles = () => {
             cy={bubble.y}
             r={bubble.r}
             style={{ fill: bubble.fill, cursor: isPoint && clickable ? "pointer" : undefined }}
-            // El `none` del grupo se hereda: los puntos lo anulan para recibir eventos.
+            // The group's `none` is inherited: the points override it to receive events.
             pointerEvents={isPoint ? "auto" : undefined}
             {...(isPoint ? getPointProps(bubble) : undefined)}
           />

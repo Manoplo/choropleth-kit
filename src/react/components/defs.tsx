@@ -2,16 +2,16 @@ import type { ReactNode } from "react";
 import { useChoroplethContext } from "../choropleth-context";
 
 export type DefsProps = {
-  /** Tus propias definiciones (`<pattern>`, `<linearGradient>`, `<filter>`), con ids de `useDefId`. */
+  /** Your own definitions (`<pattern>`, `<linearGradient>`, `<filter>`), with `useDefId` ids. */
   children?: ReactNode;
 };
 
 /**
- * `<defs>` del mapa: las tramas incluidas (`hatch` y `dots`) más las tuyas. Los ids llevan un prefijo por
- * instancia (`useDefId`): con dos mapas en la página, cada uno referencia SUS definiciones.
+ * The map's `<defs>`: the built-in patterns (`hatch` and `dots`) plus yours. Ids carry a per-instance
+ * prefix (`useDefId`): with two maps on the page, each one references ITS definitions.
  *
- * Las tramas dibujan con `currentColor` y el `color` del propio `<pattern>` es `--cm-pattern-color` (por defecto,
- * el color del texto al 45 %), así que respetan el tema (también en oscuro).
+ * The patterns draw with `currentColor` and the `<pattern>`'s own `color` is `--cm-pattern-color` (by
+ * default, the text color at 45 %), so they respect the theme (dark too).
  */
 export const Defs = ({ children }: DefsProps) => {
   const { defId } = useChoroplethContext();

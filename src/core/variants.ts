@@ -14,13 +14,13 @@ import type {
 } from "./palettes";
 import { createColorScale, type ColorScale } from "./scales";
 
-/** Punto [x, y] en píxeles o [lon, lat] en grados, según el contexto. */
+/** Point [x, y] in pixels or [lon, lat] in degrees, depending on context. */
 export type Point = readonly [number, number];
 
 /**
- * Configuración por `variant` (dd.md §9.2 y §10). Unión discriminada: cada variante exige lo suyo
- * (`categorical` pide `getCategory`, `bubble` acepta `getCoordinates`…) y TypeScript rechaza
- * combinaciones inválidas, como una paleta divergente en un mapa secuencial.
+ * Configuration per `variant` (dd.md §9.2 and §10). A discriminated union: each variant requires its
+ * own things (`categorical` asks for `getCategory`, `bubble` accepts `getCoordinates`…) and TypeScript
+ * rejects invalid combinations, such as a diverging palette on a sequential map.
  */
 export type VariantConfig<TDatum> =
   | {
@@ -39,20 +39,20 @@ export type VariantConfig<TDatum> =
   | {
       variant: "categorical";
       getCategory: (datum: TDatum) => string | null;
-      /** Orden y colores fijos. */
+      /** Fixed order and colors. */
       categories?: readonly CategorySpec[];
       palette?: CategoricalPaletteName;
     }
   | {
       variant: "bubble";
-      /** Valor ABSOLUTO que da el ÁREA del círculo. Los `null` y los ≤ 0 no dibujan círculo. */
+      /** ABSOLUTE value that gives the circle's AREA. `null`s and values ≤ 0 draw no circle. */
       getValue: (datum: TDatum) => number | null;
-      /** Segunda métrica → color de la burbuja (bivariante, escala divergente). */
+      /** Second metric → the bubble's color (bivariate, diverging scale). */
       getColorValue?: (datum: TDatum) => number | null;
-      /** [lon, lat] del dato. Sin esto, la burbuja va en el centroide de su región. */
+      /** The datum's [lon, lat]. Without this, the bubble goes at its region's centroid. */
       getCoordinates?: (datum: TDatum) => readonly [number, number] | null;
       maxRadius?: number;
-      /** Color único cuando no hay `getColorValue`. */
+      /** Single color when there is no `getColorValue`. */
       color?: string;
       classification?: Classification;
       palette?: DivergingPaletteName;
@@ -62,9 +62,9 @@ export type VariantConfig<TDatum> =
 export type VariantName = VariantConfig<unknown>["variant"];
 
 export type VariantEntry<TDatum> = {
-  /** Id de la región, o `undefined` si no tiene. */
+  /** The region's id, or `undefined` if it has none. */
   id: string | undefined;
-  /** Dato cruzado con la región, o `undefined` si no hay. */
+  /** Datum joined with the region, or `undefined` if there is none. */
   datum: TDatum | undefined;
 };
 
@@ -74,30 +74,30 @@ export type Bubble<TDatum> = {
   y: number;
   r: number;
   fill: string;
-  /** Valor que da el área. */
+  /** Value that gives the area. */
   value: number;
   colorValue: number | null;
   datum: TDatum;
   /**
-   * [lon, lat] propios del dato (`getCoordinates`), o `null` si la burbuja está en el centroide de
-   * su región. Distingue un punto (tienda) de la burbuja de una región, a efectos de interacción.
+   * The datum's own [lon, lat] (`getCoordinates`), or `null` if the bubble is at its region's centroid.
+   * Tells a point (a store) apart from a region's bubble, for interaction purposes.
    */
   coordinates: Point | null;
 };
 
 export type VariantResult<TDatum> = {
-  /** Color de cada región, en el orden de `entries`. */
+  /** Color of each region, in the order of `entries`. */
   fills: string[];
-  /** Valor de cada región: número, categoría (`categorical`) o `null`. */
+  /** Value of each region: number, category (`categorical`) or `null`. */
   values: (number | string | null)[];
-  /** `values` ya formateado para mostrar («1,5 %», «Europa»); cadena vacía si no hay valor. */
+  /** `values` already formatted for display ("1.5 %", "Europe"); empty string if there is no value. */
   labels: string[];
-  /** Escala de color numérica. `null` en `categorical` y en `bubble` sin `getColorValue`. */
+  /** Numeric color scale. `null` in `categorical` and in `bubble` without `getColorValue`. */
   scale: ColorScale | null;
   legend: LegendItem[];
   /**
-   * Índice de la CLASE de la leyenda a la que pertenece cada región (mismo orden que `fills`), o `null` si no
-   * pertenece a ninguna (sin dato, escala continua, `bubble`). Es lo que permite resaltar una clase sin re-renderizar.
+   * Index of the legend CLASS each region belongs to (same order as `fills`), or `null` if it belongs to none
+   * (no data, continuous scale, `bubble`). It is what makes it possible to highlight a class without re-rendering.
    */
   classes: (number | null)[];
   bubbles: Bubble<TDatum>[];
@@ -107,16 +107,16 @@ export type VariantResult<TDatum> = {
 export type ResolveVariantOptions<TDatum> = {
   config: VariantConfig<TDatum>;
   entries: readonly VariantEntry<TDatum>[];
-  /** Todas las filas de datos (las burbujas con `getCoordinates` no pasan por las regiones). */
+  /** All data rows (bubbles with `getCoordinates` do not go through the regions). */
   data: readonly TDatum[];
   getId: (datum: TDatum) => string;
-  /** Centroide proyectado de cada región, en el orden de `entries` (solo lo usa `bubble`). */
+  /** Projected centroid of each region, in the order of `entries` (only `bubble` uses it). */
   centroids: readonly (Point | null)[];
-  /** [lon, lat] → [x, y] en píxeles (solo lo usa `bubble`). */
+  /** [lon, lat] → [x, y] in pixels (only `bubble` uses it). */
   project: (coordinates: Point) => Point | null;
   emptyFill: string;
   formatValue: (value: number) => string;
-  /** Texto del item «sin dato» de la leyenda; sin esto, la leyenda no lo incluye. */
+  /** Text of the legend's "no data" item; without this, the legend does not include it. */
   emptyLabel?: string;
 };
 
@@ -125,9 +125,9 @@ export const DEFAULT_BUBBLE_FILL = "#2563eb";
 const isUsable = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 
 /**
- * El «preset» de cada variant (dd.md §10): una función PURA que recibe los datos ya cruzados con las
- * regiones y devuelve cómo se pinta (colores, leyenda, burbujas). El hook solo orquesta; añadir un
- * variant nuevo es añadir una rama aquí y un caso en la unión de tipos.
+ * Each variant's "preset" (dd.md §10): a PURE function that receives the data already joined with the
+ * regions and returns how it is painted (colors, legend, bubbles). The hook only orchestrates; adding
+ * a new variant means adding a branch here and a case in the type union.
  */
 export const resolveVariant = <TDatum>(
   options: ResolveVariantOptions<TDatum>,
@@ -192,11 +192,11 @@ const resolveBubbles = <TDatum>(
 ): VariantResult<TDatum> => {
   const { entries, data, getId, centroids, project, emptyFill, formatValue, emptyLabel } = options;
 
-  // Valor de cada región (para tooltip y `labels`); las regiones se pintan neutras: el color
-  // es de las burbujas, y colorear también la región competiría con ellas.
+  // Value of each region (for the tooltip and `labels`); regions are painted neutral: the color
+  // belongs to the bubbles, and coloring the region too would compete with them.
   const values = entries.map((e) => (e.datum === undefined ? null : config.getValue(e.datum)));
 
-  // Posición: por coordenadas propias del dato (tiendas) o por el centroide de su región (países).
+  // Position: by the datum's own coordinates (stores) or by its region's centroid (countries).
   type Source = { id: string; datum: TDatum; at: Point; coordinates: Point | null };
   const sources: Source[] = [];
   if (config.getCoordinates !== undefined) {
@@ -255,7 +255,7 @@ const resolveBubbles = <TDatum>(
       datum: s.datum,
       coordinates: s.coordinates,
     }))
-    // Las grandes primero: las pequeñas se dibujan encima y no quedan tapadas.
+    // The big ones first: the small ones are drawn on top and are not covered.
     .sort((a, b) => b.r - a.r);
 
   return {
@@ -267,7 +267,7 @@ const resolveBubbles = <TDatum>(
       colorScale === null
         ? []
         : buildLegend({ scale: colorScale, values: colorValues, formatValue, emptyLabel }),
-    // Las burbujas llevan el color, no las regiones: aquí no hay clase por región.
+    // The bubbles carry the color, not the regions: there is no per-region class here.
     classes: entries.map(() => null),
     bubbles,
     sizeLegend: buildSizeLegend({ scale: radius, formatValue }),

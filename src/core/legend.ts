@@ -3,31 +3,31 @@ import type { ColorScale } from "./scales";
 export type LegendItem = {
   color: string;
   label: string;
-  /** Límite inferior de la clase (incluido). Ausente en el item de "sin dato". */
+  /** Lower bound of the class (inclusive). Absent on the "no data" item. */
   from?: number;
-  /** Límite superior de la clase (excluido, salvo en la última clase). */
+  /** Upper bound of the class (exclusive, except on the last class). */
   to?: number;
-  /** Nº de regiones en esa clase. */
+  /** Number of regions in that class. */
   count: number;
-  /** Es el item de «sin dato» (no es una clase: no tiene índice de clase). */
+  /** It is the "no data" item (not a class: it has no class index). */
   empty?: true;
 };
 
 export type BuildLegendOptions = {
   scale: ColorScale;
-  /** Un valor por región. Los mismos que se usaron para crear la escala. `null`/`NaN` = sin dato. */
+  /** One value per region. The same ones used to create the scale. `null`/`NaN` = no data. */
   values: readonly (number | null | undefined)[];
   formatValue?: (value: number) => string;
-  /** Si se pasa, se añade al final un item de "sin dato" con este texto y el `emptyFill` de la escala. */
+  /** If given, a "no data" item with this text and the scale's `emptyFill` is appended at the end. */
   emptyLabel?: string;
 };
 
 export const defaultFormatValue = (value: number): string =>
   Number.isInteger(value) ? String(value) : String(Number(value.toFixed(2)));
 
-// Índice de clase = nº de cortes <= valor. Un valor justo en un corte cae en la clase de ARRIBA,
-// igual que d3.scaleThreshold; si difiriera, la leyenda contaría regiones en una clase y el mapa
-// las pintaría de otro color.
+// Class index = number of breaks <= value. A value exactly on a break falls in the class ABOVE,
+// like d3.scaleThreshold; if it differed, the legend would count regions in one class and the map
+// would paint them another color.
 export const classIndex = (thresholds: readonly number[], value: number): number => {
   let lo = 0;
   let hi = thresholds.length;
@@ -40,10 +40,10 @@ export const classIndex = (thresholds: readonly number[], value: number): number
 };
 
 /**
- * Convierte la escala en items de leyenda reutilizando SUS cortes y colores (no recalcula nada),
- * y cuenta cuántas regiones caen en cada clase.
+ * Turns the scale into legend items reusing ITS breaks and colors (nothing is recomputed), and
+ * counts how many regions fall in each class.
  *
- * Escala continua (`linear`): no hay clases, devuelve [] (se dibuja como degradado con `scale.domain`).
+ * Continuous scale (`linear`): there are no classes, it returns [] (drawn as a gradient with `scale.domain`).
  */
 export const buildLegend = (options: BuildLegendOptions): LegendItem[] => {
   const { scale, values, emptyLabel } = options;

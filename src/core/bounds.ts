@@ -6,11 +6,11 @@ import type { Point } from "./variants";
 
 export type GetFocusGeometryParams = {
   feature: Feature;
-  /** `geoPath` ya proyectado: las áreas y distancias se miden en píxeles, no en grados. */
+  /** An already-projected `geoPath`: areas and distances are measured in pixels, not degrees. */
   path: GeoPath;
   /**
-   * Un polígono cuenta como «del cuerpo principal» si el centro de sus límites está a menos de
-   * `near × diagonal(principal)` del centro del principal. Por defecto 0,5.
+   * A polygon counts as part of the "main body" if the center of its bounds is closer than
+   * `near × diagonal(main)` to the center of the main polygon. Defaults to 0.5.
    */
   near?: number;
 };
@@ -24,15 +24,15 @@ const polygonsOf = (geometry: Geometry): Polygon[] | null => {
 };
 
 /**
- * La sub-geometría «principal» de una feature: el polígono de mayor área proyectada más los que
- * están cerca de él (Mallorca, Córcega o Sicilia sí; Guayana, Hawái o Canarias no).
+ * The "main" sub-geometry of a feature: the polygon with the largest projected area plus the ones
+ * close to it (Mallorca, Corsica or Sicily yes; Guyana, Hawaii or the Canary Islands no).
  *
- * Por qué existe (dd.md §11.1.5): `geoPath.bounds` / `centroid` de la feature entera incluyen los
- * territorios lejanos. Hacer zoom a «Francia» enseñaría medio Atlántico, y su burbuja caería en el
- * golfo de Vizcaya. Se usa para encuadrar y para anclar burbujas y etiquetas.
+ * Why it exists (dd.md §11.1.5): `geoPath.bounds` / `centroid` of the whole feature include the
+ * distant territories. Zooming to "France" would show half the Atlantic, and its bubble would land
+ * in the Bay of Biscay. It is used to frame the view and to anchor bubbles and labels.
  *
- * Devuelve `null` si la feature no tiene geometría. Las geometrías que no son polígonos y los
- * polígonos sueltos se devuelven tal cual.
+ * Returns `null` if the feature has no geometry. Non-polygon geometries and lone polygons are
+ * returned as they are.
  */
 export const getFocusGeometry = ({
   feature,
@@ -54,7 +54,7 @@ export const getFocusGeometry = ({
       diagonal: Math.hypot(x1 - x0, y1 - y0),
     };
   });
-  // Un polígono que no se puede medir (fuera de la proyección) no puede ser el principal.
+  // A polygon that cannot be measured (outside the projection) cannot be the main one.
   const usable = measured.filter((m) => Number.isFinite(m.area) && Number.isFinite(m.cx));
   const main = usable.reduce<(typeof usable)[number] | undefined>(
     (best, m) => (best === undefined || m.area > best.area ? m : best),
@@ -81,12 +81,12 @@ const ringArea = (ring: readonly Point[]): number => {
 };
 
 /**
- * Punto de anclaje de burbujas y etiquetas: el «polo de inaccesibilidad» (`polylabel`) del polígono
- * proyectado más grande de `geometry`, es decir, el punto interior más alejado del borde. A
- * diferencia del centroide, siempre cae DENTRO del polígono (Chile, Croacia, Francia).
+ * Anchor point for bubbles and labels: the "pole of inaccessibility" (`polylabel`) of the largest
+ * projected polygon of `geometry`, i.e. the interior point farthest from the edge. Unlike the
+ * centroid, it always falls INSIDE the polygon (Chile, Croatia, France).
  *
- * `project` convierte [lon, lat] en [x, y] de píxeles y devuelve `null` si no puede. `precision`
- * está en píxeles. Devuelve `null` si no hay ningún polígono proyectable.
+ * `project` turns [lon, lat] into pixel [x, y] and returns `null` if it cannot. `precision` is in
+ * pixels. Returns `null` if there is no projectable polygon.
  */
 export const getAnchorPoint = ({
   geometry,
@@ -127,32 +127,33 @@ export const getAnchorPoint = ({
 
 export type Padding = { top: number; right: number; bottom: number; left: number };
 
-/** Margen por defecto al encajar y al volar a una región, en px (dd.md §11.1.1). */
+/** Default padding when fitting and when flying to a region, in px (dd.md §11.1.1). */
 export const DEFAULT_PADDING = 24;
 
-/** `number` = el mismo margen en los cuatro lados. */
+/** `number` = the same padding on all four sides. */
 export const normalizePadding = (padding: number | Padding = DEFAULT_PADDING): Padding =>
   typeof padding === "number"
     ? { top: padding, right: padding, bottom: padding, left: padding }
     : padding;
 
 export type BoundsToTransformParams = {
-  /** Lo que hay que encajar, en píxeles del lienzo: [[x0, y0], [x1, y1]]. */
+  /** What to fit, in canvas pixels: [[x0, y0], [x1, y1]]. */
   bounds: Extent;
-  /** La vista (el contenedor). */
+  /** The view (the container). */
   size: Size;
   padding?: number | Padding;
-  /** [mínimo, máximo] de `k`. Por defecto sin límites. */
+  /** [minimum, maximum] of `k`. Unbounded by default. */
   scaleExtent?: readonly [number, number];
 };
 
 /**
- * Cámara que encaja unos límites en la vista, con margen en píxeles (dd.md §11.1.5). Es el destino
- * de «zoom a un país» y del encuadre inicial. Respeta `scaleExtent`: si el país es tan pequeño que
- * haría falta más zoom del permitido, se queda en el máximo (y el país queda centrado).
+ * Camera that fits some bounds into the view, with padding in pixels (dd.md §11.1.5). It is the
+ * target of "zoom to a country" and of the initial framing. It honors `scaleExtent`: if the country
+ * is so small that more zoom than allowed would be needed, it stays at the maximum (and the country
+ * is centered).
  *
- * Límites degenerados (un punto): `k` sube hasta el máximo en vez de dar `Infinity`. Si el margen
- * se come toda la vista, `k` baja al mínimo.
+ * Degenerate bounds (a single point): `k` rises up to the maximum instead of producing `Infinity`. If
+ * the padding eats the whole view, `k` drops to the minimum.
  */
 export const boundsToTransform = ({
   bounds,
@@ -173,23 +174,22 @@ export const boundsToTransform = ({
   };
 };
 
-/** Límites geográficos [[lonO, latS], [lonE, latN]]. Si `lonE < lonO`, cruzan el antimeridiano. */
+/** Geographic bounds [[lonW, latS], [lonE, latN]]. If `lonE < lonW`, they cross the antimeridian. */
 export type LonLatBounds = readonly [Point, Point];
 
-/** Puntos por lado con los que se muestrea un rectángulo geográfico al proyectarlo. */
+/** Points per side used to sample a geographic rectangle when projecting it. */
 const EDGE_SAMPLES = 9;
 
 /**
- * Rectángulo geográfico → rectángulo en píxeles que lo contiene. Un rectángulo de lon/lat NO es un
- * rectángulo en pantalla (los paralelos se curvan en Equal Earth, el globo se estrecha en los
- * polos), así que se proyectan puntos a lo largo de sus cuatro lados y se toma el mínimo que los
- * contiene. Los puntos que la proyección no sabe proyectar se descartan; si no queda ninguno,
- * devuelve `null`.
+ * Geographic rectangle → pixel rectangle that contains it. A lon/lat rectangle is NOT a rectangle on
+ * screen (parallels curve in Equal Earth, the globe narrows at the poles), so points are projected
+ * along its four sides and the minimum box containing them is taken. Points the projection cannot
+ * project are discarded; if none remain, it returns `null`.
  *
- * Si `lonE < lonO` el rectángulo cruza el antimeridiano (Fiyi, el Pacífico). En un mapa plano esa
- * región aparece partida en los dos bordes y **no existe un rectángulo que contenga las dos mitades**
- * (saldría un caja del ancho del mundo entero): se encuadra la mitad más ancha, igual que
- * `getFocusGeometry` se queda con el cuerpo principal.
+ * If `lonE < lonW` the rectangle crosses the antimeridian (Fiji, the Pacific). On a flat map that
+ * region appears split across both edges and **no rectangle contains both halves** (it would give a
+ * box as wide as the whole world): the wider half is framed, just as `getFocusGeometry` keeps the
+ * main body.
  */
 export const projectBounds = (
   bounds: LonLatBounds,
@@ -228,20 +228,20 @@ export const projectBounds = (
 };
 
 export type GetFocusExtentParams = GetFocusGeometryParams & {
-  /** [lon, lat] → píxeles del lienzo; `null` si no proyecta. */
+  /** [lon, lat] → canvas pixels; `null` if it does not project. */
   project: (coordinates: Point) => Point | null;
 };
 
 /**
- * Límites en píxeles del cuerpo principal de una región: lo que se encuadra al volar a ella
- * (dd.md §11.1.5). Es `getFocusGeometry` + sus límites proyectados, con un caso aparte:
+ * Pixel bounds of a region's main body: what gets framed when flying to it (dd.md §11.1.5). It is
+ * `getFocusGeometry` + its projected bounds, with one special case:
  *
- * **Antimeridiano.** El polígono principal de Rusia (y el de Fiyi o Alaska) cruza la línea ±180° sin
- * partirse, y `path.bounds` mide las dos mitades: el encuadre abarcaría el mapa de borde a borde, con
- * Chukotka asomando por el lado contrario. Se detecta con `geoBounds` (que devuelve `oeste > este`
- * cuando se cruza) y se encuadra la mitad más ancha (`projectBounds`).
+ * **Antimeridian.** The main polygon of Russia (and Fiji's or Alaska's) crosses the ±180° line
+ * without being split, and `path.bounds` measures both halves: the framing would span the map from
+ * edge to edge, with Chukotka poking out on the opposite side. It is detected with `geoBounds` (which
+ * returns `west > east` when crossing) and the wider half is framed (`projectBounds`).
  *
- * Devuelve `null` si la feature no tiene geometría o sus límites no son finitos.
+ * Returns `null` if the feature has no geometry or its bounds are not finite.
  */
 export const getFocusExtent = ({
   feature,
