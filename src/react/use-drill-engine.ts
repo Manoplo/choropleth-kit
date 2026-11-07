@@ -70,7 +70,12 @@ export type DrillEngineParams<TDatum> = {
 };
 
 /** Lo que se dibujó antes del último cambio de nivel: las capas que salen (`exiting`) lo necesitan. */
-export type DrillPrevious = { path: readonly string[]; chain: readonly ChainLevel[] };
+export type DrillPrevious = {
+  path: readonly string[];
+  chain: readonly ChainLevel[];
+  /** Color con el que estaba pintada cada región: la capa que sale se desvanece CON su color, no en gris. */
+  fills: ReadonlyMap<string, string>;
+};
 
 export type DrillEngine<TDatum> = {
   /** `false` sin prop `drill`: el hook se comporta como siempre. */
@@ -109,6 +114,8 @@ export type DrillEngine<TDatum> = {
   dispatch: Dispatch<DrillMachineEvent>;
   /** Lo que se mostraba antes del último cambio (para dibujar la capa que sale). */
   previous: DrillPrevious | null;
+  /** Anota los colores de lo que se está mostrando; se leen al cambiar de nivel (`previous.fills`). */
+  rememberFills: (fills: ReadonlyMap<string, string>) => void;
   /** La cadena de niveles de una ruta (para calcular a dónde vuela la cámara); `null` si faltan. */
   chainLevelsFor: (path: readonly string[]) => ChainLevel[] | null;
 };
@@ -338,7 +345,14 @@ export const useDrillEngine = <TDatum>({
     data: undefined as readonly TDatum[] | undefined,
     path: shownPath,
     chain: [] as readonly ChainLevel[],
+    fills: new Map<string, string>() as ReadonlyMap<string, string>,
   }));
+  const rememberFills = useCallback(
+    (fills: ReadonlyMap<string, string>) => {
+      latest.fills = fills;
+    },
+    [latest],
+  );
 
   // Las colecciones son estables por construcción (cachés de arriba): su identidad, resumida en una
   // cadena, dice si `chain` cambió. (No se puede pasar un número variable de dependencias a `useMemo`.)
@@ -355,7 +369,7 @@ export const useDrillEngine = <TDatum>({
   const [previous, setPrevious] = useState<DrillPrevious | null>(null);
   if (!samePath(seen, shownPath)) {
     setSeen(shownPath);
-    setPrevious({ path: latest.path, chain: latest.chain });
+    setPrevious({ path: latest.path, chain: latest.chain, fills: latest.fills });
   }
   useEffect(() => {
     latest.path = shownPath;
@@ -538,6 +552,7 @@ export const useDrillEngine = <TDatum>({
     machine,
     dispatch,
     previous,
+    rememberFills,
     chainLevelsFor,
   };
 };

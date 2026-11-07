@@ -4,6 +4,8 @@ export type {
   FallbackPoint,
   JoinReport,
   DrillLayerView,
+  DrillNav,
+  DrillNavItem,
   Region,
   PointProps,
   RegionProps,
@@ -44,6 +46,8 @@ export { useContainerSize } from "./use-container-size";
 export type { ContainerSize, UseContainerSizeOptions } from "./use-container-size";
 export { Choropleth } from "./choropleth";
 export { Borders } from "./components/borders";
+export { Breadcrumb } from "./components/breadcrumb";
+export type { BreadcrumbProps, BreadcrumbRenderContext } from "./components/breadcrumb";
 export { Bubbles } from "./components/bubbles";
 export { DrillLayers } from "./components/drill-layers";
 export { FallbackPoints } from "./components/fallback-points";

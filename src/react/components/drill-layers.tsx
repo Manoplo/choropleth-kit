@@ -51,6 +51,8 @@ export const DrillLayers = ({ role }: { role: "context" | "exiting" }) => {
                 data-context-id={path.id}
                 data-focus={path.focus ? "" : undefined}
                 data-drillable={path.drillable ? "" : undefined}
+                // Al salir conserva su color de dato (solo `exiting`); el contexto lo da el CSS, en gris.
+                style={path.fill === undefined ? undefined : { fill: path.fill }}
               />
             ))}
           </g>

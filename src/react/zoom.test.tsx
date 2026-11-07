@@ -299,11 +299,43 @@ describe("arrastre (pan) y clic", () => {
     expect(onItemClick).not.toHaveBeenCalled();
   });
 
-  it("durante el arrastre está `data-interacting`, y al soltar se quita", () => {
+  it("pulsar NO marca `data-interacting`: si quitara los eventos a las regiones, el `click` caería en el <svg>", () => {
+    // Regresión (solo se veía en un navegador real): d3-zoom emite `start` en el `mousedown`. Si ahí se marca
+    // `interacting`, el CSS pone `pointer-events: none` en las regiones, el `mouseup` aterriza en el <svg> y el
+    // `click` nunca llega a la región: ningún clic funcionaba.
     const { svg, root } = setup();
     mouse("mouseDown", svg, { clientX: 100, clientY: 50, button: 0 });
-    expect(root.hasAttribute("data-interacting")).toBe(true);
+    expect(root.hasAttribute("data-interacting")).toBe(false);
     mouse("mouseUp", window, { clientX: 100, clientY: 50 });
+    expect(root.hasAttribute("data-interacting")).toBe(false);
+  });
+
+  it("un temblor de 3 px (por debajo del umbral de clic) tampoco lo marca", () => {
+    const { svg, root } = setup();
+    mouse("mouseDown", svg, { clientX: 100, clientY: 50, button: 0 });
+    mouse("mouseMove", window, { clientX: 102, clientY: 52 });
+
+    expect(root.hasAttribute("data-interacting")).toBe(false);
+    mouse("mouseUp", window, { clientX: 102, clientY: 52 });
+  });
+
+  it("al ARRASTRAR de verdad (más de 4 px) sí está `data-interacting`, y al soltar se quita", () => {
+    const { svg, root } = setup({ zoom: { max: 4 } });
+    wheel(svg, { deltaY: -2000 }); // con k = 1 y `contain` no hay nada que arrastrar
+    endWheel();
+    mouse("mouseDown", svg, { clientX: 100, clientY: 50, button: 0 });
+    mouse("mouseMove", window, { clientX: 130, clientY: 50 });
+    expect(root.hasAttribute("data-interacting")).toBe(true);
+    mouse("mouseUp", window, { clientX: 130, clientY: 50 });
+    expect(root.hasAttribute("data-interacting")).toBe(false);
+  });
+
+  it("la rueda marca `data-interacting` en cuanto hay zoom", () => {
+    const { svg, root } = setup();
+    wheel(svg);
+
+    expect(root.hasAttribute("data-interacting")).toBe(true);
+    endWheel();
     expect(root.hasAttribute("data-interacting")).toBe(false);
   });
 

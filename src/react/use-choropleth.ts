@@ -100,7 +100,33 @@ export type DrillLayerView = {
   role: "context" | "exiting";
   depth: number;
   transform: CameraTransform;
-  paths: { id: string | undefined; d: string; focus: boolean; drillable: boolean }[];
+  paths: {
+    id: string | undefined;
+    d: string;
+    focus: boolean;
+    drillable: boolean;
+    /** Solo en `exiting`: el color que tenía la región (se desvanece con él). */
+    fill: string | undefined;
+  }[];
+};
+
+/** Una miga de la ruta del drill (dd.md §11.2.5). */
+export type DrillNavItem = {
+  depth: number;
+  /** `null` en la raíz. */
+  id: string | null;
+  label: string;
+  /** La última: el nivel al que se va (o en el que se está). */
+  current: boolean;
+};
+
+/** Lo que necesita un breadcrumb (el del preset o el tuyo). `null` sin `drill`. */
+export type DrillNav = {
+  items: DrillNavItem[];
+  canDrillUp: boolean;
+  /** Va a la miga de esa profundidad (0 = raíz). */
+  drillTo: (depth: number) => void;
+  drillUp: (steps?: number) => void;
 };
 
 export type JoinReport = Omit<JoinResult<unknown>, "joined">;
@@ -247,6 +273,8 @@ export type UseChoroplethResult<TDatum> = {
   drillLayers: DrillLayerView[];
   /** Clic en una región de una capa de contexto (navegación lateral o salto). */
   selectContextItem: (depth: number, id: string) => void;
+  /** Migas y navegación del drill (`null` sin `drill`). */
+  drillNav: DrillNav | null;
   /** `loading` mientras llega la geometría asíncrona; `error` si falló. */
   status: GeographyStatus;
   /** `true` mientras `data` es `undefined` (o `loading`): se mantiene el último dato. */
@@ -559,7 +587,9 @@ export const useChoropleth = <TDatum>(
             level: { id: level?.id ?? ROOT_LEVEL.id, depth: layer.depth },
             drillable: true,
           });
-        return [{ id, d, focus: id !== undefined && id === focusId, drillable }];
+        const fill =
+          layer.role === "exiting" && id !== undefined ? previous?.fills.get(id) : undefined;
+        return [{ id, d, focus: id !== undefined && id === focusId, drillable, fill }];
       });
       views.push({
         key: layer.key,
@@ -573,6 +603,44 @@ export const useChoropleth = <TDatum>(
     // `layersKey` resume `machine.layers`; el resto cambia solo al cambiar de nivel o de tamaño.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [engine.active, chain, previousChain, previous, layersKey, engine.chainSig, contextMode]);
+
+  // Migas: la ruta PEDIDA (optimista), con el nombre real de cada región (`properties.name`) salvo que el
+  // consumidor haya dado su `getLabel`. Cada paso se busca en el nivel de arriba, que ya está cargado.
+  const controller = engine.controller;
+  const drillNav = useMemo<DrillNav | null>(() => {
+    if (!engine.active || controller === null) return null;
+    const rootLabel = engine.levels[0]?.label ?? labels.breadcrumbRoot;
+    const items = controller.breadcrumbs.map((crumb): DrillNavItem => {
+      let label = crumb.label;
+      if (crumb.id === null) label = rootLabel;
+      else if (crumb.label === crumb.id) {
+        const parent = engine.chain[crumb.depth - 1];
+        const feature = parent?.features.find((f) => parent.idOf(f) === crumb.id);
+        label = (feature === undefined ? undefined : nameOf(feature)) ?? crumb.id;
+      }
+      return {
+        depth: crumb.depth,
+        id: crumb.id,
+        label,
+        current: crumb.depth === controller.path.length,
+      };
+    });
+    return {
+      items,
+      canDrillUp: controller.canDrillUp,
+      drillTo: (depth) => controller.drillTo(controller.path.slice(0, depth)),
+      drillUp: (steps) => controller.drillUp(steps),
+    };
+    // `engine.chain` cambia solo con `chainSig`; `labels` es un objeto nuevo por render: se resume en el texto.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    engine.active,
+    controller,
+    controller?.path,
+    engine.chainSig,
+    engine.levels,
+    labels.breadcrumbRoot,
+  ]);
 
   /** La región hacia la que se baja (se atenúa el resto; si tarda, «respira»). */
   const drillFocusId =
@@ -815,6 +883,14 @@ export const useChoropleth = <TDatum>(
   // ── interacción ───────────────────────────────────────────────────────────────────────────────
   const { onItemClick, onItemHover } = options;
 
+  // Los colores de lo que se muestra, para que la capa que SALE al cambiar de nivel se desvanezca con su color.
+  // Se anotan tras cada commit y se leen en el render en que cambia el nivel.
+  const { rememberFills } = engine;
+  const drillActive = engine.active;
+  useEffect(() => {
+    if (drillActive) rememberFills(new Map(regions.map((region) => [region.id, region.fill])));
+  });
+
   const regionsById = new Map(regions.map((region) => [region.id, region]));
   const featuresById = new Map<string, Feature>();
   features.features.forEach((feature) => {
@@ -941,7 +1017,9 @@ export const useChoropleth = <TDatum>(
 
   // ── cámara: ZoomTarget → transform ────────────────────────────────────────────────────────────
   const zoomOptions = resolveZoomOptions(options.zoom, {
-    clickIsBusy: onItemClick !== undefined || selectable,
+    // Con `drill` el clic ya hace algo (bajar de nivel): el doble clic NO debe además hacer zoom ×2, o el
+    // segundo clic interrumpiría el vuelo del drill y se quedaría en un simple zoom (dd.md §11.1.2).
+    clickIsBusy: onItemClick !== undefined || selectable || engine.active,
   });
   const focusBounds = { ...DEFAULT_FOCUS_BOUNDS, ...options.focusBounds };
 
@@ -986,6 +1064,7 @@ export const useChoropleth = <TDatum>(
     drillPhase: engine.active ? machine.phase : null,
     drillFocusId,
     drillLayers,
+    drillNav,
     selectContextItem: (depth: number, id: string) => {
       // Un item de una capa de contexto: ir a ese hermano (lateral si es el nivel justo encima, si no, salto).
       engine.controller?.drillTo([...engine.shownPath.slice(0, depth), id]);

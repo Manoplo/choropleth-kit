@@ -1,4 +1,4 @@
-import { act, fireEvent, render, waitFor } from "@testing-library/react";
+import { act, createEvent, fireEvent, render, waitFor } from "@testing-library/react";
 import type { Feature, FeatureCollection } from "geojson";
 import type { DrillContext } from "../core";
 import { Choropleth } from "./choropleth";
@@ -275,6 +275,21 @@ describe("subir", () => {
     ).toEqual(["A1", "A2"]);
   });
 
+  it("la capa que sale se desvanece CON el color que tenía (no en gris)", async () => {
+    const utils = mount();
+    await down(utils);
+    const fills = ["A1", "A2"].map((id) => utils.path(id).getAttribute("style"));
+    expect(fills[0]).not.toBe(fills[1]); // dos colores distintos de verdad
+    act(() => utils.handle.controller?.drillUp());
+    await waitFor(() => expect(utils.layers("exiting")).toHaveLength(1), TIMEOUT);
+
+    const [exiting] = utils.layers("exiting");
+    const leaving = ["A1", "A2"].map((id) =>
+      exiting?.querySelector(`[data-context-id="${id}"]`)?.getAttribute("style"),
+    );
+    expect(leaving).toEqual(fills);
+  });
+
   it("al empezar a subir la cámara reproduce lo que se veía (R), no el encaje: sin salto", async () => {
     const utils = mount();
     await down(utils);
@@ -468,6 +483,74 @@ describe("interrumpir y redirigir", () => {
 
     expect([...seen]).toEqual(["A,B,C"]);
     expect(utils.handle.controller?.path).toEqual([]);
+  });
+});
+
+// d3-zoom engancha `mousemove`/`mouseup` a `event.view`; jsdom no deja pasarlo en el constructor.
+const mouse = (type: "mouseDown" | "mouseUp", target: Element | Window, init: MouseEventInit) => {
+  const event = createEvent[type](target, init);
+  Object.defineProperty(event, "view", { value: window });
+  return fireEvent(target, event);
+};
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Un clic como lo manda un navegador: `mousedown`, una pausa, `mouseup` y `click`. */
+const realClick = async (target: Element, x = 40, y = 50) => {
+  mouse("mouseDown", target, { clientX: x, clientY: y, button: 0 });
+  await sleep(50);
+  mouse("mouseUp", window, { clientX: x, clientY: y });
+  fireEvent.click(target);
+};
+
+describe("clic y doble clic (eventos de ratón reales)", () => {
+  it("un clic baja de nivel", async () => {
+    const utils = mount();
+    await realClick(utils.path("A"));
+
+    await waitFor(() => expect(utils.ids()).toEqual(["A1", "A2"]), TIMEOUT);
+  });
+
+  it("el doble clic NO hace zoom ×2 en el mapa: el clic ya hace drill", () => {
+    const utils = mount();
+    const before = utils.viewport().getAttribute("transform");
+    fireEvent.doubleClick(utils.container.querySelector("svg") as SVGSVGElement, {
+      clientX: 100,
+      clientY: 50,
+    });
+
+    expect(utils.viewport().getAttribute("transform")).toBe(before);
+  });
+
+  it("doble clic sobre una región: acaba en el nivel de abajo, sin zoom suelto ni drill doble", async () => {
+    const onDrill = vi.fn<(e: DrillEvent<Row>) => void>();
+    const utils = mount({ onDrill });
+    const svg = utils.container.querySelector("svg") as SVGSVGElement;
+    await realClick(utils.path("A"));
+    await sleep(120);
+    await realClick(utils.path("A")); // el segundo clic cae sobre la región a la que se vuela
+    fireEvent.doubleClick(svg, { clientX: 40, clientY: 50 });
+
+    await waitFor(() => expect(utils.ids()).toEqual(["A1", "A2"]), TIMEOUT);
+    await waitFor(() => expect(utils.phase()).toBeNull(), TIMEOUT);
+    expect(parseTransform(utils.viewport().getAttribute("transform"))).toEqual({
+      x: 0,
+      y: 0,
+      k: 1,
+    });
+    // Pulsar la región de destino NO interrumpe el vuelo: un solo `onDrill` (no «down, up, down»).
+    expect(onDrill).toHaveBeenCalledTimes(1);
+    expect(onDrill.mock.calls[0]?.[0].direction).toBe("down");
+  });
+
+  it("pulsar OTRA región durante el vuelo sí interrumpe y redirige", async () => {
+    const utils = mount();
+    await realClick(utils.path("A"));
+    await waitFor(() => expect(utils.phase()).toBe("flying"), TIMEOUT);
+    await realClick(utils.path("B"));
+
+    await waitFor(() => expect(utils.ids()).toEqual(["B1", "B2"]), TIMEOUT);
+    await waitFor(() => expect(utils.phase()).toBeNull(), TIMEOUT);
+    expect(utils.handle.controller?.path).toEqual(["B"]);
   });
 });
 

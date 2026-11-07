@@ -62,6 +62,21 @@ export type UseZoomParams = {
 /** Duración de los botones `+` / `−` (dd.md §11.1.2). */
 const BUTTON_ZOOM_MS = 300;
 
+/**
+ * ¿Es un clic o un toque sobre la región a la que vuela un drill en curso? (`data-drill-phase` y
+ * `data-drill-target` los publican `Root` y `Regions`.)
+ */
+const isPressOnDrillTarget = (event: Event, root: HTMLElement): boolean => {
+  if (event.type !== "mousedown" && event.type !== "touchstart") return false;
+  const phase = root.getAttribute("data-drill-phase");
+  if (phase !== "flying" && phase !== "loading") return false;
+  const target = event.target;
+  return target instanceof Element && target.closest("[data-drill-target]") !== null;
+};
+
+/** Hasta cuántos píxeles se mueve el puntero y sigue siendo un clic (el `clickDistance` de d3-zoom). */
+const CLICK_DISTANCE_PX = 4;
+
 /** Por encima de esta `k` se considera que el mapa está «ampliado» (y por tanto arrastrable). */
 const ZOOMED_EPSILON = 1.001;
 
@@ -141,6 +156,8 @@ export const useZoom = ({
     // hasta que termina).
     let samples: CameraSample[] = [];
     let glide: { frame: number } | null = null;
+    // El gesto de usuario en curso: dónde empezó, y si ya se ha movido más que un clic.
+    let gesture = { k: 1, x: 0, y: 0, moving: false };
     const commit = (transform: ZoomTransform, notify: boolean) => {
       const camera = { k: transform.k, x: transform.x, y: transform.y };
       store.setState({ camera, interacting: false });
@@ -161,6 +178,14 @@ export const useZoom = ({
       commit(zoomTransform(svg), true);
     };
 
+    const baseFilter = createZoomFilter({
+      wheel,
+      pinch,
+      pan,
+      doubleClick,
+      onGestureHint: (kind) => store.showGestureHint(kind),
+    }) as (event: Event) => boolean;
+
     const behavior = zoom<SVGSVGElement, unknown>()
       .extent([
         [0, 0],
@@ -168,22 +193,30 @@ export const useZoom = ({
       ])
       .scaleExtent([min, max])
       // `clickDistance` por defecto es 0: cualquier micro-temblor del ratón se come el clic.
-      .clickDistance(4)
-      .filter(
-        createZoomFilter({
-          wheel,
-          pinch,
-          pan,
-          doubleClick,
-          onGestureHint: (kind) => store.showGestureHint(kind),
-        }) as (event: Event) => boolean,
-      )
-      .on("start", (event: { sourceEvent: Event | null }) => {
+      .clickDistance(CLICK_DISTANCE_PX)
+      .filter((event: Event) => {
+        // Pulsar la región a la que SE ESTÁ VOLANDO (un drill en curso) no interrumpe el vuelo: d3-zoom
+        // interrumpe en el `mousedown`/`touchstart`, antes de saber si es un arrastre o un simple clic, así
+        // que un doble clic sobre la región cancelaría y reiniciaría el drill (parpadeo y `onDrill` doble).
+        // La rueda, un arrastre en otro sitio o un toque fuera siguen cortándolo.
+        if (isPressOnDrillTarget(event, root)) return false;
+        return baseFilter(event);
+      })
+      .on("start", (event: { sourceEvent: Event | null; transform: ZoomTransform }) => {
         // Solo gestos del usuario; un vuelo programático (`sourceEvent === null`) no «interactúa».
         if (event.sourceEvent === null) return;
         stopGlide(); // agarrar el mapa frena la inercia
         samples = [];
-        store.setState({ interacting: true });
+        // NO se marca `interacting` aquí. d3-zoom emite `start` en el `mousedown`, y `interacting` quita los
+        // eventos de puntero a las regiones (CSS): el `mouseup` caería en el <svg> y el navegador mandaría el
+        // `click` al <svg>, no a la región, así que NINGÚN clic llegaría a las regiones. Se marca en cuanto el
+        // gesto se mueve de verdad (ver `zoom`), que es cuando ya no es un clic.
+        gesture = {
+          k: event.transform.k,
+          x: event.transform.x,
+          y: event.transform.y,
+          moving: false,
+        };
       })
       .on(
         "zoom",
@@ -195,6 +228,17 @@ export const useZoom = ({
             "--cm-bubble-scale",
             String(bubbleScale(transform.k, bubbleScaling)),
           );
+          if (sourceEvent !== null && !gesture.moving) {
+            // La rueda y el pellizco cambian `k`; un arrastre cuenta cuando pasa del umbral de clic.
+            const moved =
+              sourceEvent.type === "wheel" ||
+              transform.k !== gesture.k ||
+              Math.hypot(transform.x - gesture.x, transform.y - gesture.y) > CLICK_DISTANCE_PX;
+            if (moved) {
+              gesture.moving = true;
+              store.setState({ interacting: true });
+            }
+          }
           if (sourceEvent !== null) {
             samples.push({
               time: performance.now(),

@@ -36,6 +36,10 @@
   --cm-drill-dim-opacity: 0.35;
   --cm-reveal-duration: 200ms;
   --cm-reveal-stagger: 250ms;
+  --cm-breadcrumb-bg: #ffffff;
+  --cm-breadcrumb-color: #111111;
+  --cm-breadcrumb-muted: #6b7280;
+  --cm-breadcrumb-border: #cccccc;
   --cm-font-family: inherit;
   --cm-font-size: 12px;
   --cm-tooltip-bg: #ffffff;
@@ -431,4 +435,58 @@
   .cm-root:not([data-unstyled]) .cm-layer[data-role="exiting"] {
     display: none;
   }
+}
+
+/* ── breadcrumb ───────────────────────────────────────────────────────────────────────────── */
+
+.cm-root:not([data-unstyled]) .cm-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: calc(100% - 24px);
+  padding: 2px 6px;
+  border: 1px solid var(--cm-breadcrumb-border);
+  border-radius: 6px;
+  background: var(--cm-breadcrumb-bg);
+  color: var(--cm-breadcrumb-color);
+  font-family: var(--cm-font-family);
+  font-size: var(--cm-font-size);
+}
+.cm-root:not([data-unstyled]) .cm-breadcrumb__list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* El separador es decoración: va por CSS para que un lector de pantalla no lo lea. */
+.cm-root:not([data-unstyled]) .cm-breadcrumb__item + .cm-breadcrumb__item::before {
+  content: "›";
+  padding: 0 4px;
+  color: var(--cm-breadcrumb-muted);
+}
+.cm-root:not([data-unstyled]) .cm-breadcrumb button {
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.cm-root:not([data-unstyled]) .cm-breadcrumb button:hover {
+  background: rgb(0 0 0 / 0.06);
+}
+.cm-root:not([data-unstyled]) .cm-breadcrumb button:focus-visible {
+  outline: 2px solid var(--cm-focus-ring);
+}
+.cm-root:not([data-unstyled]) .cm-breadcrumb__current {
+  padding: 2px 4px;
+  font-weight: 600;
+}
+.cm-root:not([data-unstyled]) .cm-tooltip__hint {
+  margin-top: 2px;
+  color: var(--cm-breadcrumb-muted);
+  font-size: 0.9em;
 }

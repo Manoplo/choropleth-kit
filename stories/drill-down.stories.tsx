@@ -19,7 +19,8 @@ type Row = {
 };
 
 const features = toFeatureCollection({ geography: world110m, objectName: "countries" }).features;
-const ids = features.flatMap((f) => (f.id === undefined ? [] : [String(f.id)]));
+// Sin la Antártida: el nivel raíz la filtra y sus datos darían un aviso de «sin cruzar».
+const ids = features.flatMap((f) => (f.id === undefined || f.id === "AQ" ? [] : [String(f.id)]));
 
 /** Países con tiendas (los demás no son navegables: un clic los selecciona). */
 const WITH_STORES = ["ES", "FR", "DE", "IT", "GB", "US", "BR", "JP", "AU", "ZA", "IN", "MX"];
@@ -103,23 +104,13 @@ const describe = (e: DrillEvent<Row>) =>
 const Uncontrolled = () => {
   const [lines, setLines] = useState<string[]>([]);
   const push = (line: string) => setLines((prev) => [...prev.slice(-5), line]);
-  // `useDrillDown` sin `path` es no controlado; se usa aquí solo para tener un botón «Subir» (el breadcrumb y
-  // Escape llegan en el paso siguiente). `drill={levels}` a secas también funciona.
-  const drill = useDrillDown<Row>({ levels });
+  // Ejemplo A de dd.md §11.2.2 tal cual: `drill={levels}` y listo. Las migas, «←», Escape y Retroceso vienen
+  // incluidos en el preset.
   return (
     <div style={{ maxWidth: 1100, font: "13px sans-serif" }}>
-      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
-        <button disabled={!drill.canDrillUp} onClick={() => drill.drillUp()}>
-          ← Subir
-        </button>
-        <span>
-          {drill.breadcrumbs.map((crumb) => crumb.label).join(" › ")} · estado:{" "}
-          <b>{drill.status}</b>
-        </span>
-      </div>
       <ChoroplethMap<Row>
         {...common}
-        drill={drill}
+        drill={levels}
         data={select}
         onDrill={(e) => push(`onDrill     ${describe(e)}`)}
         onDrillEnd={(e) => push(`onDrillEnd  ${describe(e)}`)}
@@ -234,7 +225,7 @@ type Story = StoryObj<typeof meta>;
  * Mundo → país → tiendas, no controlado. Solo los 12 países con tiendas tienen cursor `zoom-in`. Al pulsar: el
  * resto se atenúa, la cámara VUELA al país y las tiendas aparecen en abanico desde el centro. Los demás países
  * quedan en gris (contexto) y los 12 con tiendas son pulsables (navegación lateral). Subir vuelve a la cámara
- * de antes de bajar.
+ * de antes de bajar. Migas arriba a la izquierda; «←», Escape y Retroceso suben.
  */
 export const UncontrolledStory: Story = { name: "Uncontrolled", render: () => <Uncontrolled /> };
 
