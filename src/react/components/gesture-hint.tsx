@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { cx } from "../class-names";
 import { useChoroplethContext } from "../choropleth-context";
 import { useMapStore } from "../map-store";
 import { useIsApplePlatform } from "../platform";
@@ -13,7 +14,7 @@ import { useIsApplePlatform } from "../platform";
  * aparece y se va con un fundido, y el texto no desaparece antes de que termine de apagarse.
  */
 export const GestureHint = ({ className }: { className?: string }) => {
-  const { choropleth, store } = useChoroplethContext();
+  const { choropleth, store, classNames } = useChoroplethContext();
   const hint = useMapStore(store, (s) => s.gestureHint);
   const apple = useIsApplePlatform();
 
@@ -32,7 +33,7 @@ export const GestureHint = ({ className }: { className?: string }) => {
 
   return (
     <div
-      className={className === undefined ? "cm-gesture-hint" : `cm-gesture-hint ${className}`}
+      className={cx("cm-gesture-hint", classNames.gestureHint, className)}
       aria-hidden="true"
       data-visible={hint === null ? undefined : ""}
     >

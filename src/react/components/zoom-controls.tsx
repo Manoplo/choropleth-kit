@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { isFitTransform, type Corner } from "../../core";
+import { cx } from "../class-names";
 import { useChoroplethContext } from "../choropleth-context";
 import { useMapStore } from "../map-store";
 
@@ -36,7 +37,7 @@ export const ZoomControls = ({
   reset = true,
   className,
 }: ZoomControlsProps) => {
-  const { choropleth, store } = useChoroplethContext();
+  const { choropleth, store, classNames } = useChoroplethContext();
   const { zoom, labels } = choropleth;
   const camera = useMapStore(store, (s) => s.camera);
   if (zoom === null) return null;
@@ -46,12 +47,12 @@ export const ZoomControls = ({
 
   return (
     <div
-      className={className === undefined ? "cm-zoom-controls" : `cm-zoom-controls ${className}`}
+      className={cx("cm-zoom-controls", classNames.controls, className)}
       style={{ position: "absolute", ...CORNERS[position] }}
     >
       <button
         type="button"
-        className="cm-zoom-button"
+        className={cx("cm-zoom-button", classNames.controlButton)}
         aria-label={labels.zoomIn}
         disabled={atMax}
         onClick={() => void store.getZoom()?.zoomBy(STEP)}
@@ -60,7 +61,7 @@ export const ZoomControls = ({
       </button>
       <button
         type="button"
-        className="cm-zoom-button"
+        className={cx("cm-zoom-button", classNames.controlButton)}
         aria-label={labels.zoomOut}
         disabled={atMin}
         onClick={() => void store.getZoom()?.zoomBy(1 / STEP)}
@@ -70,7 +71,7 @@ export const ZoomControls = ({
       {reset && (
         <button
           type="button"
-          className="cm-zoom-button"
+          className={cx("cm-zoom-button", classNames.controlButton)}
           aria-label={labels.resetView}
           disabled={isFitTransform(camera)}
           onClick={() => void store.getZoom()?.resetView()}

@@ -7,6 +7,7 @@ export type {
   DrillNav,
   DrillNavItem,
   Region,
+  RegionStyle,
   PointProps,
   RegionProps,
   UseChoroplethOptions,
@@ -35,7 +36,10 @@ export type {
   RegionItem,
 } from "./map-item";
 export type { ChoroplethMapHandle } from "./handle";
-export { useChoroplethApi } from "./choropleth-context";
+export { useChoroplethApi, useDefId } from "./choropleth-context";
+export { Defs } from "./components/defs";
+export type { DefsProps } from "./components/defs";
+export { Patterns } from "./components/patterns";
 export { createMapStore, useMapStore } from "./map-store";
 export type { MapState, MapStore, PointerPosition, ZoomApi } from "./map-store";
 export { clearGeographyCache, useGeography } from "./use-geography";
@@ -69,3 +73,6 @@ export { ChoroplethMap } from "./choropleth-map";
 export type { ChoroplethMapProps, LegendOptions, LegendPosition } from "./choropleth-map";
 export type { CameraOptions, TransitionResult, ViewState, ZoomOptions, ZoomTarget } from "../core";
 export type { DrillContext } from "../core";
+export { THEMES, defineTheme, extendTheme, themeToCssVars } from "../core";
+export type { ChoroplethTheme, ThemeName } from "../core";
+export type { ChoroplethClassNames, ClassSlot } from "./class-names";

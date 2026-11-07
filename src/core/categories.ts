@@ -92,6 +92,6 @@ export const buildCategoricalLegend = ({
     count: counts.get(c.id) ?? 0,
   }));
   if (emptyLabel !== undefined)
-    items.push({ color: scale.emptyFill, label: emptyLabel, count: empty });
+    items.push({ color: scale.emptyFill, label: emptyLabel, count: empty, empty: true });
   return items;
 };

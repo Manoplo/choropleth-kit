@@ -45,7 +45,12 @@ describe("buildLegend", () => {
       emptyLabel: "Sin dato",
     });
 
-    expect(items.at(-1)).toEqual({ color: scale.emptyFill, label: "Sin dato", count: 3 });
+    expect(items.at(-1)).toEqual({
+      color: scale.emptyFill,
+      label: "Sin dato",
+      count: 3,
+      empty: true,
+    });
     expect(items[0]?.count).toBe(1);
   });
 

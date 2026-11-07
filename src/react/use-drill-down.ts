@@ -58,14 +58,17 @@ export type DrillController<TDatum> = {
   /** Lo escribe el mapa; mientras no hay mapa montado, `"idle"`. */
   status: DrillStatus;
   canDrillUp: boolean;
-  /** Baja un nivel al hijo `id`. Sin nivel por debajo no hace nada (y avisa en desarrollo). */
-  drillDown: (id: string) => void;
+  /**
+   * Baja un nivel al hijo `id`. Sin nivel por debajo no hace nada (y avisa en desarrollo). Devuelve la
+   * ruta que ha quedado pedida (ya recortada): el mapa la usa para saber a dónde espera llegar.
+   */
+  drillDown: (id: string) => readonly string[];
   /** Sube `steps` niveles (por defecto 1); más que la profundidad = a la raíz. */
-  drillUp: (steps?: number) => void;
+  drillUp: (steps?: number) => readonly string[];
   /** Cualquier ruta: lateral, saltos, la URL. */
-  drillTo: (path: readonly string[]) => void;
+  drillTo: (path: readonly string[]) => readonly string[];
   /** Vuelve a la raíz. */
-  reset: () => void;
+  reset: () => readonly string[];
   /** @internal El canal con el que el mapa publica `status`. */
   readonly [DRILL_BRIDGE]: DrillBridge;
 };
@@ -137,7 +140,7 @@ export const useDrillDown = <TDatum>({
     latest.current = { path, levels: levels.length, controlled, onPathChange };
   });
 
-  const commit = useCallback((next: readonly string[]) => {
+  const commit = useCallback((next: readonly string[]): readonly string[] => {
     const current = latest.current;
     const { path: valid, clamped: tooDeep } = clampPath(next, current.levels);
     if (tooDeep) {
@@ -145,24 +148,28 @@ export const useDrillDown = <TDatum>({
         `cannot drill to ${JSON.stringify(next)}: only ${current.levels} level(s) are defined (max depth ${current.levels - 1}).`,
       );
     }
-    if (samePath(valid, current.path)) return;
+    if (samePath(valid, current.path)) return valid;
     // Dos llamadas en el mismo tick (`drillUp(); drillDown(x)`) ven la ruta ya cambiada.
     latest.current = { ...current, path: valid };
     if (!current.controlled) setInnerPath(valid);
     current.onPathChange?.(valid);
+    return valid;
   }, []);
 
-  const drillDown = useCallback((id: string) => commit([...latest.current.path, id]), [commit]);
+  const drillDown = useCallback(
+    (id: string): readonly string[] => commit([...latest.current.path, id]),
+    [commit],
+  );
   const drillUp = useCallback(
-    (steps = 1) => {
+    (steps = 1): readonly string[] => {
       const up = Number.isFinite(steps) ? Math.max(0, Math.floor(steps)) : 0;
       const { path: current } = latest.current;
-      commit(current.slice(0, Math.max(0, current.length - up)));
+      return commit(current.slice(0, Math.max(0, current.length - up)));
     },
     [commit],
   );
   const drillTo = commit;
-  const reset = useCallback(() => commit([]), [commit]);
+  const reset = useCallback((): readonly string[] => commit([]), [commit]);
 
   const status = useSyncExternalStore(bridge.subscribe, bridge.getStatus, bridge.getStatus);
 

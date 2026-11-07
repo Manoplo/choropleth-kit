@@ -18,31 +18,29 @@
 
 ## Estado actual y handoff (leer primero)
 
-> Actualizada tras el **paso 33** (visual confirmada por el humano; commiteado; 27-32 también). Rama `feat/choreography-and-breadcrumbs`. **752 tests** en verde; `typecheck`, `lint`,
-> `format:check`, `build` y `build-storybook` limpios. Cobertura de `src/core` 100 % líneas.
+> Actualizada tras el **paso 36** (34 y 35 commiteados en `627bb5d`; el 36 terminado y **sin commitear**; revisión visual de 34-36 pendiente del humano). Rama `feat/drill-close-and-theming`. **880 tests** en verde;
+> `typecheck`, `lint`, `format:check`, `build` y `build-storybook` limpios. Cobertura de `src/core` 100 % líneas.
 
 ### Dónde estamos
 
-| Fase                   | Pasos  | Estado                                                                                                                                                                                                                                                                                                                                                      |
-| ---------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| v0.1                   | 1-13   | ✅                                                                                                                                                                                                                                                                                                                                                          |
-| A · cimientos          | 14-22  | ✅ (revisión visual de «Foundations» pendiente del humano)                                                                                                                                                                                                                                                                                                  |
-| **B · cámara**         | 23-26  | ✅ código y tests. Revisión visual: el 24 la dio por buena el humano; **25 y 26 sin confirmar**                                                                                                                                                                                                                                                             |
-| B · cámara             | **27** | ✅ (revisión visual confirmada por el humano)                                                                                                                                                                                                                                                                                                               |
-| C · drill-down (v0.4)  | 28-33  | ✅ **28-33** commiteados y confirmados por el humano (el 32 con la capa saliente en color; el 33 tras corregir el bug del clic, ver 33.2 bis). Queda el cierre del drill, que es el paso 34                                                                                                                                                                 |
-| **MVP básico**         | 34-37  | **34 ⏳ SIGUIENTE** cierre del drill (`onDrillIntent`, handle `drillDown/Up/To`, avisos de desarrollo) · **35** theming mínimo · **36** leyenda `bar` + `Defs` con ids por instancia · **37** higiene de publicación (`useCamera`, `size-limit`, story de rendimiento, README, `Zoom/Cooperative`). Alcance y orden en «Plan hasta el MVP básico», al final |
-| Post-MVP               | —      | ⏳ motion ⭐, capas decorativas (`Labels`, `Marker`, `Sphere`, `Graticule`), tween de conteos, accesibilidad completa, exportación y lo aplazado del drill. Lista en «Post-MVP», al final                                                                                                                                                                   |
-| Accesibilidad completa | —      | ⏳ **al final, por decisión del humano** (`dd.md §13`); es post-MVP                                                                                                                                                                                                                                                                                         |
+| Fase                   | Pasos  | Estado                                                                                                                                                                                                                                                                                             |
+| ---------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| v0.1                   | 1-13   | ✅                                                                                                                                                                                                                                                                                                 |
+| A · cimientos          | 14-22  | ✅ (revisión visual de «Foundations» pendiente del humano)                                                                                                                                                                                                                                         |
+| **B · cámara**         | 23-26  | ✅ código y tests. Revisión visual: el 24 la dio por buena el humano; **25 y 26 sin confirmar**                                                                                                                                                                                                    |
+| B · cámara             | **27** | ✅ (revisión visual confirmada por el humano)                                                                                                                                                                                                                                                      |
+| C · drill-down (v0.4)  | 28-34  | ✅ **28-33** commiteados y confirmados por el humano. **34** (cierre del drill) hecho, pendiente de revisión visual y de commit: con él, v0.4 queda completo                                                                                                                                       |
+| **MVP básico**         | 34-37  | **34** ✅\* · **35** ✅\* · **36** ✅\* leyenda `bar` e interactiva, `Defs` / `Patterns` con ids por instancia · **37 ⏳ SIGUIENTE** higiene de publicación (`useCamera`, `size-limit`, story de rendimiento, README, `Zoom/Cooperative`). Alcance y orden en «Plan hasta el MVP básico», al final |
+| Post-MVP               | —      | ⏳ motion ⭐, capas decorativas (`Labels`, `Marker`, `Sphere`, `Graticule`), tween de conteos, accesibilidad completa, exportación y lo aplazado del drill. Lista en «Post-MVP», al final                                                                                                          |
+| Accesibilidad completa | —      | ⏳ **al final, por decisión del humano** (`dd.md §13`); es post-MVP                                                                                                                                                                                                                                |
 
-### Qué leer para el paso 34 (no más)
+### Qué leer para el paso 37 (no más)
 
 1. `AGENTS.md` (reglas; **la primera: commit y push solo bajo petición explícita**).
-2. Este «Estado actual», el **paso 33** (sobre todo **33.2 bis**: el bug del clic y la trampa de `pointer-events`) y el **paso 32** (la coreografía).
-3. `dd.md §11.2.2` (props `onDrillIntent`, handle), `§11.2.3` (fila del prefetch y la máquina de estados) y `§9.5` (el handle:
-   `drillDown`/`drillUp` devuelven `Promise<TransitionResult>`). `§21` tarea 20 resume el alcance.
-4. El código que se toca: `src/react/use-drill-engine.ts` (eventos y fase), `src/react/handle.ts` y `map-store.ts` (el handle consulta el store),
-   `src/react/use-drill-down.ts` (el controlador), `src/react/components/regions.tsx` (hover → intención).
-5. Para comprobar interacciones de ratón: `scripts/cdp-story.mjs` (Chrome real por CDP). **Un `click` en jsdom no demuestra nada** sobre `pointer-events`.
+2. Este «Estado actual» y la tabla del paso 37 en «Plan hasta el MVP básico» (al final del diario).
+3. `dd.md §11.1.7` (`useCamera(selector)`, `getView`), `§14.2` (presupuestos: < 50 KB gzip, rendimiento) y `§21` criterios globales (README, stories obligatorias).
+4. El código que se toca: `src/react/map-store.ts` (la cámara confirmada vive ahí), `src/react/handle.ts` (`getView`), `package.json` (`size-limit`), `stories/` (`Performance/AdminLevel`, `Zoom/Cooperative`).
+5. Para comprobar en un navegador: `scripts/cdp-story.mjs` (ratón y táctil por CDP). **jsdom no ve ni `pointer-events` ni el CSS**: para estilos, `getComputedStyle` en Chrome real (y capturas con `Page.captureScreenshot`, que se pueden mirar con `Read`). Para medir rendimiento hace falta Chrome real, no jsdom.
 
 ### Decisiones del humano que se desvían de `dd.md` (vigentes)
 
@@ -54,6 +52,9 @@
 - **`dimOthers` por defecto `"selection"`**. Chipre del Norte y Somalilandia quedan en gris sin id (Legal).
 - Se puede **romper la API** antes de 1.0, sin alias de compatibilidad.
 - **Contexto del drill en gris** (sin color de dato del padre), por corrección cartográfica: lo confirmó el humano en el paso 31 (`dd.md §11.2.5`).
+- **Táctil del drill dentro del 34:** el 1.er toque en una región navegable previsualiza (no llama a `onItemClick`), el 2.º baja.
+- **Paso 36:** `contrast` rayado en «sin dato» (cierra la reserva del 35); `interactive: "filter"`, `orientation`, `showEmpty` y el tween de conteos **fuera** (post-MVP); la leyenda no es enfocable con teclado hasta la accesibilidad.
+- **Theming (paso 35):** variables renombradas a `dd.md §12.5.2` sin alias (`--cm-control-*`, `--cm-context-border-color`; adiós `--cm-breadcrumb-*`); el tema `contrast` **sin trama** hasta que haya `Defs` (36); `getRegionStyle().pattern` tipado pero ignorado (con aviso) hasta entonces; el tipo `ChoroplethTheme` solo contiene lo que existe hoy.
 
 ### Trampas aprendidas (cuestan tiempo si se repiten)
 
@@ -74,6 +75,11 @@
   `pnpm vitest run <archivo>`.
 - **jsdom no ve `pointer-events` ni layout.** Un `click` disparado sobre el `<path>` siempre «funciona»; en un navegador el CSS puede desviarlo al `<svg>`
   (paso 33.2 bis). Las interacciones de ratón se comprueban también con `scripts/cdp-story.mjs`.
+- **`await handle().drillDown()` dentro de `act(async)` se cuelga:** `act` retiene los renders hasta que el callback acaba y la promesa depende de ellos. Lanzar en `act(() => …)` síncrono y esperar fuera (`waitFor`). Y para afirmar que algo **no** ha pasado hay que dejar pasar tiempo (la geometría llega en un microtask), o la mutación sobrevive.
+- **Variables CSS declaradas en `.cm-root` ganan a las heredadas de un ancestro** (fallo del paso 12, corregido en el 35): los valores por defecto van en cada uso, `var(--cm-x, valor)`. Y el prefijo de todo selector es `:where(.cm-root:not([data-unstyled]))`, o una clase suelta (Tailwind) no puede ganarle. `styles.test.ts` lo vigila leyendo el archivo.
+- **jsdom conserva los colores como se escriben** (`#ff00ff`), un navegador los normaliza (`rgb(…)`). Los tests de estilo comparan con lo escrito.
+- **Un `background` en línea (shorthand) tapa el `background-image` del CSS:** el color de un swatch va en `backgroundColor` si el CSS puede ponerle una trama encima.
+- **Una mutación puede sobrevivir porque el test no prueba lo que cree** (el de `bubble` no tenía segunda métrica: la leyenda estaba vacía). Mirar que la situación del test **existe** antes de fiarse de un verde.
 - **Hover/zoom no deben re-renderizar `Root`.** Se comprueba contando llamadas a `getId` (el join la llama una vez por
   fila en cada render). Cualquier cambio en `Root`, el hook o el store debe mantener esos tests en verde.
 
@@ -94,18 +100,21 @@
 
 - **Ancla de las burbujas de Rusia** (§26.8): `getAnchorPoint` proyecta el anillo que cruza el antimeridiano vértice
   a vértice; visualmente salió plausible pero no está garantizado. ¿Prueba específica ahora o en el pulido?
+- **Foco de teclado como intención de bajar** (`dd.md §11.2.2`: «hover sostenido o foco»): aplazado, hoy las regiones no se enfocan. Entra con la accesibilidad (flechas entre regiones).
+- **Las tramas escalan con el zoom** (36.3): contraescalar el `<pattern>` desde `use-zoom`, ¿en el 37 o en el pulido?
+- **Inversión de rampas** (`palette: { name, reverse: true }`, citada en `dd.md §12.5.3` para `dark`): no existe. ¿Entra en el 36 con la leyenda, o post-MVP? Hoy `dark` usa `viridis`.
 - **Aviso de `scroll-jacking`** (§24.8): con `wheel: "always"` y el mapa en una página con scroll, el mapa se come la
   rueda. ¿El preset lo avisa en desarrollo o basta la documentación de la prop?
 - Fronteras disputadas y política de Chipre del Norte / Somalilandia: decisión de Legal, no técnica (§F.2, §22).
 
 ### Prompt de arranque para una sesión nueva
 
-> Lee `AGENTS.md` y la sección «Estado actual y handoff» de `choropleth-build-proccess.md`, y los pasos 32 y 33 de ese
-> diario. Sigue con el **paso 34** (cierre del drill: `onDrillIntent`, `drillDown`/`drillUp`/`drillTo` en el handle y
-> avisos de desarrollo), leyendo solo `coropleth-library.md` §11.2.2, §11.2.3 y §9.5 y el código que se toca. Después
-> vienen 35, 36 y 37 (ver «Plan hasta el MVP básico», al final del diario). Un paso cada vez; no commitees ni hagas
-> push sin que te lo pida; la revisión visual la hago yo, pero puedes comprobar interacciones en Chrome real con
-> `scripts/cdp-story.mjs`.
+> Lee `AGENTS.md` y la sección «Estado actual y handoff» de `choropleth-build-proccess.md`, y los pasos 35 y 36 de ese
+> diario. Sigue con el **paso 37** (higiene de publicación: `useCamera(selector)`, `size-limit` con presupuesto < 50 KB gzip,
+> story `Performance/AdminLevel` con Profiler y tests de «hover/zoom/pan no re-renderizan `Root`», README y la story
+> `Zoom/Cooperative` completa), leyendo solo `coropleth-library.md` §11.1.7, §14.2 y §21 (criterios globales) y el código que se
+> toca. Un paso cada vez; no commitees ni hagas push sin que te lo pida; la revisión visual la hago yo, pero puedes comprobar
+> interacciones y estilos en Chrome real con `scripts/cdp-story.mjs` y `getComputedStyle`.
 
 ## Índice de pasos
 
@@ -163,12 +172,12 @@
 
 **MVP básico** (plan acordado; alcance en «Plan hasta el MVP básico», al final del diario):
 
-| Paso | Título                                                                                                       | Estado       |
-| ---- | ------------------------------------------------------------------------------------------------------------ | ------------ |
-| 34   | Cierre del drill: `onDrillIntent`, handle `drillDown`/`drillUp`/`drillTo`, avisos de desarrollo (¿+ táctil?) | ⏳ Siguiente |
-| 35   | Theming mínimo: `theme`, `themeToCssVars`, `classNames`, contrato `data-*`                                   | ⏳ Pendiente |
-| 36   | Leyenda `bar` + resaltado, y `Defs` con ids por instancia                                                    | ⏳ Pendiente |
-| 37   | Higiene de publicación: `useCamera`, `size-limit`, story de rendimiento, README, `Zoom/Cooperative`          | ⏳ Pendiente |
+| Paso | Título                                                                                                            | Estado       |
+| ---- | ----------------------------------------------------------------------------------------------------------------- | ------------ |
+| 34   | Cierre del drill: `onDrillIntent`, handle `drillDown`/`drillUp`/`drillTo`, dos toques, avisos de desarrollo       | ✅ Hecho\*   |
+| 35   | Theming mínimo: `theme`, `themeToCssVars`, `classNames`, `getRegionStyle`, contrato `data-*` (+ 2 fallos del CSS) | ✅ Hecho\*   |
+| 36   | Leyenda `bar` e interactiva, `Defs` / `Patterns` con ids por instancia                                            | ✅ Hecho\*   |
+| 37   | Higiene de publicación: `useCamera`, `size-limit`, story de rendimiento, README, `Zoom/Cooperative`               | ⏳ Pendiente |
 
 **Post-MVP:** motion ⭐, capas decorativas (`Labels`, `Marker`, `Sphere`, `Graticule`), tween de conteos, accesibilidad completa, exportación y
 lo aplazado del drill (ver «Post-MVP», al final del diario). Cada paso se detalla en su propia entrada al empezarlo.
@@ -3001,6 +3010,271 @@ comprueba también en un Chrome real** con `scripts/cdp-story.mjs`.
 - ¿De dónde sale el nombre de una miga y por qué se busca en el nivel de arriba?
 - ¿Qué parte de la accesibilidad del drill se hizo ya y cuál se aplazó, y por qué?
 
+# Paso 34: cierre del drill (handle, intención, dos toques y avisos)
+
+Archivos nuevos: `src/core/drill-intent.ts` (+ test), `src/react/drill-close.test.tsx`. Tocan: `use-drill-engine.ts` (`prefetch`, `navigate`, `target`), `use-drill-down.ts`
+(las acciones devuelven la ruta pedida), `use-choropleth.ts` (intención, validación, API del handle, avisos), `map-store.ts` (`registerDrill`, `pointerType`),
+`handle.ts`, `components/root.tsx`, `components/tooltip.tsx`, `core/labels.ts`, `stories/drill-down.stories.tsx` (story «Handle + intent») y `scripts/cdp-story.mjs`
+(modos `touch` y `tour`). Tarea 20 de `dd.md §21` + el modo táctil de `dd.md §11.2.5` (decisión del humano: entra en este paso). **Sin commitear.**
+
+## 34.1 Qué se hizo
+
+| Pieza                | Comportamiento                                                                                                                                                                                                                                                                                                  |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Handle del drill     | `drillDown(id)`, `drillUp(steps?)` y `drillTo(path)` en el `ref` y en `useChoroplethApi()`. Devuelven `Promise<TransitionResult>` que resuelve **al volver a reposo en la ruta pedida**: `await map.drillDown("ES"); await map.drillTo(["FR"]);`.                                                               |
+| `completed: false`   | Si se corta (un gesto, otra navegación que la sustituye, error de carga), si la petición no es válida (id inexistente, `canDrill: false`, más profundo que los niveles, mapa sin `drill`) o si un padre `controlled` no acepta la ruta (a los 1.000 ms). Estar ya en la ruta pedida resuelve `completed: true`. |
+| `onDrillIntent`      | 150 ms sobre una región navegable → `onDrillIntent(ctx)` (el contexto del nivel **al que bajaría**) y **precarga de la geometría** de ese nivel en la caché del motor. Una vez por permanencia; no se dispara a mitad de una coreografía.                                                                       |
+| Táctil, dos toques   | El 1.er toque sobre una región navegable es una vista previa (tooltip con `labels.tapAgainHint`, «Tap again to enter») y el 2.º, sobre la misma, baja. Tocar otra región o el océano retira la vista previa. Regiones no navegables: un toque, como siempre. Ratón y lápiz: un clic.                            |
+| Avisos de desarrollo | Ver 34.4. Todos en inglés, con prefijo `[choropleth]`, solo fuera de producción.                                                                                                                                                                                                                                |
+
+## 34.2 Cómo funciona por dentro
+
+```
+ ref.drillDown("ES") ─► handle ─► store.getDrill() ─► drillApi (use-choropleth)
+                                                        │ valida (findRequestProblem)  ─ inválida → aviso + { completed:false }
+                                                        ▼
+                                          engine.navigate(controller => controller.drillTo(path))
+                                                        │ el controlador devuelve la ruta que ha quedado pedida
+                                                        ▼
+                                  Waiter { target }  ── se resuelve en un efecto tras cada render:
+                                      · destino == target y máquina en reposo en target → { completed: true }
+                                      · se vio el destino y luego cambió a otra ruta    → { completed: false }
+```
+
+- **El handle no sabe de React.** `createHandle(store)` sigue siendo un objeto estable; `use-choropleth` registra la API del drill en el store (`registerDrill`) y la suelta al desmontar, igual que hace `use-zoom` con la cámara.
+- **Por qué el controlador devuelve la ruta.** `drillDown/drillUp/drillTo/reset` de `useDrillDown` devolvían `void`. Ahora devuelven la ruta recortada que ha quedado pedida (compatible con quien las usaba como `void`): así el motor sabe a dónde espera llegar aunque se encadenen dos llamadas en el mismo tick (`drillUp(); drillDown(x)`), sin leer una ruta obsoleta del render.
+- **Una navegación nueva sustituye a las anteriores** que iban a otra parte (resuelven `false` al momento). Si van a la misma ruta, ambas resuelven al llegar.
+- **`seen`.** Una promesa solo se declara «deshecha» si antes se vio su ruta como destino del controlador. Sin eso, un efecto que corre entre la llamada y el render que aplica la ruta (un hijo del compound que llama al handle desde su propio efecto) la resolvería `false` por error. Para el padre `controlled` que nunca acepta la ruta, un temporizador de 1.000 ms resuelve `false` si nunca se vio.
+- **Prefetch.** El efecto que pedía las geometrías del destino se convirtió en `request(path, prefetching, retryFailed)`, que también usa `engine.prefetch`. Un prefetch que falla **no** marca la clave como fallida (si lo hiciera, un fallo de red al pasar el ratón condenaría el clic): sube `version`, que está en las dependencias del efecto, y el clic vuelve a pedirla. Una clave que **sí** falló en un clic se reintenta al volver a pedir esa ruta (`retryFailed`), no en cada recarga ajena.
+- **El hover no re-renderiza `Root`.** La intención vive en un efecto que se suscribe al store; `createIntentTimer` (core, con temporizadores inyectables) lleva la cuenta de los 150 ms.
+- **Dos toques.** `pointerover` llega _antes_ que `click`, así que «ya estoy en hover sobre la región» no distingue el 1.º del 2.º toque. Se guarda aparte `previewed` (la región ya previsualizada) y `hoverItem` lo olvida en cuanto el puntero va a otra cosa. El tipo de puntero (`pointerType`) se guarda en el store al `pointermove/down` de `Root`; el tooltip lo lee para elegir la pista.
+
+## 34.3 Decisiones y desviaciones respecto a `dd.md`
+
+- **Táctil dentro del 34** (decisión del humano). El primer toque **no** llama a `onItemClick` (solo a `onItemHover`, que es lo que es: una vista previa). Quien necesite el toque en una región navegable usa `onItemHover` o `onDrill`.
+- **Foco (teclado) como intención: aplazado.** `dd.md §11.2.2` dice «hover sostenido o foco». Hoy las regiones no se enfocan (la navegación por flechas es de la fase de accesibilidad, al final), así que no hay foco que escuchar. Entra con esa fase.
+- **`drillTo` a una región con `canDrill: false` se rechaza**, no solo avisa (el plan decía «avisos»). Navegar ahí acabaría en un nivel vacío y un error; rechazarlo con el mismo aviso es más útil. Una ruta que llega **por otro camino** (la URL, un `useDrillDown` ajeno) solo se avisa: el mapa hará lo que pueda y, si el nivel sale vacío, lo deshace con su propio error.
+- **`canDrill` solo se evalúa para el nivel mostrado y con los datos cargados** (necesita el `datum` del item; con `data: undefined` daría falsos avisos). Un id se comprueba en todos los tramos cuya geometría ya está cargada; los más profundos no se pueden juzgar.
+- **Un fallo latente corregido al refactorizar:** el efecto de carga usaba un `cancelled` por ejecución; al cambiar el destino, la promesa de una clave ya pedida se resolvía sin avisar (`setVersion`) y el mapa se quedaba con la geometría en caché sin pintarla. Ahora un `mounted` de montaje lo resuelve.
+- `drillUp()` en la raíz y `drillTo(rutaActual)` resuelven `completed: true`: «el mapa está donde pediste».
+
+## 34.4 Avisos de desarrollo
+
+| Situación                                               | Mensaje (resumen)                                                                                                             |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `drillDown("ZZ")` / `drillTo([...])` con id inexistente | `drillDown(): region "ZZ" does not exist in level "country" (depth 0)…; navigation was ignored.`                              |
+| Región con `canDrill: false`                            | `…cannot be drilled into: canDrill is false for it in level …; navigation was ignored.`                                       |
+| Ruta más profunda que los niveles                       | `drillTo(): cannot go to […]: only 2 level(s) are defined (max depth 1); navigation was ignored.`                             |
+| Handle sin la prop `drill`                              | `drillDown() needs the `drill` prop; this map has none.`                                                                      |
+| Ruta que llega por la URL con un id inexistente         | `drill path: region "ZZ" does not exist…` (solo avisa)                                                                        |
+| Datos de otro nivel sobre la geometría actual           | Pista añadida al aviso del cruce cuando hay `drill`, `data` es una lista fija y **nada** cruza: pasa `data` como selector.    |
+| `getFeatureId` que no cruza                             | `none of the N region(s) in level "x" has an id…` (ninguna región tiene id; distingue `getFeatureId` propio de `feature.id`). |
+
+## 34.5 Tests
+
+**800 tests** en verde (752 + 48 nuevos: 16 de `core`, 32 de `drill-close`); `typecheck`, `lint`, `format:check`, `build` y `build-storybook` limpios.
+
+- **`drill-intent.test.ts` (16, core):** el temporizador (150 ms exactos, una vez, misma clave no reinicia, salir cancela, cambiar reinicia, volver a entrar es otra permanencia, `dispose`) y los textos de aviso.
+- **`drill-close.test.tsx` (32):** el handle (resuelve al reposo, encadena bajar/subir/saltar/profundo con `await`, estar ya allí, id inexistente en el nivel y en un tramo intermedio, `canDrill`, profundidad, sin `drill`, sustitución, error de carga, padre `controlled` que rechaza, desmontar, `useChoroplethApi`); la intención (150 ms + geometría precargada y no repetida en el clic, paso fugaz, `canDrill: false`, sin callback también precarga, re-entrada, el hover no re-renderiza, un prefetch fallido no condena el clic); el táctil (1.º/2.º toque, otra región, océano, i18n, ratón, no navegable); y los avisos.
+- **Trampa de test (nueva):** no se puede hacer `await handle().drillDown()` **dentro** de `act(async)`: `act` retiene los renders hasta que el callback acaba y la promesa depende de esos renders, así que se cuelga. Se lanza dentro de `act(() => …)` síncrono y se espera fuera (`waitFor`). Del mismo modo, afirmar que **no** se ha bajado exige dejar pasar tiempo (la geometría llega en un microtask): la primera versión de los tests táctiles sobrevivía a la mutación «sin dos toques» por afirmar demasiado pronto.
+- **Mutaciones (todas rompen tests, cada una comprobada como aplicada):** sin sustitución de navegaciones; sin «deshecho»; sin el temporizador de rechazo; sin prefetch; sin `onDrillIntent`; sin dos toques; la vista previa no se olvida; sin rechazo de ids inválidos; sin rechazo por profundidad; un prefetch fallido condena la clave; el tooltip sin `tapAgainHint`; sin la pista del selector.
+- Se actualizaron los tests que fijaban la forma antigua: las claves del handle (`flights.test.tsx`) y el estado inicial del store (`map-store.test.tsx`).
+
+## 34.6 Verificación visual: pendiente de ti \*
+
+Comprobado por mí en Chrome real (`scripts/cdp-story.mjs`, story **DrillDown / Engine → Handle + intent**): el tour `drillDown("ES") → drillTo(["FR"]) → drillTo(["DE"]) → drillUp()` devuelve `completed: true` en cada paso y `drillDown("ZZ")` `false` con su aviso; el hover de 300 ms anota `onDrillIntent [ES]` **antes** del clic; el clic de ratón sigue llegando a la región (`pointerup:ES, click:ES`); en táctil el 1.er toque deja el tooltip «Spain · Tap again to enter» sin bajar y el 2.º vuela. Lo que **no** puedo juzgar:
+
+| Qué comprobar (`pnpm storybook` → **DrillDown / Engine → Handle + intent**)                                                                                      |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Botón «▶ Tour»: el mapa baja a España, salta a Francia y Alemania **sin pasar por el mundo**, sube, y el log anota `completed: true` en cada paso.               |
+| Deja el ratón sobre un país con tiendas: tras un instante, el log anota `onDrillIntent`; al hacer clic, la bajada no se nota más lenta (la geometría ya estaba). |
+| Devtools → emulación táctil: el 1.er toque en un país con tiendas **solo muestra el tooltip** («Tap again to enter») y el 2.º baja. Tocar el océano lo retira.   |
+
+## 34.7 Antes de pasar al paso 35: ¿lo tienes claro?
+
+- ¿Por qué la promesa de `drillTo` no puede resolverse en cuanto la ruta cambia, y qué condición exacta la resuelve?
+- ¿Para qué sirve `seen`, y qué pasa con la promesa si el padre `controlled` ignora la ruta?
+- ¿Por qué un prefetch fallido no puede marcar la clave como fallida?
+- ¿Por qué `hover === región` no basta para distinguir el 1.er del 2.º toque?
+- ¿Qué tiene de especial el `await` dentro de `act(async)` y cómo se evita en los tests?
+
+# Paso 35: theming mínimo (`theme`, `classNames`, `getRegionStyle`, contrato `data-*`) + dos fallos del CSS
+
+Archivos nuevos: `src/core/theme.ts` (+ test), `src/react/class-names.ts`, `src/react/theming.test.tsx`, `src/react/styles.test.ts`, `stories/styling.stories.tsx`. Tocan:
+`src/react/styles.css` (reescrito: ver 35.3), `components/root.tsx`, `choropleth-map.tsx`, `choropleth-context.ts`, `use-choropleth.ts` (`getRegionStyle`),
+`components/{regions,svg,borders,bubbles,selection,legend,tooltip,zoom-controls,breadcrumb,gesture-hint,drill-layers}.tsx`, `index.ts` y `core/index.ts`.
+Tarea 21 de `dd.md §21` **sin `Defs`** (va en el 36, decisión del humano). **Sin commitear.**
+
+## 35.1 Qué se hizo
+
+| Pieza               | Comportamiento                                                                                                                                                                                                                                                                          |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `theme`             | `theme="dark"` o un objeto, en `ChoroplethMap` y en `Choropleth.Root`. Nombres: `light`, `dark`, `minimal`, `contrast`. La librería escribe las variables `--cm-*` **en línea** en `.cm-root` y marca `data-theme` (`"dark"`…, o `"custom"`).                                           |
+| `defineTheme`       | Identidad tipada (autocompletado + reutilizar un tema entre mapas).                                                                                                                                                                                                                     |
+| `extendTheme`       | `extendTheme("dark", { border: { color: "#f00" } })`: superpone **grupo a grupo** (lo que no tocas de `border` se queda). No muta la base.                                                                                                                                              |
+| `themeToCssVars`    | Pura, en `core` (`dd.md` la ponía en `react/`): el objeto → `{ "--cm-border-width": "0.5px", … }`. Los campos sin definir no producen variable.                                                                                                                                         |
+| `classNames`        | Una clase tuya por pieza (17 slots: `root`, `svg`, `layer`, `regions`, `region`, `borders`, `bubbles`, `bubble`, `selection`, `legend`, `legendItem`, `tooltip`, `controls`, `controlButton`, `breadcrumb`, `breadcrumbItem`, `gestureHint`). **Se suma** a la `cm-*`, no la sustituye. |
+| `getRegionStyle`    | `(region) => { fill?, opacity?, className?, pattern? } \| undefined`. Prioridad: `getRegionStyle` > color de la escala > `emptyFill`. Todo pasa a `RegionPath` como primitivas: el `memo` sigue sirviendo.                                                                              |
+| Contrato `data-*`   | Ver 35.4. Nuevos: `data-theme` (raíz) y `data-empty` (región).                                                                                                                                                                                                                          |
+| Stories `Styling/*` | **Themes** (los cuatro lado a lado + uno propio con `extendTheme`), **Ancestor variables** y **Tailwind-like**.                                                                                                                                                                         |
+
+## 35.2 Qué tiene `ChoroplethTheme` (y qué no, a propósito)
+
+`background`, `empty.fill`, `context.{fill,border}`, `border.{color,width}`, `hover.{stroke,width}`, `selected.{stroke,width}`, `focus.{ring,width}`, `dim.opacity`,
+`bubble.{fill,stroke,opacity}`, `font.{family,size,color}`, `tooltip.{background,color,border,radius,shadow}`, `controls.{background,color,border,radius}`.
+
+**Desviaciones de `dd.md §12.5.3`:** el tipo solo contiene lo que **existe y se consume hoy**. Quedan fuera `sphere`, `graticule`, `hover.effect`, `selected.glow`, `motion` y
+`empty.pattern`: llegan con las capas/efectos que los usan (añadir un campo no rompe a nadie; tener uno que no hace nada, engaña). Se **añaden** `focus` (anillo y grosor: el
+`contrast` lo necesita), `font.color` (sin él, la leyenda y las migas son ilegibles en `dark`) y `controls` (botones de zoom y migas).
+
+Los temas: `light` (= el aspecto por defecto, escrito en explícito para que `theme="light"` garantice ese aspecto aunque la página ponga variables más arriba) · `dark` (fondo
+`#0f172a`, «sin dato» gris pizarra, fronteras oscuras, tooltip invertido) · `minimal` (fronteras de 0,25 px, tooltip y controles sin caja marcada) · `contrast` (fronteras de 1 px,
+hover 3 px, selección 4 px, anillo de foco de 4 px, tooltip negro con borde blanco). **`contrast` NO lleva la trama de «sin dato»** que pide `dd.md`: iba con `Defs` (**ya incluida en el paso 36**: `empty.pattern`).
+Un test comprueba el contraste WCAG de cada tema (texto del tooltip, de los controles y de las etiquetas ≥ 4,5:1; resaltes de selección, hover y foco ≥ 3:1).
+
+## 35.3 Dos fallos del CSS encontrados al comprobarlo en Chrome real (los dos venían del paso 12)
+
+1. **Las variables puestas en un ancestro no hacían nada.** `.cm-root { --cm-border-color: #fff; … }` declaraba los valores por defecto en el propio `.cm-root`, y una
+   declaración propia **gana** a la heredada de un ancestro. La story `Themed` del paso 12 («cambia 8 variables desde un `div` padre») no cambiaba nada, y `dd.md §12.5.1` nivel 3
+   («variables `--cm-*` desde CSS, temas globales») tampoco funcionaba. Medido en Chrome: el ancestro valía `#1f2937` y `.cm-root` `#fff`. **Arreglo:** el bloque de defaults desaparece
+   y cada uso lleva su valor (`var(--cm-border-color, #ffffff)`). Única variable declarada: `--cm-transition-duration: 0ms` en «reducir movimiento» (forzarla es el objetivo).
+2. **`classNames` no podía ganar al CSS base.** Todas las reglas empezaban por `.cm-root:not([data-unstyled])` (especificidad 0,2,0); una clase suelta (Tailwind, 0,1,0) perdía sin
+   `!important`. Se vio porque el degradado de `tw-bg-slate` en la raíz no se pintaba: el `background: transparent` base lo tapaba. **Arreglo:** el prefijo pasa a
+   `:where(.cm-root:not([data-unstyled]))` (especificidad 0): una regla `.cm-region` de la librería vale ahora (0,1,0), como la tuya, y a igualdad gana la que va después. `unstyled`
+   sigue quitándolo todo.
+
+Como **jsdom no ve el CSS**, `styles.test.ts` vigila las dos propiedades leyendo el archivo: ninguna variable `--cm-*` declarada salvo la de movimiento, todo `var(--cm-x)` con valor
+por defecto, ningún selector con el prefijo `.cm-root` fuera de `:where()`, y toda regla visual atada a `[data-unstyled]`.
+
+**Renombres de variables (rotura, pre-1.0, sin alias; decisión del humano: alinear con `dd.md §12.5.2`):** `--cm-controls-bg/-color/-border` → `--cm-control-bg/-color/-border`;
+`--cm-context-stroke` → `--cm-context-border-color`. **Desaparecen** `--cm-breadcrumb-bg/-color/-muted/-border` (las migas usan `--cm-control-*`; el gris de la pista y del separador es
+una opacidad). **Nuevas:** `--cm-background`, `--cm-label-color`, `--cm-focus-ring-width`, `--cm-control-hover-bg`, `--cm-control-radius`, `--cm-tooltip-radius`, `--cm-tooltip-shadow`.
+`--cm-context-hover-fill` por defecto se deriva (`color-mix` del relleno del contexto con el trazo del hover), así que sirve en `dark` sin tocarlo.
+
+## 35.4 El contrato `data-*` (API pública, versionada con semver)
+
+Lo que existe hoy (`dd.md §12.5.5` lista más: lo que falta llega con su pieza):
+
+| Elemento             | Atributos                                                                                                                                                                                                                                                                                          |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.cm-root`           | `data-status` (de la **geometría**: `loading`/`ready`/`error`; no la fase del drill), `data-drill-phase` (`flying`/`loading`/`revealing`; ausente en reposo), `data-loading` (datos en camino), `data-dim`, `data-has-selection`, `data-interacting`, `data-zoomed`, `data-unstyled`, `data-theme` |
+| `.cm-layer`          | `data-role` (`context`/`exiting`), `data-depth`                                                                                                                                                                                                                                                    |
+| `.cm-region`         | `data-region-id`, `data-drillable`, `data-drill-target`, `data-empty` (sin valor que pintar: sin fila o con valor nulo)                                                                                                                                                                            |
+| `.cm-context-region` | `data-context-id`, `data-focus`, `data-drillable`                                                                                                                                                                                                                                                  |
+| `.cm-bubble`         | `data-bubble-id`                                                                                                                                                                                                                                                                                   |
+| `.cm-selection path` | `data-selection` (`hover`/`selected`)                                                                                                                                                                                                                                                              |
+
+**Desviaciones de `dd.md §12.5.5`:** `data-status` no usa los valores `idle/flying/…` (esos son `data-drill-phase`); `data-zoom-bucket`, `data-level`, `data-highlight-class`,
+`data-class`, `data-category` y `data-entering` **no existen todavía**: los de clase (`data-highlight-class`, `data-class`) llegan con la leyenda interactiva (paso 36); los de zoom y nivel, con el pulido de v0.5.
+
+## 35.5 Decisiones
+
+- **Un tema se escribe en línea.** Por eso **gana al CSS** que pongas en `.cm-root`; solo el CSS de un _ancestro_ pierde contra él. Para tocar una variable a mano estando bajo un tema, `style` del consumidor (gana al tema; se comprueba). Es lo esperable: una prop explícita pesa más que un CSS global.
+- **`theme` y `classNames` viven en `Root`**, no en el hook: son presentación. `getRegionStyle` sí va en el hook (cambia lo que se pinta en cada región). `classNames` viaja por el contexto (`useChoroplethContext().classNames`).
+- **`pattern` en `getRegionStyle` está tipado pero no se pinta** (decisión del humano: se activa con `Defs`, paso 36). Para no engañar, si lo devuelves se **avisa una vez** en consola (en inglés, fuera de producción).
+- **`data-empty` es «sin valor que pintar»**, no «sin fila de datos»: una región con valor nulo se ve igual (`emptyFill`) y el CSS del consumidor quiere tratarlas igual. (La primera versión miraba solo la fila; lo corregí al ver que `seed` generaba nulos con fila.)
+- **La inversión de rampas (`palette: { name, reverse: true }`) no existe**, aunque `dd.md §12.5.3` la cite para `dark`. Se ha quitado esa afirmación del comentario del tema; en la story, `dark` usa `viridis`.
+- **`dimOthers` por defecto (`"selection"`) atenúa el resto con una selección activa:** al mirar las capturas parecía que los países «se habían desteñido»; era eso, no un fallo del tema.
+
+## 35.6 Tests
+
+**846 tests** en verde (800 + 46 nuevos: 18 + 24 + 4); cobertura de `src/core` 100 % líneas (`theme.ts` 100 %, `drill-intent.ts` 100 %). `typecheck`, `lint`, `format:check`, `build` y `build-storybook` limpios.
+
+- **`core/theme.test.ts` (18):** cada campo → su variable (con `px`; la opacidad sin unidad; el 0 cuenta), lo no definido no emite, nunca `--cm-k`/`--cm-bubble-scale`/`--cm-wave`; los cuatro temas definen todos los grupos; `light` = el CSS por defecto; `dark` oscuro e invertido; `contrast` más grueso que `light`; **contraste WCAG** de los textos y los resaltes de cada tema; `resolveTheme`/`isThemeName` (no confunde `toString`); `extendTheme` (grupo a grupo, sin mutar, objeto como base, `undefined` no borra).
+- **`theming.test.tsx` (24):** variables en línea y `data-theme`, objeto parcial → `custom`, sin tema no escribe nada, extendido, `style` gana al tema, cambio en caliente, `unstyled`, compound; `classNames` (cada slot en su elemento junto a la `cm-*`, burbujas/fronteras/tooltip, se suma a `className`, sin «undefined», **no rompe el `memo`**); `getRegionStyle` (fill/opacity/className, prioridad, recibe la región construida, la copia de selección usa su color, `pattern` avisa una vez, `undefined` no cambia el DOM); `data-*`.
+- **`styles.test.ts` (4):** las propiedades del CSS de 35.3, leyendo el archivo.
+- **Mutaciones** (todas rompen tests; cada una comprobada como aplicada): el tema gana a `style`; sin `data-theme`; sin variables; seis slots sin su clase (`bubble`, `borders`, `tooltip`, `breadcrumbItem`, `region`…); `getRegionStyle` sin `fill` / sin `opacity`; `data-empty` solo sin fila; sin aviso de `pattern`; `dark` con tooltip ilegible (contraste); sin `px` en el ancho; `extendTheme` que sustituye el grupo entero; y las cuatro del CSS (declarar una variable, `var()` sin valor, selector sin `:where`, regla sin `unstyled`).
+- La primera versión del test de `data-empty` y la de `getRegionStyle` esperaban `rgb(…)`: **jsdom conserva el color como se escribió** (`#ff00ff`), no lo normaliza como un navegador.
+
+## 35.7 Verificación visual: pendiente de ti \*
+
+Comprobado por mí en Chrome real (estilos calculados + capturas): las variables de un ancestro ya se aplican (`--cm-border-color` → trazo `rgb(31, 41, 55)`, 0,8 px, selección verde, Georgia);
+los cinco mapas de `Themes` calculan fondo, color de texto, trazo de fronteras, selección y controles propios; con `classNames` la raíz lleva su degradado, la leyenda su cristal y la base
+sigue intacta (borde de 0,5 px, botones de 32 px). Lo que **no** puedo juzgar es si se ve bien:
+
+| Qué comprobar (`pnpm storybook` → **Styling**)                                                                                                                                                                                         |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Themes:** `dark` (fondo, leyenda, «sin dato» y la rampa `viridis` se leen), `minimal` (casi sin tinta), `contrast` (fronteras gruesas; pulsa Tab hasta el mapa: anillo de foco de 4 px). El propio (`extendTheme`) en tonos cálidos. |
+| Pasa el ratón en cada uno: el tooltip es el del tema (invertido en `dark`, negro en `contrast`). Los botones de zoom y la leyenda también cambian.                                                                                     |
+| **Ancestor variables:** fronteras oscuras, «sin dato» amarillo, selección (Francia) verde, tipografía con serifa, tooltip oscuro. (Antes de este paso no cambiaba nada.)                                                               |
+| **Tailwind-like:** el mapa dentro de una tarjeta con esquinas redondeadas y sombra, la leyenda de «cristal» en mayúsculas, el tooltip en píldora. Nada del CSS base se ha roto debajo.                                                 |
+| **Preset → ChoroplethMap → Themed** (la del paso 12): ahora sí cambia.                                                                                                                                                                 |
+
+## 35.8 Antes de pasar al paso 36: ¿lo tienes claro?
+
+- ¿Por qué una variable declarada en `.cm-root` impedía tematizar desde un ancestro, y por qué `var(--x, valor)` en cada uso lo arregla?
+- ¿Qué hace `:where()` con la especificidad y por qué hace falta para que `classNames` (Tailwind) gane al CSS base?
+- ¿Por qué un tema en línea gana al CSS de `.cm-root` pero pierde contra `style`? ¿Y por qué eso es lo deseable?
+- ¿Por qué `themeToCssVars` vive en `core` y por qué el tipo del tema no incluye `sphere`/`glow`/`motion` todavía?
+- ¿Por qué `data-empty` mira el valor y no la fila de datos?
+- ¿Por qué hace falta un test que lea `styles.css` si ya hay tests de `Root`?
+
+# Paso 36: leyenda `bar` e interactiva, y `Defs` / `Patterns` con ids por instancia
+
+Archivos nuevos: `src/react/components/defs.tsx`, `src/react/components/patterns.tsx`, `src/core/variants-classes.test.ts`, `src/react/legend-patterns.test.tsx`. Tocan: `core/{legend,categories,variants,theme}.ts`,
+`components/{legend,regions,root,svg}.tsx`, `choropleth-context.ts` (`useDefId`), `choropleth.ts`, `choropleth-map.tsx`, `use-choropleth.ts`, `styles.css`, `index.ts`, `stories/styling.stories.tsx`.
+Tarea 22 de `dd.md §21` **sin** el tween de conteos (post-MVP) y sin `interactive: "filter"`. **Sin commitear.**
+
+## 36.1 Qué se hizo
+
+| Pieza                 | Comportamiento                                                                                                                                                                                                                                                                                |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Leyenda interactiva   | Pasar el ratón por una clase (fila o tramo) **resalta sus regiones y atenúa el resto**, sin re-renderizar regiones. `legend={{ interactive: false }}` lo desactiva. También para el item de «sin dato» y para las categorías.                                                                 |
+| Leyenda `bar`         | `legend={{ variant: "bar" }}`: una barra con un tramo por clase y los cortes debajo (inicio de cada clase y final de la última); «sin dato» aparte, tras la barra. `title` de cada tramo: rango y conteo. Solo con clases numéricas: con categorías o escala continua se dibuja como siempre. |
+| `Choropleth.Defs`     | `<defs>` con las tramas `hatch` y `dots` y las tuyas (`children`). **Los ids llevan un prefijo por instancia** (`useId`): dos mapas en la página no comparten tramas.                                                                                                                         |
+| `useDefId(name)`      | El id (único por mapa) de una definición: para definir las tuyas (`<pattern id={useDefId("stripes")}>`) y referenciarlas.                                                                                                                                                                     |
+| `Choropleth.Patterns` | Dibuja las tramas **encima** del color de cada región (el dato sigue viéndose): las de `getRegionStyle().pattern` y la de las regiones sin dato. `Svg` y el preset ya incluyen `Defs` y `Patterns`.                                                                                           |
+| `emptyPattern`        | Prop de `Root` y del preset (`"hatch"`, `"dots"`, `"none"`); gana a `theme.empty.pattern`. **El tema `contrast` ya rayó «sin dato»** (lo que el 35 dejó reservado). El swatch de «sin dato» de la leyenda lleva la misma trama.                                                               |
+
+## 36.2 Cómo funciona por dentro
+
+- **Resaltar sin renderizar.** El core calcula el índice de clase de cada región (`VariantResult.classes`, con la misma `classIndex` que usa la leyenda para los conteos: no pueden discrepar). Cada región lleva `data-class="2"`
+  (o `"empty"`); la leyenda, al entrar el puntero en un item, escribe `data-highlight-class` en el root **directamente en el DOM** y el CSS atenúa `.cm-region:not([data-class="2"])`. Un test comprueba que resaltar **no** vuelve a llamar a `getId`.
+- **El CSS son reglas estáticas** para las clases 0-11 y `empty`. Con más de 12 clases (categorías) no se resalta nada: es un límite conocido, no un fallo (una hoja de estilo dinámica era más complejidad de la que el MVP justifica).
+- **Cuándo no hay nada que resaltar:** escala continua (no hay clases) y `bubble` (el color va en las burbujas, no en las regiones: resaltar atenuaría **todas** las regiones). La leyenda lo decide con `regions.some(r => r.classIndex !== null)`.
+- **Tramas como capa aparte, no como `fill`.** Un `<path>` solo tiene un relleno; para rayar **sobre** el color, `Patterns` dibuja una copia de la ruta con `fill="url(#…)"`, sin eventos (`pointer-events: none`) y oculta a lectores de pantalla. Va entre las regiones y las fronteras.
+- **Ids por instancia.** `Root` calcula un prefijo con `useId` (sin los `:` de React 18, que rompen `url(#…)` en algunos navegadores) y lo reparte por contexto (`defId`). Se midió en Chrome: con dos mapas, los cuatro `<pattern>` tienen ids distintos y cada mapa usa los suyos.
+- **El color de la trama sale del tema.** Las tramas dibujan con `currentColor`, y el `color` del `<pattern>` es `--cm-pattern-color` (por defecto, `--cm-label-color` al 45 %): en `dark` se ven claras sin tocar nada.
+- **Dos arreglos al comprobarlo en Chrome:** el swatch de «sin dato» no mostraba la trama porque el `background` **en línea** (shorthand) tapaba mi `background-image` del CSS: ahora el color va en `backgroundColor`. Y las etiquetas de la barra se pisaban con 5 clases: la barra pasa de 240 a 280 px.
+
+## 36.3 Decisiones y desviaciones respecto a `dd.md`
+
+- **`LegendItem` gana `empty?: true`** (el item de «sin dato» deja de identificarse por posición) y `VariantResult` gana `classes`. Cambios aditivos del core.
+- **Fuera de este paso:** `interactive: "filter"` (clic = filtrar clases), `orientation` y `showEmpty` de `dd.md §12.3`, el tween de conteos, la leyenda anidada de tamaños y la trama del «sin dato» **como item propio con `emptyPattern`** más allá del swatch. Solo `variant` e `interactive` entran en `LegendOptions`.
+- **El tema `contrast` rayado cierra la desviación del paso 35** (`empty.pattern` entra en `ChoroplethTheme`). `hover.effect`, `selected.glow`, `sphere`, `graticule` y `motion` siguen fuera hasta tener consumidor.
+- **Se quita el aviso de `pattern` ignorado** del 35: ya se pinta.
+- **Las tramas escalan con el zoom** (viven dentro de la cámara, así que a ×8 las rayas son 8 veces más gruesas). Es una limitación conocida: arreglarlo exige contraescalar el `<pattern>` desde `use-zoom`. Se anota para el pulido.
+- **No hay `tabIndex` en los items de la leyenda** (el teclado y el foco son de la fase de accesibilidad): hoy se resalta con el puntero, y con táctil al tocar.
+- **Las barras no muestran conteos** (solo en el `title` del tramo): con `showCount`, el de «sin dato» sí.
+
+## 36.4 Tests
+
+**880 tests** en verde (846 − 1 + 35: 7 + 28); cobertura de `src/core` 100 % líneas. `typecheck`, `lint`, `format:check`, `build` y `build-storybook` limpios.
+
+- **`variants-classes.test.ts` (7, core):** la clase de cada región es la de su color y coincide con los conteos de la leyenda; el item de «sin dato» está marcado; `diverging`; continua → ninguna; categórica (índice por categoría; no declaradas y sin dato, `null`); `bubble` → ninguna; `classIndex` en los cortes.
+- **`legend-patterns.test.tsx` (28):** `data-class` de las regiones; resaltar y soltar; «sin dato»; el índice del item coincide con la región de su color; **no re-renderiza**; `interactive: false`; continua y `bubble` con segunda métrica (la leyenda tiene clases, las regiones no); desmontar suelta el resaltado; categorías. `bar`: tramos, cortes, resaltado, «sin dato» aparte con conteo, `title`, categorías y continua con su aspecto de siempre, `classNames`. `Defs`/`Patterns`: trama encima del color y `<pattern>` existente, `dots`, sin eventos ni lectura, `emptyPattern`, el tema `contrast` y la prioridad de la prop, el swatch, **dos mapas sin ids repetidos**, una trama propia con `useDefId`, ids válidos en `url(#…)`, sin capa si no hay tramas, sin aviso.
+- **Mutaciones (todas rompen tests; cada una comprobada como aplicada):** `data-class` fijo; sin resaltar; sin soltar; sin limpiar al desmontar; resaltar siempre (**sobrevivió** la primera vez: el test de `bubble` no tenía segunda métrica, así que la leyenda estaba vacía y no probaba nada; corregido); ids sin instancia; sin trama del tema; el tema gana a la prop; sin trama de vacíos; último corte mal; `bar` con categorías; clase desplazada una posición; item vacío sin marca; `contrast` sin trama.
+
+## 36.5 Verificación visual: pendiente de ti \*
+
+Comprobado por mí en Chrome real: al entrar en el primer tramo de la barra, `data-highlight-class="0"` y las demás regiones pasan a opacidad .45 (y vuelven al salir); 5 tramos, 6 cortes (`1 % … 100 %`); 58 regiones con trama en cada mapa; los ids de los dos mapas son distintos. Lo que **no** puedo juzgar:
+
+| Qué comprobar (`pnpm storybook` → **Styling → Legend + patterns**)                                                                                                                                                                                  |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Izquierda: la leyenda es una **barra** con cortes legibles (sin pisarse); pasa el ratón por un tramo: sus países se destacan y el resto se atenúa con fundido. «No data» (puntos) y los países estimados (rayas) se distinguen y no tapan el color. |
+| Derecha (`contrast`): «sin dato» **rayado**, también en el swatch de la leyenda; los puntos sobre los estimados; resalta una fila de la leyenda.                                                                                                    |
+| Cualquier story con leyenda (p. ej. `Preset → ChoroplethMap → Diverging`): pasar el ratón por una clase la resalta. Con `Sequential` y escala continua, no pasa nada (no hay clases).                                                               |
+| Acerca con la rueda sobre un país rayado: las rayas **engordan** con el zoom (limitación conocida, 36.3).                                                                                                                                           |
+
+## 36.6 Antes de pasar al paso 37: ¿lo tienes claro?
+
+- ¿Por qué resaltar una clase no re-renderiza ninguna región, y quién escribe cada atributo (`data-class`, `data-highlight-class`)?
+- ¿Por qué el índice de clase de una región y los conteos de la leyenda no pueden discrepar?
+- ¿Por qué la trama es una capa aparte y no el `fill` de la región?
+- ¿Qué pasaría con dos mapas en la página si los ids de las tramas fueran fijos?
+- ¿Por qué `bubble` y la escala continua no se resaltan?
+- ¿Por qué el `background` en línea del swatch tapaba la trama del CSS?
+
 # Plan hasta el MVP básico (pasos 34-37) y post-MVP
 
 > Orden acordado con el humano (tras el paso 33). El criterio: primero lo que falta de la fase C (`dd.md §17`, «v0.4 Navegación entre niveles»),
@@ -3009,19 +3283,19 @@ comprueba también en un Chrome real** con `scripts/cdp-story.mjs`.
 
 ## MVP básico
 
-| Paso   | Título                     | Alcance                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Fuente (`dd.md`)                                         |
-| ------ | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| **34** | **Cierre del drill**       | `onDrillIntent` (hover sostenido 150 ms o foco → el consumidor precarga datos; la geometría hija se precarga en la caché del motor). `drillDown(id)`, `drillUp(steps)` y `drillTo(path)` en el **handle** (`ref` y `useChoroplethApi`), con `Promise<TransitionResult>` que resuelve al volver a reposo (`completed: false` si se cancela). **Avisos de desarrollo** del drill en inglés: id que no existe en el nivel, `drillTo` a una región con `canDrill: false`, datos de otro nivel sobre la geometría actual, `getFeatureId` que no cruza. | §11.2.2, §11.2.3 (fila del prefetch), §9.5, §21 tarea 20 |
-| **35** | **Theming mínimo**         | `theme` (objeto + `light` / `dark` / `minimal` / `contrast`), `defineTheme`, `themeToCssVars`, prop `classNames` y el contrato `data-*` documentado, `getRegionStyle`. Story `Styling/Themes` (los cuatro lado a lado + uno propio) y `Styling/Tailwind-like`.                                                                                                                                                                                                                                                                                    | §12 (estilado), §21 tarea 21                             |
-| **36** | **Leyenda `bar` y `Defs`** | `Defs` con ids únicos por instancia (`useId`): **dos mapas en la misma página no comparten tramas ni filtros** (criterio global sin cubrir). Variante `bar` de la leyenda y resaltado por `data-highlight-class` (pasar el ratón por un tramo atenúa el resto).                                                                                                                                                                                                                                                                                   | §12, §21 tarea 22 (sin el tween de conteos)              |
-| **37** | **Higiene de publicación** | `useCamera(selector)` (§11.1.7). **`size-limit`** con presupuesto < 50 KB gzip, anotado en el diario. Story `Performance/AdminLevel` (miles de regiones + 1.000 burbujas) con **Profiler** y tests de «hover/zoom/pan no re-renderizan `Root`». `README` con el ejemplo de 10 líneas, instalación y enlace al glosario. Story `Zoom/Cooperative` completa (aviso Ctrl/⌘, pinch, inercia, controles).                                                                                                                                              | §11.1.7, §14.2, §21 criterios globales                   |
+| Paso   | Título                          | Alcance                                                                                                                                                                                                                                                                                                                                                                                              | Fuente (`dd.md`)                                         |
+| ------ | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| **34** | **Cierre del drill** ✅\*       | (hecho: ver «Paso 34»; el foco como intención queda para la accesibilidad)                                                                                                                                                                                                                                                                                                                           | §11.2.2, §11.2.3 (fila del prefetch), §9.5, §21 tarea 20 |
+| **35** | **Theming mínimo** ✅\*         | (hecho: ver «Paso 35»; sin `Defs`, que va en el 36)                                                                                                                                                                                                                                                                                                                                                  | §12 (estilado), §21 tarea 21                             |
+| **36** | **Leyenda `bar` y `Defs`** ✅\* | (hecho: ver «Paso 36»; sin tween de conteos ni `filter`)                                                                                                                                                                                                                                                                                                                                             | §12, §21 tarea 22                                        |
+| **37** | **Higiene de publicación**      | `useCamera(selector)` (§11.1.7). **`size-limit`** con presupuesto < 50 KB gzip, anotado en el diario. Story `Performance/AdminLevel` (miles de regiones + 1.000 burbujas) con **Profiler** y tests de «hover/zoom/pan no re-renderizan `Root`». `README` con el ejemplo de 10 líneas, instalación y enlace al glosario. Story `Zoom/Cooperative` completa (aviso Ctrl/⌘, pinch, inercia, controles). | §11.1.7, §14.2, §21 criterios globales                   |
 
 **Qué significa «MVP básico cerrado»:** v0.4 completo y revisado; un consumidor puede cambiar el aspecto sin tocar el CSS interno; dos mapas conviven en una página;
 el peso está medido y dentro del presupuesto; hay README y las stories obligatorias de zoom, drill, estilado y rendimiento.
 
 ### Decisiones pendientes del humano (antes de empezar el paso indicado)
 
-- **Paso 34 · táctil:** ¿entra el modo de dos toques del drill (primer toque = vista previa con tooltip, segundo = bajar; `labels.tapAgainHint`)? Es lo único
+- ~~**Paso 34 · táctil:**~~ **Resuelta: entró en el 34.** ¿Entra el modo de dos toques del drill (primer toque = vista previa con tooltip, segundo = bajar; `labels.tapAgainHint`)? Es lo único
   del drill aplazado que importa si el mapa va a móvil. Recomendación: **sí, dentro del 34** (es una pieza pequeña sobre el `hovered` del store).
 - **Capas `Labels` (nombres de países):** ¿entran en el MVP? Son lo que más se echa en falta en un mapa, pero llevan anti-colisión y halo. Recomendación: **fuera
   del MVP** (primera pieza post-MVP).

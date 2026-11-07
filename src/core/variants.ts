@@ -6,7 +6,7 @@ import {
 } from "./bubbles";
 import { buildCategoricalLegend, createCategoricalScale, type CategorySpec } from "./categories";
 import type { Classification } from "./classify";
-import { buildLegend, type LegendItem } from "./legend";
+import { buildLegend, classIndex, type LegendItem } from "./legend";
 import type {
   CategoricalPaletteName,
   DivergingPaletteName,
@@ -95,6 +95,11 @@ export type VariantResult<TDatum> = {
   /** Escala de color numérica. `null` en `categorical` y en `bubble` sin `getColorValue`. */
   scale: ColorScale | null;
   legend: LegendItem[];
+  /**
+   * Índice de la CLASE de la leyenda a la que pertenece cada región (mismo orden que `fills`), o `null` si no
+   * pertenece a ninguna (sin dato, escala continua, `bubble`). Es lo que permite resaltar una clase sin re-renderizar.
+   */
+  classes: (number | null)[];
   bubbles: Bubble<TDatum>[];
   sizeLegend: SizeLegendItem[];
 };
@@ -147,6 +152,10 @@ export const resolveVariant = <TDatum>(
       labels: values.map((v) => scale.getLabel(v)),
       scale: null,
       legend: buildCategoricalLegend({ scale, values, emptyLabel }),
+      classes: values.map((v) => {
+        const index = v == null ? -1 : scale.categories.findIndex((c) => c.id === v);
+        return index < 0 ? null : index;
+      }),
       bubbles: [],
       sizeLegend: [],
     };
@@ -169,6 +178,9 @@ export const resolveVariant = <TDatum>(
     labels: formatted(values),
     scale,
     legend: buildLegend({ scale, values, formatValue, emptyLabel }),
+    classes: values.map((v) =>
+      isUsable(v) && scale.kind !== "continuous" ? classIndex(scale.thresholds, v) : null,
+    ),
     bubbles: [],
     sizeLegend: [],
   };
@@ -255,6 +267,8 @@ const resolveBubbles = <TDatum>(
       colorScale === null
         ? []
         : buildLegend({ scale: colorScale, values: colorValues, formatValue, emptyLabel }),
+    // Las burbujas llevan el color, no las regiones: aquí no hay clase por región.
+    classes: entries.map(() => null),
     bubbles,
     sizeLegend: buildSizeLegend({ scale: radius, formatValue }),
   };

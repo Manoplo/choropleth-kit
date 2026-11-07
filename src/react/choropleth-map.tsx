@@ -6,7 +6,8 @@ import {
   type ReactNode,
   type Ref,
 } from "react";
-import { resolveControls, resolveLabels } from "../core";
+import { resolveControls, resolveLabels, type ChoroplethTheme, type ThemeName } from "../core";
+import type { ChoroplethClassNames } from "./class-names";
 import { Breadcrumb } from "./components/breadcrumb";
 import { GestureHint } from "./components/gesture-hint";
 import { Legend } from "./components/legend";
@@ -24,6 +25,10 @@ export type LegendOptions = {
   /** Esquina del mapa donde se superpone. Por defecto `bottom-left`. */
   position?: LegendPosition;
   showCount?: boolean;
+  /** `"swatches"` (por defecto) o `"bar"`: una barra con un tramo por clase y los cortes debajo. */
+  variant?: "swatches" | "bar";
+  /** Pasar el ratón por una clase resalta sus regiones (por defecto `true`). */
+  interactive?: boolean;
 };
 
 export type ChoroplethMapProps<TDatum> = UseChoroplethOptions<TDatum> & {
@@ -36,6 +41,12 @@ export type ChoroplethMapProps<TDatum> = UseChoroplethOptions<TDatum> & {
   className?: string;
   style?: CSSProperties;
   unstyled?: boolean;
+  /** `"light"` · `"dark"` · `"minimal"` · `"contrast"` o un objeto (`defineTheme`, `extendTheme`). */
+  theme?: ThemeName | ChoroplethTheme;
+  /** Trama sobre las regiones sin dato (`"hatch"`, `"dots"`); gana a la del tema. */
+  emptyPattern?: "none" | "hatch" | "dots";
+  /** Una clase tuya por pieza, SUMADA a la `cm-*` (Tailwind, CSS Modules). */
+  classNames?: ChoroplethClassNames;
   ariaLabel?: string;
 };
 
@@ -59,6 +70,9 @@ const ChoroplethMapInner = <TDatum,>(
     className,
     style,
     unstyled,
+    theme,
+    emptyPattern,
+    classNames,
     ariaLabel,
     ...options
   }: ChoroplethMapProps<TDatum>,
@@ -77,11 +91,19 @@ const ChoroplethMapInner = <TDatum,>(
       className={className}
       style={style}
       unstyled={unstyled}
+      theme={theme}
+      emptyPattern={emptyPattern}
+      classNames={classNames}
     >
       <Svg ariaLabel={ariaLabel} />
       {legendOptions !== null && (
         <div style={{ position: "absolute", ...CORNERS[legendOptions.position ?? "bottom-left"] }}>
-          <Legend title={legendOptions.title} showCount={legendOptions.showCount} />
+          <Legend
+            title={legendOptions.title}
+            showCount={legendOptions.showCount}
+            variant={legendOptions.variant}
+            interactive={legendOptions.interactive}
+          />
         </div>
       )}
       {options.drill !== undefined && breadcrumb !== false && (

@@ -25,6 +25,7 @@ import {
   type GeographyData,
   type GeographyInput,
   type LruCache,
+  type TransitionResult,
 } from "../core";
 import { buildDrillEvent, sourceDepth, type DrillEvent, type DrillLevel } from "./drill-levels";
 import { isProduction } from "./env";
@@ -118,6 +119,31 @@ export type DrillEngine<TDatum> = {
   rememberFills: (fills: ReadonlyMap<string, string>) => void;
   /** La cadena de niveles de una ruta (para calcular a dónde vuela la cámara); `null` si faltan. */
   chainLevelsFor: (path: readonly string[]) => ChainLevel[] | null;
+  /** La ruta PEDIDA (la del controlador), no la mostrada. */
+  target: readonly string[];
+  /**
+   * Carga la geometría de `path` (y de sus ancestros) en la caché sin mostrarla: el prefetch por intención
+   * (dd.md §11.2.3). Idempotente, silencioso y sin efecto si ya está o ya se está pidiendo.
+   */
+  prefetch: (path: readonly string[]) => void;
+  /**
+   * Navega con `run` (que llama al controlador y devuelve la ruta que ha quedado pedida) y devuelve una
+   * `Promise` que resuelve al volver a reposo en ella (`completed: false` si se cortó o no llegó a aplicarse).
+   */
+  navigate: (
+    run: (controller: DrillController<TDatum>) => readonly string[],
+  ) => Promise<TransitionResult>;
+};
+
+/** Si el controlador no aplica la ruta pedida en este tiempo (un padre `controlled` que la rechaza), la promesa resuelve `false`. */
+const REJECTED_AFTER_MS = 1000;
+
+type Waiter = {
+  target: readonly string[];
+  resolve: (result: TransitionResult) => void;
+  /** Ya se vio la ruta pedida como destino del controlador. */
+  seen: boolean;
+  timer: ReturnType<typeof setTimeout> | undefined;
 };
 
 const defaultFeatureId = (feature: Feature): string | undefined =>
@@ -238,7 +264,7 @@ export const useDrillEngine = <TDatum>({
   // `cache` guarda lo que viene de funciones (`geography: (ctx) => import(…)`); las geometrías fijas se
   // leen directamente. `failed` guarda las claves que dieron error; `pending`, las que vuelan.
   const [cache] = useState<LruCache<GeographyData>>(() => createLruCache<GeographyData>());
-  const [, setVersion] = useState(0);
+  const [version, setVersion] = useState(0);
   const [failed, setFailed] = useState<ReadonlyMap<string, unknown>>(new Map());
   const pending = useRef(new Set<string>());
 
@@ -252,19 +278,27 @@ export const useDrillEngine = <TDatum>({
     return fixedGeography(level) ?? cache.get(keyAt(depth, path));
   };
 
-  // Efecto real: pide lo que falta (carga asíncrona) y avisa al llegar.
+  // Pide lo que falta de una ruta (carga asíncrona) y avisa al llegar. Lo usan el efecto del destino y el
+  // prefetch. Un prefetch que falla no marca la clave como fallida: el error real, si lo hay, lo dará el
+  // clic (que volverá a pedirla); `version` en las dependencias del efecto lo reintenta en cuanto vuelve.
+  const mounted = useRef(false);
   useEffect(() => {
-    if (!active) return;
-    let cancelled = false;
-    for (let depth = 0; depth <= target.length; depth++) {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  const request = (path: readonly string[], prefetching: boolean, retryFailed = false) => {
+    for (let depth = 0; depth <= path.length; depth++) {
       const source = sourceOf(depth);
       const level = levels[source];
       if (level === undefined || fixedGeography(level) !== undefined) continue;
-      const key = keyAt(depth, target);
+      const key = keyAt(depth, path);
       if (cache.has(key) || pending.current.has(key)) continue;
+      if (failed.has(key) && !retryFailed) continue;
       const input =
         typeof level.geography === "function"
-          ? level.geography(contextOf(target.slice(0, source)))
+          ? level.geography(contextOf(path.slice(0, source)))
           : level.geography;
       if (input === "inherit") continue;
       pending.current.add(key);
@@ -272,20 +306,37 @@ export const useDrillEngine = <TDatum>({
         (loaded) => {
           pending.current.delete(key);
           cache.set(key, loaded);
-          if (!cancelled) setVersion((v) => v + 1);
+          if (mounted.current) setVersion((v) => v + 1);
         },
         (error: unknown) => {
           pending.current.delete(key);
-          if (!cancelled) setFailed((previous) => new Map(previous).set(key, error));
+          if (!mounted.current) return;
+          if (prefetching) setVersion((v) => v + 1);
+          else setFailed((previous) => new Map(previous).set(key, error));
         },
       );
     }
-    return () => {
-      cancelled = true;
-    };
-    // `target`/`levels` se resumen en `targetKey`; `cache` y `pending` son estables.
+  };
+  const latestRequest = useRef(request);
+  useEffect(() => {
+    latestRequest.current = request;
+  });
+  const prefetch = useCallback(
+    (path: readonly string[]) => {
+      if (active) latestRequest.current(path, true);
+    },
+    [active],
+  );
+
+  // Una clave que falló se reintenta al volver a pedir ESA ruta (un clic nuevo), no en cada recarga ajena.
+  const requestedTarget = useRef("");
+  useEffect(() => {
+    const retryFailed = requestedTarget.current !== targetKey;
+    requestedTarget.current = targetKey;
+    if (active) request(target, false, retryFailed);
+    // `target`/`levels` se resumen en `targetKey`; `version` reintenta lo que un prefetch fallido dejó sin cargar.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, targetKey, levels]);
+  }, [active, targetKey, levels, version]);
 
   // ── features por profundidad ────────────────────────────────────────────────────────────────────
   /** El filtro del nivel de `depth`: el del mapa (solo en la raíz) y el de cada nivel, con SU contexto. */
@@ -408,6 +459,54 @@ export const useDrillEngine = <TDatum>({
   useEffect(() => {
     latestProps.current = { onDrill, onDrillEnd, onDrillError, controller, target, machine };
   });
+
+  // ── navegación del handle: la Promise resuelve al volver a reposo en la ruta pedida ───────────────
+  const waiters = useRef<Waiter[]>([]);
+  const finish = (waiter: Waiter, completed: boolean) => {
+    clearTimeout(waiter.timer);
+    waiters.current = waiters.current.filter((w) => w !== waiter);
+    waiter.resolve({ completed });
+  };
+  const arrived = (waiter: Waiter) => {
+    const { target: wanted, machine: current } = latestProps.current;
+    if (!samePath(wanted, waiter.target)) return false;
+    waiter.seen = true;
+    return current.phase === "idle" && samePath(current.settledPath, waiter.target);
+  };
+  const navigate = useCallback<DrillEngine<TDatum>["navigate"]>((run) => {
+    const ctl = latestProps.current.controller;
+    if (ctl === null) return Promise.resolve({ completed: false });
+    const wanted = run(ctl);
+    return new Promise<TransitionResult>((resolve) => {
+      const waiter: Waiter = { target: wanted, resolve, seen: false, timer: undefined };
+      waiter.timer = setTimeout(() => {
+        if (!waiter.seen) finish(waiter, false);
+      }, REJECTED_AFTER_MS);
+      // Una navegación nueva sustituye a las anteriores que iban a otra parte: esas ya no llegarán.
+      for (const other of waiters.current) {
+        if (!samePath(other.target, wanted)) finish(other, false);
+      }
+      waiters.current.push(waiter);
+      // Ya estaba allí (nada que esperar), o ya iba hacia allí (esperar a que acabe).
+      if (arrived(waiter)) finish(waiter, true);
+    });
+    // `finish`/`arrived` solo tocan refs: no cambian de significado entre renders.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    for (const waiter of waiters.current) {
+      if (arrived(waiter)) finish(waiter, true);
+      // Otra ruta pasó a ser el destino tras haber visto el pedido: lo sustituyeron o la máquina lo deshizo.
+      else if (waiter.seen && !samePath(target, waiter.target)) finish(waiter, false);
+    }
+  });
+  useEffect(
+    () => () => {
+      for (const waiter of waiters.current) finish(waiter, false);
+    },
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   // ── del mundo real a eventos del reducer ────────────────────────────────────────────────────────
   // `dispatched`: la última ruta pedida a la máquina. `machineAtDispatch`: la máquina en ese instante; sirve
@@ -554,5 +653,8 @@ export const useDrillEngine = <TDatum>({
     previous,
     rememberFills,
     chainLevelsFor,
+    target,
+    prefetch,
+    navigate,
   };
 };

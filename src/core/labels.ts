@@ -21,6 +21,8 @@ export type ChoroplethLabels = {
   breadcrumbRoot: string;
   drillUp: string;
   drillHint: string;
+  /** Táctil: la pista del tooltip tras el primer toque (el segundo baja). */
+  tapAgainHint: string;
 };
 
 export const en: ChoroplethLabels = {
@@ -36,6 +38,7 @@ export const en: ChoroplethLabels = {
   breadcrumbRoot: "All",
   drillUp: "Up one level",
   drillHint: "Click to see regions",
+  tapAgainHint: "Tap again to enter",
 };
 
 export const es: ChoroplethLabels = {
@@ -51,6 +54,7 @@ export const es: ChoroplethLabels = {
   breadcrumbRoot: "Todo",
   drillUp: "Subir un nivel",
   drillHint: "Clic para ver regiones",
+  tapAgainHint: "Toca de nuevo para entrar",
 };
 
 /** Completa los textos que falte con los de inglés. */

@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { Corner } from "../../core";
+import { cx } from "../class-names";
 import { useChoroplethContext } from "../choropleth-context";
 import type { DrillNav } from "../use-choropleth";
 
@@ -29,7 +30,7 @@ const CORNERS: Record<Corner, CSSProperties> = {
  * cámara). Sin `drill` no pinta nada. Con `children` (render prop) el aspecto es tuyo.
  */
 export const Breadcrumb = ({ position, className, children }: BreadcrumbProps) => {
-  const { choropleth } = useChoroplethContext();
+  const { choropleth, classNames } = useChoroplethContext();
   const { drillNav, labels } = choropleth;
   if (drillNav === null) return null;
   if (children !== undefined) return <>{children(drillNav)}</>;
@@ -37,7 +38,7 @@ export const Breadcrumb = ({ position, className, children }: BreadcrumbProps) =
   const { items, canDrillUp, drillTo, drillUp } = drillNav;
   return (
     <nav
-      className={className === undefined ? "cm-breadcrumb" : `cm-breadcrumb ${className}`}
+      className={cx("cm-breadcrumb", classNames.breadcrumb, className)}
       aria-label={labels.breadcrumb}
       style={position === undefined ? undefined : { position: "absolute", ...CORNERS[position] }}
     >
@@ -53,7 +54,7 @@ export const Breadcrumb = ({ position, className, children }: BreadcrumbProps) =
       )}
       <ol className="cm-breadcrumb__list">
         {items.map((item) => (
-          <li key={item.depth} className="cm-breadcrumb__item">
+          <li key={item.depth} className={cx("cm-breadcrumb__item", classNames.breadcrumbItem)}>
             {item.current ? (
               <span className="cm-breadcrumb__current" aria-current="page">
                 {item.label}

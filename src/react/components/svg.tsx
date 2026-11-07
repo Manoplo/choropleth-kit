@@ -1,6 +1,9 @@
 import { useRef, type KeyboardEvent, type ReactNode } from "react";
+import { cx } from "../class-names";
 import { useChoroplethContext } from "../choropleth-context";
 import { Borders } from "./borders";
+import { Defs } from "./defs";
+import { Patterns } from "./patterns";
 import { Bubbles } from "./bubbles";
 import { DrillLayers } from "./drill-layers";
 import { FallbackPoints } from "./fallback-points";
@@ -30,7 +33,7 @@ export type SvgProps = {
  * el mapa: la página no salta cuando aparece.
  */
 export const Svg = ({ children, className, ariaLabel }: SvgProps) => {
-  const { choropleth, store, viewportRef } = useChoroplethContext();
+  const { choropleth, store, viewportRef, classNames } = useChoroplethContext();
   const {
     width,
     height,
@@ -105,22 +108,26 @@ export const Svg = ({ children, className, ariaLabel }: SvgProps) => {
       ref={svgRef}
       tabIndex={keyboard ? 0 : undefined}
       onKeyDown={keyboard ? handleKeyDown : undefined}
-      className={className === undefined ? "cm-svg" : `cm-svg ${className}`}
+      className={cx("cm-svg", classNames.svg, className)}
       viewBox={`0 0 ${width} ${height}`}
       role="img"
       aria-label={ariaLabel}
       style={{ display: "block", width: "100%", height: "auto" }}
     >
       {children ?? (
-        <Viewport>
-          <DrillLayers role="context" />
-          <Regions />
-          <Borders />
-          <Bubbles />
-          <FallbackPoints />
-          <Selection />
-          <DrillLayers role="exiting" />
-        </Viewport>
+        <>
+          <Defs />
+          <Viewport>
+            <DrillLayers role="context" />
+            <Regions />
+            <Patterns />
+            <Borders />
+            <Bubbles />
+            <FallbackPoints />
+            <Selection />
+            <DrillLayers role="exiting" />
+          </Viewport>
+        </>
       )}
     </svg>
   );

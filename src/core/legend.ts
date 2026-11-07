@@ -9,6 +9,8 @@ export type LegendItem = {
   to?: number;
   /** Nº de regiones en esa clase. */
   count: number;
+  /** Es el item de «sin dato» (no es una clase: no tiene índice de clase). */
+  empty?: true;
 };
 
 export type BuildLegendOptions = {
@@ -26,7 +28,7 @@ export const defaultFormatValue = (value: number): string =>
 // Índice de clase = nº de cortes <= valor. Un valor justo en un corte cae en la clase de ARRIBA,
 // igual que d3.scaleThreshold; si difiriera, la leyenda contaría regiones en una clase y el mapa
 // las pintaría de otro color.
-const classIndex = (thresholds: readonly number[], value: number): number => {
+export const classIndex = (thresholds: readonly number[], value: number): number => {
   let lo = 0;
   let hi = thresholds.length;
   while (lo < hi) {
@@ -63,7 +65,7 @@ export const buildLegend = (options: BuildLegendOptions): LegendItem[] => {
   });
 
   if (emptyLabel !== undefined) {
-    items.push({ color: scale.emptyFill, label: emptyLabel, count: empty });
+    items.push({ color: scale.emptyFill, label: emptyLabel, count: empty, empty: true });
   }
   return items;
 };

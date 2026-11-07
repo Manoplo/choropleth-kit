@@ -1,4 +1,5 @@
 import type { MouseEvent } from "react";
+import { cx } from "../class-names";
 import { useChoroplethContext } from "../choropleth-context";
 
 /**
@@ -14,7 +15,7 @@ import { useChoroplethContext } from "../choropleth-context";
  * `role="context"` va DEBAJO de las regiones activas y `role="exiting"` ENCIMA (se desvanece sobre ellas).
  */
 export const DrillLayers = ({ role }: { role: "context" | "exiting" }) => {
-  const { choropleth } = useChoroplethContext();
+  const { choropleth, classNames } = useChoroplethContext();
   const { drillLayers, selectContextItem } = choropleth;
   const layers = drillLayers.filter((layer) => layer.role === role);
   if (layers.length === 0) return null;
@@ -26,7 +27,7 @@ export const DrillLayers = ({ role }: { role: "context" | "exiting" }) => {
         return (
           <g
             key={layer.key}
-            className="cm-layer"
+            className={cx("cm-layer", classNames.layer)}
             data-role={layer.role}
             data-depth={layer.depth}
             transform={`translate(${x},${y}) scale(${k})`}
