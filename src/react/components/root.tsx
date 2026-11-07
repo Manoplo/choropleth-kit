@@ -1,6 +1,8 @@
 import {
   forwardRef,
+  useCallback,
   useEffect,
+  useId,
   useImperativeHandle,
   useMemo,
   useRef,
@@ -42,6 +44,8 @@ export type RootProps<TDatum> = UseChoroplethOptions<TDatum> & {
    * el CSS; para tocar una a mano, usa `style`.
    */
   theme?: ThemeName | ChoroplethTheme;
+  /** Trama sobre las regiones sin dato. Gana a la del tema (`empty.pattern`); `"none"` la quita. */
+  emptyPattern?: "none" | "hatch" | "dots";
   /** Una clase tuya por pieza, SUMADA a la `cm-*` (Tailwind, CSS Modules). */
   classNames?: ChoroplethClassNames;
 };
@@ -53,6 +57,7 @@ const RootInner = <TDatum,>(
     style,
     unstyled,
     theme,
+    emptyPattern,
     classNames,
     dimOthers = "selection",
     ...options
@@ -92,6 +97,11 @@ const RootInner = <TDatum,>(
   // Las variables del tema: se recalculan solo si cambia el tema (un nombre casi siempre; un objeto, su identidad).
   const themeVars = useMemo(() => themeToCssVars(resolveTheme(theme)), [theme]);
   const slots = useMemo(() => classNames ?? {}, [classNames]);
+  // Ids de las definiciones SVG: únicos por instancia (dos mapas en una página no se pisan las tramas).
+  const instance = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  const defId = useCallback((name: string) => `cm${instance}-${name}`, [instance]);
+  const pattern = emptyPattern ?? resolveTheme(theme)?.empty?.pattern;
+  const resolvedPattern = pattern === "hatch" || pattern === "dots" ? pattern : null;
 
   const handlePointer = (event: PointerEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -111,6 +121,8 @@ const RootInner = <TDatum,>(
         viewportRef,
         api,
         classNames: slots,
+        defId,
+        emptyPattern: resolvedPattern,
       }}
     >
       <div

@@ -99,6 +99,10 @@ export type Region<TDatum> = {
   opacity: number | undefined;
   /** De `getRegionStyle`: clase propia para esta región. */
   className: string | undefined;
+  /** De `getRegionStyle`: trama dibujada ENCIMA del color (`"hatch"`, `"dots"` o el nombre de una tuya en `<Choropleth.Defs>`). */
+  pattern: string | undefined;
+  /** Clase de la leyenda a la que pertenece (`data-class`), o `null` (sin dato, escala continua, `bubble`). */
+  classIndex: number | null;
 };
 
 /**
@@ -112,8 +116,9 @@ export type RegionStyle = {
   /** Clase propia; se suma a `classNames.region`. */
   className?: string;
   /**
-   * **Reservado**: las tramas (`"hatch"`, `"dots"`) llegan con `<Choropleth.Defs>` (paso 36). Hasta entonces se
-   * ignora y, fuera de producción, se avisa una vez.
+   * Trama dibujada encima del color (el dato sigue viéndose): `"hatch"` o `"dots"`, o el nombre de un `<pattern>`
+   * tuyo definido en `<Choropleth.Defs>` con `useDefId(nombre)`. Necesita `<Choropleth.Defs>` y `<Choropleth.Patterns>`
+   * (el preset y `Choropleth.Svg` ya los incluyen).
    */
   pattern?: "hatch" | "dots" | (string & {});
 };
@@ -802,7 +807,6 @@ export const useChoropleth = <TDatum>(
     ? { id: engine.level?.id ?? ROOT_LEVEL.id, depth: engine.depth }
     : ROOT_LEVEL;
   const regions: Region<TDatum>[] = [];
-  const patternIgnored = { current: false };
   const anonymousPaths: string[] = [];
   features.features.forEach((feature, index) => {
     const path = paths[index];
@@ -837,6 +841,8 @@ export const useChoropleth = <TDatum>(
       wave,
       opacity: undefined,
       className: undefined,
+      pattern: undefined,
+      classIndex: variant.classes[index] ?? null,
       drillable:
         engine.active &&
         isDrillable(engine.levels, engine.depth, {
@@ -849,7 +855,6 @@ export const useChoropleth = <TDatum>(
         }),
     };
     const custom = options.getRegionStyle?.(base);
-    if (custom?.pattern !== undefined) patternIgnored.current = true;
     regions.push(
       custom === undefined
         ? base
@@ -858,20 +863,10 @@ export const useChoropleth = <TDatum>(
             fill: custom.fill ?? base.fill,
             opacity: custom.opacity,
             className: custom.className,
+            pattern: custom.pattern,
           },
     );
   });
-  // `pattern` aún no se pinta (paso 36): se avisa una vez, en un efecto, no en el render.
-  const patternWarned = useRef(false);
-  useEffect(() => {
-    if (patternIgnored.current && !patternWarned.current && !isProduction()) {
-      patternWarned.current = true;
-      console.warn(
-        "[choropleth] getRegionStyle: `pattern` is not rendered yet (patterns arrive with <Choropleth.Defs>); it was ignored.",
-      );
-    }
-  });
-
   // Los microestados son burbujas en `bubble` (con sus coordenadas) y puntos sueltos en el resto.
   const fallbackCoordinates = new Map(fallbacks.map((f) => [f.id, f.coordinates]));
   const bubbles = isBubble

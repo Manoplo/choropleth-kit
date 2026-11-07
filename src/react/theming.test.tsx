@@ -325,23 +325,6 @@ describe("getRegionStyle", () => {
     expect((selected as SVGElement).style.fill).toBe("#ff00ff");
   });
 
-  it("`pattern` está reservado: se ignora y avisa UNA vez (inglés, fuera de producción)", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const { rerender } = preset({ getRegionStyle: () => ({ pattern: "hatch" }) });
-    rerender(
-      <ChoroplethMap<Row>
-        {...({
-          ...baseProps,
-          getRegionStyle: () => ({ pattern: "hatch" }),
-        } as ChoroplethMapProps<Row>)}
-      />,
-    );
-    const messages = warn.mock.calls.map((c) => String(c[0])).filter((m) => m.includes("pattern"));
-    expect(messages).toHaveLength(1);
-    expect(messages[0]).toContain("[choropleth] getRegionStyle");
-    warn.mockRestore();
-  });
-
   it("no cambiar nada (devolver undefined) no cambia el DOM", () => {
     const plain = preset();
     const withFn = preset({ getRegionStyle: () => undefined });

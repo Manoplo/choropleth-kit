@@ -39,7 +39,9 @@
 
 /* OJO: aquí NO se define `fill`: una regla CSS ganaría al `fill` de cada región (el color del dato). */
 :where(.cm-root:not([data-unstyled])) .cm-region {
-  transition: fill var(--cm-transition-duration, 250ms);
+  transition:
+    fill var(--cm-transition-duration, 250ms),
+    opacity var(--cm-transition-duration, 250ms);
 }
 
 /* Con GeoJSON no hay capa de fronteras (mesh): cada región dibuja su propio contorno. */
@@ -483,4 +485,80 @@
   margin-top: 2px;
   opacity: 0.7;
   font-size: 0.9em;
+}
+
+/* ── leyenda interactiva y barra ──────────────────────────────────────────────────────────── */
+
+/*
+ * Pasar el ratón por una clase de la leyenda la resalta: la leyenda escribe `data-highlight-class` en el root y
+ * cada región ya lleva su `data-class` (depende solo del dato), así que NO se re-renderiza ninguna región.
+ * Reglas estáticas para las clases 0-11 y «empty» (más de 12 clases no se resaltan).
+ */
+:where(.cm-root:not([data-unstyled]))[data-highlight-class="0"] .cm-region:not([data-class="0"]),
+:where(.cm-root:not([data-unstyled]))[data-highlight-class="1"] .cm-region:not([data-class="1"]),
+:where(.cm-root:not([data-unstyled]))[data-highlight-class="2"] .cm-region:not([data-class="2"]),
+:where(.cm-root:not([data-unstyled]))[data-highlight-class="3"] .cm-region:not([data-class="3"]),
+:where(.cm-root:not([data-unstyled]))[data-highlight-class="4"] .cm-region:not([data-class="4"]),
+:where(.cm-root:not([data-unstyled]))[data-highlight-class="5"] .cm-region:not([data-class="5"]),
+:where(.cm-root:not([data-unstyled]))[data-highlight-class="6"] .cm-region:not([data-class="6"]),
+:where(.cm-root:not([data-unstyled]))[data-highlight-class="7"] .cm-region:not([data-class="7"]),
+:where(.cm-root:not([data-unstyled]))[data-highlight-class="8"] .cm-region:not([data-class="8"]),
+:where(.cm-root:not([data-unstyled]))[data-highlight-class="9"] .cm-region:not([data-class="9"]),
+:where(.cm-root:not([data-unstyled]))[data-highlight-class="10"] .cm-region:not([data-class="10"]),
+:where(.cm-root:not([data-unstyled]))[data-highlight-class="11"] .cm-region:not([data-class="11"]),
+:where(.cm-root:not([data-unstyled]))[data-highlight-class="empty"]
+  .cm-region:not([data-class="empty"]) {
+  opacity: var(--cm-dim-opacity, 0.45);
+}
+:where(.cm-root:not([data-unstyled])) .cm-legend [data-class] {
+  cursor: default;
+}
+
+:where(.cm-root:not([data-unstyled])) .cm-legend__bar-wrap {
+  width: 280px;
+}
+:where(.cm-root:not([data-unstyled])) .cm-legend__bar {
+  display: flex;
+  height: 10px;
+  border-radius: 2px;
+  overflow: hidden;
+}
+:where(.cm-root:not([data-unstyled])) .cm-legend__segment {
+  flex: 1 1 0;
+}
+:where(.cm-root:not([data-unstyled])) .cm-legend__ticks {
+  position: relative;
+  height: 1.4em;
+  margin-bottom: 4px;
+  font-size: 0.9em;
+}
+:where(.cm-root:not([data-unstyled])) .cm-legend__tick {
+  position: absolute;
+  top: 2px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  opacity: 0.75;
+}
+:where(.cm-root:not([data-unstyled])) .cm-legend__tick:first-child {
+  transform: none;
+}
+:where(.cm-root:not([data-unstyled])) .cm-legend__tick:last-child {
+  transform: translateX(-100%);
+}
+
+/* La trama de «sin dato» también en el swatch de la leyenda. */
+:where(.cm-root:not([data-unstyled])) .cm-legend__swatch[data-pattern="hatch"] {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--cm-pattern-color, color-mix(in srgb, var(--cm-label-color, #111111) 45%, transparent)) 0
+      1.5px,
+    transparent 1.5px 4px
+  );
+}
+:where(.cm-root:not([data-unstyled])) .cm-legend__swatch[data-pattern="dots"] {
+  background-image: radial-gradient(
+    var(--cm-pattern-color, color-mix(in srgb, var(--cm-label-color, #111111) 45%, transparent)) 1px,
+    transparent 1.2px
+  );
+  background-size: 4px 4px;
 }

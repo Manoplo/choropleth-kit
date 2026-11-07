@@ -13,6 +13,10 @@ export type ChoroplethContextValue = {
   api: ChoroplethMapHandle;
   /** Clases del consumidor por pieza (`classNames` de `Root`). Vacío si no las hay. */
   classNames: ChoroplethClassNames;
+  /** Id (único por instancia del mapa) de una definición SVG: `defId("hatch")`. */
+  defId: (name: string) => string;
+  /** Trama de las regiones sin dato (`emptyPattern` o la del tema). */
+  emptyPattern: "hatch" | "dots" | null;
 };
 
 export const ChoroplethContext = createContext<ChoroplethContextValue | null>(null);
@@ -27,6 +31,8 @@ export const useChoroplethContext = <TDatum = unknown>(): {
   viewportRef: RefObject<SVGGElement | null>;
   api: ChoroplethMapHandle;
   classNames: ChoroplethClassNames;
+  defId: (name: string) => string;
+  emptyPattern: "hatch" | "dots" | null;
 } => {
   const value = useContext(ChoroplethContext);
   if (value === null) {
@@ -40,6 +46,8 @@ export const useChoroplethContext = <TDatum = unknown>(): {
     viewportRef: RefObject<SVGGElement | null>;
     api: ChoroplethMapHandle;
     classNames: ChoroplethClassNames;
+    defId: (name: string) => string;
+    emptyPattern: "hatch" | "dots" | null;
   };
 };
 
@@ -48,3 +56,11 @@ export const useChoroplethContext = <TDatum = unknown>(): {
  * puede llamar a `zoomTo` sin necesitar un `ref`.
  */
 export const useChoroplethApi = (): ChoroplethMapHandle => useChoroplethContext().api;
+
+/**
+ * El id de una definición SVG (`<pattern>`, `<linearGradient>`, `<filter>`) de ESTE mapa. Con dos mapas en la
+ * página, `url(#hatch)` apuntaría siempre al primero: los ids llevan un prefijo por instancia (`useId`).
+ * Úsalo para definir las tuyas dentro de `<Choropleth.Defs>` (`<pattern id={useDefId("stripes")}>`) y para
+ * referenciarlas: `fill="url(#…)"`. Las incluidas son `"hatch"` y `"dots"`.
+ */
+export const useDefId = (name: string): string => useChoroplethContext().defId(name);

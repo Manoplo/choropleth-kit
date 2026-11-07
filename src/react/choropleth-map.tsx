@@ -25,6 +25,10 @@ export type LegendOptions = {
   /** Esquina del mapa donde se superpone. Por defecto `bottom-left`. */
   position?: LegendPosition;
   showCount?: boolean;
+  /** `"swatches"` (por defecto) o `"bar"`: una barra con un tramo por clase y los cortes debajo. */
+  variant?: "swatches" | "bar";
+  /** Pasar el ratón por una clase resalta sus regiones (por defecto `true`). */
+  interactive?: boolean;
 };
 
 export type ChoroplethMapProps<TDatum> = UseChoroplethOptions<TDatum> & {
@@ -39,6 +43,8 @@ export type ChoroplethMapProps<TDatum> = UseChoroplethOptions<TDatum> & {
   unstyled?: boolean;
   /** `"light"` · `"dark"` · `"minimal"` · `"contrast"` o un objeto (`defineTheme`, `extendTheme`). */
   theme?: ThemeName | ChoroplethTheme;
+  /** Trama sobre las regiones sin dato (`"hatch"`, `"dots"`); gana a la del tema. */
+  emptyPattern?: "none" | "hatch" | "dots";
   /** Una clase tuya por pieza, SUMADA a la `cm-*` (Tailwind, CSS Modules). */
   classNames?: ChoroplethClassNames;
   ariaLabel?: string;
@@ -65,6 +71,7 @@ const ChoroplethMapInner = <TDatum,>(
     style,
     unstyled,
     theme,
+    emptyPattern,
     classNames,
     ariaLabel,
     ...options
@@ -85,12 +92,18 @@ const ChoroplethMapInner = <TDatum,>(
       style={style}
       unstyled={unstyled}
       theme={theme}
+      emptyPattern={emptyPattern}
       classNames={classNames}
     >
       <Svg ariaLabel={ariaLabel} />
       {legendOptions !== null && (
         <div style={{ position: "absolute", ...CORNERS[legendOptions.position ?? "bottom-left"] }}>
-          <Legend title={legendOptions.title} showCount={legendOptions.showCount} />
+          <Legend
+            title={legendOptions.title}
+            showCount={legendOptions.showCount}
+            variant={legendOptions.variant}
+            interactive={legendOptions.interactive}
+          />
         </div>
       )}
       {options.drill !== undefined && breadcrumb !== false && (

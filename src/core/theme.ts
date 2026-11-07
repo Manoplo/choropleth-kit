@@ -13,8 +13,8 @@
 export type ChoroplethTheme = {
   /** Fondo del mapa (el `.cm-root`). Por defecto, transparente. */
   background?: string;
-  /** Regiones sin dato. */
-  empty?: { fill?: string };
+  /** Regiones sin dato. `pattern`: trama sobre las regiones sin dato (no solo color: se distingue también sin verlo). Por defecto, ninguna. */
+  empty?: { fill?: string; pattern?: "none" | "hatch" | "dots" };
   /** Los niveles de arriba en un drill: gris, sin color de dato. */
   context?: { fill?: string; border?: string };
   /** Fronteras entre regiones. */
@@ -119,13 +119,12 @@ const minimal: ChoroplethTheme = {
 };
 
 /**
- * Alto contraste: fronteras y resaltes gruesos, anillo de foco reforzado y colores que cumplen AA.
- * (La trama de «sin dato» de `dd.md §12.5.3` llega con `Defs`, paso 36: hasta entonces «sin dato» se
- * distingue por el gris y el borde, no por una textura.)
+ * Alto contraste: fronteras y resaltes gruesos, anillo de foco reforzado, colores que cumplen AA y «sin dato»
+ * rayado (no depende solo del color).
  */
 const contrast: ChoroplethTheme = {
   background: "#ffffff",
-  empty: { fill: "#bdbdbd" },
+  empty: { fill: "#bdbdbd", pattern: "hatch" },
   context: { fill: "#e0e0e0", border: "#000000" },
   border: { color: "#000000", width: 1 },
   hover: { stroke: "#000000", width: 3 },

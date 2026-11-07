@@ -88,7 +88,7 @@ export type {
   RebaseParams,
   RebaseResult,
 } from "./projection";
-export { buildLegend, defaultFormatValue } from "./legend";
+export { buildLegend, classIndex, defaultFormatValue } from "./legend";
 export type { BuildLegendOptions, LegendItem } from "./legend";
 export { createBorders } from "./borders";
 export type { CreateBordersOptions } from "./borders";

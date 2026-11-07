@@ -36,7 +36,10 @@ export type {
   RegionItem,
 } from "./map-item";
 export type { ChoroplethMapHandle } from "./handle";
-export { useChoroplethApi } from "./choropleth-context";
+export { useChoroplethApi, useDefId } from "./choropleth-context";
+export { Defs } from "./components/defs";
+export type { DefsProps } from "./components/defs";
+export { Patterns } from "./components/patterns";
 export { createMapStore, useMapStore } from "./map-store";
 export type { MapState, MapStore, PointerPosition, ZoomApi } from "./map-store";
 export { clearGeographyCache, useGeography } from "./use-geography";

@@ -158,6 +158,44 @@ const TailwindLike = () => (
   </div>
 );
 
+// ── Leyenda y tramas (paso 36) ─────────────────────────────────────────────────────────────────
+
+/** Dos mapas en la misma página: cada uno con SUS tramas (ids por instancia) y su leyenda interactiva. */
+const LegendAndPatterns = () => (
+  <div
+    style={{
+      display: "grid",
+      gap: 16,
+      gridTemplateColumns: "repeat(auto-fit, minmax(460px, 1fr))",
+      padding: 16,
+    }}
+  >
+    <figure style={{ margin: 0 }}>
+      <figcaption style={{ font: "600 13px sans-serif", margin: "0 0 6px" }}>
+        legend=&#123;&#123; variant: "bar" &#125;&#125; · estimados rayados · «sin dato» con puntos
+      </figcaption>
+      <ChoroplethMap<Row>
+        {...common}
+        legend={{ title: "Índice (sintético)", position: "bottom-left", variant: "bar" }}
+        emptyPattern="dots"
+        getRegionStyle={(r) => (r.datum?.estimated === true ? { pattern: "hatch" } : undefined)}
+        ariaLabel="Leyenda en barra y tramas"
+      />
+    </figure>
+    <figure style={{ margin: 0 }}>
+      <figcaption style={{ font: "600 13px sans-serif", margin: "0 0 6px" }}>
+        theme="contrast" (el «sin dato» va rayado) · leyenda en filas
+      </figcaption>
+      <ChoroplethMap<Row>
+        {...common}
+        theme="contrast"
+        getRegionStyle={(r) => (r.datum?.estimated === true ? { pattern: "dots" } : undefined)}
+        ariaLabel="Contraste con tramas"
+      />
+    </figure>
+  </div>
+);
+
 const meta = {
   title: "Styling",
   parameters: { layout: "fullscreen" },
@@ -181,3 +219,13 @@ export const AncestorVariablesStory: Story = {
 
 /** `classNames` con utilidades al estilo Tailwind: tu clase en cada pieza, sumada a la `cm-*`. */
 export const TailwindLikeStory: Story = { name: "Tailwind-like", render: () => <TailwindLike /> };
+
+/**
+ * Pasa el ratón por una clase de la leyenda (tramo de la barra o fila): sus regiones se destacan y el resto se
+ * atenúa, sin re-renderizar regiones. Los países «estimados» llevan una trama encima de su color; «sin dato» se
+ * ve con puntos (izquierda) o rayado (`contrast`, derecha). Hay DOS mapas: cada uno referencia sus propias tramas.
+ */
+export const LegendAndPatternsStory: Story = {
+  name: "Legend + patterns",
+  render: () => <LegendAndPatterns />,
+};

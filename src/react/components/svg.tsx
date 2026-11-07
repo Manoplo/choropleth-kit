@@ -2,6 +2,8 @@ import { useRef, type KeyboardEvent, type ReactNode } from "react";
 import { cx } from "../class-names";
 import { useChoroplethContext } from "../choropleth-context";
 import { Borders } from "./borders";
+import { Defs } from "./defs";
+import { Patterns } from "./patterns";
 import { Bubbles } from "./bubbles";
 import { DrillLayers } from "./drill-layers";
 import { FallbackPoints } from "./fallback-points";
@@ -113,15 +115,19 @@ export const Svg = ({ children, className, ariaLabel }: SvgProps) => {
       style={{ display: "block", width: "100%", height: "auto" }}
     >
       {children ?? (
-        <Viewport>
-          <DrillLayers role="context" />
-          <Regions />
-          <Borders />
-          <Bubbles />
-          <FallbackPoints />
-          <Selection />
-          <DrillLayers role="exiting" />
-        </Viewport>
+        <>
+          <Defs />
+          <Viewport>
+            <DrillLayers role="context" />
+            <Regions />
+            <Patterns />
+            <Borders />
+            <Bubbles />
+            <FallbackPoints />
+            <Selection />
+            <DrillLayers role="exiting" />
+          </Viewport>
+        </>
       )}
     </svg>
   );
