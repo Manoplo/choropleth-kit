@@ -14,28 +14,35 @@ is always a decision of the maintainer (see `AGENTS.md`: agents never commit, pu
 
 ## Every release
 
-1. **Make sure everything is committed and on `master`** (pnpm refuses to publish from a dirty tree or
-   from another branch unless you pass `--no-git-checks`).
-2. **Bump the version** in `package.json`. Use `pnpm version patch|minor|major` (it also creates a git
-   commit and tag), or edit the field by hand. While the major is `0`, treat `minor` as the breaking-change slot.
-3. **Verify**: `pnpm verify` runs typecheck, lint, formatting, the tests, the build, `size-limit`, `publint`
-   and `attw`. (`pnpm publish` runs it again through `prepublishOnly`.)
-4. **Look at what will ship**: `pnpm pack --pack-destination /tmp/ck` and `tar -tzf /tmp/ck/choropleth-kit-*.tgz`.
-   Expected: `dist/` without sourcemaps, `README.md`, `LICENSE`, `package.json`. To smoke-test it, install the
-   `.tgz` in an empty project with `npm i /tmp/ck/choropleth-kit-<version>.tgz react react-dom`.
-5. **Publish**: `pnpm publish --access public` (the package is unscoped, so `--access public` is optional but harmless).
-   Enter the one-time code when asked.
+Releases are cut from `master`, after `develop` has been merged into it. Nothing is published from a branch.
+
+1. **Bump the version** (not needed for `0.1.0`). On a branch `release/vX.Y.Z` from `master`, run
+   `npm version X.Y.Z --no-git-tag-version` (it only edits `package.json`; `pnpm version` behaves differently
+   across pnpm versions, so do not use it). While the major is `0`, a `minor` bump may break the API.
+   Commit `chore(release): vX.Y.Z`, open a PR against `master` and merge it.
+2. **Sync**: `git switch master && git pull --ff-only`. The tree must be clean.
+3. **Verify**: `pnpm install --frozen-lockfile && pnpm verify && pnpm smoke:package`.
+4. **Look at what will ship**: `pnpm pack --pack-destination /tmp/ck && tar -tzf /tmp/ck/choropleth-kit-X.Y.Z.tgz`.
+   Expected: `dist/` without sourcemaps, `README.md`, `LICENSE`, `package.json`.
+5. **Publish**: `pnpm publish` (`publishConfig` already sets `access: public`). It runs `prepublishOnly`
+   (`pnpm verify`) and asks for the one-time code.
 6. **Check** <https://www.npmjs.com/package/choropleth-kit> and, in a scratch project, `npm i choropleth-kit`.
-7. Push the commit and the tag: `git push && git push --tags`.
+7. **Tag the published commit** (after publishing, so the tag always means "this is what npm has"):
+   `git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin vX.Y.Z`.
+8. **GitHub Release**: `gh release create vX.Y.Z --verify-tag --title "vX.Y.Z" --generate-notes`
+   (add `--prerelease` for betas).
 
 ## Pre-releases
 
 Publish risky changes under a tag so `npm i choropleth-kit` keeps installing the stable one:
 
 ```bash
-pnpm version 0.2.0-beta.0
+npm version 0.2.0-beta.0 --no-git-tag-version
 pnpm publish --tag beta          # users opt in with: npm i choropleth-kit@beta
+gh release create v0.2.0-beta.0 --verify-tag --prerelease --generate-notes
 ```
+
+Never publish a version twice: a bad one is deprecated and superseded.
 
 ## When something goes wrong
 

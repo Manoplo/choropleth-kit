@@ -1,6 +1,6 @@
 [
   {
-    "name": "Código propio: core + react (dependencias externas), presupuesto dd.md §14.2",
+    "name": "Own code: core + react (external dependencies)",
     "path": "dist/index.js",
     "import": "*",
     "gzip": true,
@@ -21,7 +21,7 @@
     "limit": "50 KB"
   },
   {
-    "name": "Coste real para quien instala: ChoroplethMap con todo d3 (sin React)",
+    "name": "Real cost for consumers: ChoroplethMap with all of d3 (without React)",
     "path": "dist/index.js",
     "import": "{ ChoroplethMap }",
     "gzip": true,
@@ -29,7 +29,7 @@
     "limit": "75 KB"
   },
   {
-    "name": "Solo core con sus dependencias (sin React)",
+    "name": "core alone with its dependencies (without React)",
     "path": "dist/core.js",
     "import": "*",
     "gzip": true,
@@ -42,7 +42,7 @@
     "limit": "5 KB"
   },
   {
-    "name": "geo: world-110m (datos, fuera del presupuesto de JS)",
+    "name": "geo: world-110m (data, outside the JS budget)",
     "path": "dist/geo.js",
     "import": "*",
     "gzip": true,
