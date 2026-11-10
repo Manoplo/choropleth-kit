@@ -29,7 +29,7 @@ Instructions for any coding agent working in this repository.
 and `attw`; it is what `prepublishOnly` runs).
 `pnpm smoke:package` (packs the library, installs it with npm in an empty project and renders a map).
 CI (`.github/workflows/`) runs on every PR to `develop`/`master`: Verify, Quality (coverage, Storybook, package smoke test),
-Size, Dependency review, CodeQL and PR title (Conventional Commits). Dependabot opens weekly update PRs against `develop`.
+Dependency review, CodeQL and PR title (Conventional Commits). Dependabot opens weekly update PRs against `develop`.
 pnpm only; npm and yarn are blocked (the guard is in `prepare`, not in `preinstall`: a `preinstall`
 would be published and would break `npm install choropleth-kit` for consumers).
 

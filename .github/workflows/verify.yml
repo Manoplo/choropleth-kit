@@ -33,3 +33,13 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm verify
+
+      # The hard limits are enforced by `pnpm verify`; this only shows the numbers in the run summary.
+      - name: Bundle size summary
+        run: |
+          {
+            echo '### Bundle size (gzip)'
+            echo '```'
+            pnpm exec size-limit
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
