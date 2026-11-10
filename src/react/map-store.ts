@@ -25,7 +25,7 @@ export type ZoomApi = {
   ) => Promise<TransitionResult>;
   /**
    * Flies to an EXACT camera (without `constrain` or `k` limits): the drill-down needs to end exactly at
-   * `R` (dd.md §11.2.4) so the projection change is invisible. `duration: 0` places the camera;
+   * `R` so the projection change is invisible. `duration: 0` places the camera;
    * with `silent` it does not notify `onViewChange`.
    */
   flyTo: (
@@ -53,7 +53,7 @@ export type DrillApi = {
 
 export type PointerPosition = { x: number; y: number };
 
-/** The map's interaction state. It lives OUTSIDE React (dd.md §11.0, §12.1 and §14). */
+/** The map's interaction state. It lives OUTSIDE React. */
 export type MapState = {
   /** Item (region or point) under the cursor or with the first tap (touch). */
   hovered: ItemRef | null;
@@ -65,7 +65,7 @@ export type MapState = {
   interacting: boolean;
   /**
    * "Confirmed" camera: the one from the last time a gesture ENDED. During the gesture `d3-zoom` writes
-   * it straight to the DOM and this does not change (dd.md §11.0: nothing per frame in React).
+   * it straight to the DOM and this does not change (nothing per frame in React).
    */
   camera: CameraTransform;
   /** Hint on how to zoom (Ctrl/⌘ + wheel, two fingers). It turns itself off. */
@@ -95,7 +95,7 @@ export type MapStore = {
   getFallbackView: () => ViewState | null;
 };
 
-/** How long the "Use Ctrl + scroll to zoom" hint lasts (dd.md §11.1.2). */
+/** How long the "Use Ctrl + scroll to zoom" hint lasts. */
 export const GESTURE_HINT_MS = 1500;
 
 const INITIAL_STATE: MapState = {

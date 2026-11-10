@@ -3,7 +3,7 @@
  * development warnings for navigation requests. No React or DOM: timers are injected.
  */
 
-/** How long the pointer must stay over a drillable region to count as intent (dd.md §12.1). */
+/** How long the pointer must stay over a drillable region to count as intent. */
 export const DRILL_INTENT_MS = 150;
 
 export type IntentTimer = {

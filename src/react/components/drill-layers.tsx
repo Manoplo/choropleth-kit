@@ -3,7 +3,7 @@ import { cx } from "../class-names";
 import { useChoroplethContext } from "../choropleth-context";
 
 /**
- * The drill layers that are NOT the active one (dd.md §11.2.5), inside the camera:
+ * The drill layers that are NOT the active one, inside the camera:
  *  - `context`: the levels above, in gray and with no datum color. Cartographic reason: the parent's
  *    scale and the child's differ; seeing both in color invites comparing what is not comparable. Their
  *    drillable regions can be clicked (lateral navigation).

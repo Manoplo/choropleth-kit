@@ -1,7 +1,7 @@
 import type { CameraTransform } from "./camera";
 
 /**
- * Drill-down state machine (dd.md §11.2.3). It is a pure _reducer_: no DOM, no timers, no promises.
+ * Drill-down state machine. It is a pure _reducer_: no DOM, no timers, no promises.
  * Whoever uses it (`react/`) translates the real world into events (click, end of flight, geometry
  * ready…) and renders the resulting state. That way every edge case (click during a flight, error,
  * going up before finishing going down…) is tested without jsdom.

@@ -1,13 +1,13 @@
 /**
- * Theme (dd.md §12.5.3): a typed object that is translated into `--cm-*` CSS variables. **The
+ * Theme: a typed object that is translated into `--cm-*` CSS variables. **The
  * variables remain the single source of truth**: the object is sugar so there is autocompletion and
  * reusable themes.
  *
- * It is pure (no React or DOM) and lives in `core` even though `dd.md` puts it in `react/theme.ts`:
+ * It is pure (no React or DOM) and lives in `core` even though it is consumed only by `react`:
  * that way it is tested without rendering and a consumer without React can use `themeToCssVars`.
  *
  * It only has fields for what EXISTS today. `sphere`, `graticule`, `hover.effect`, `selected.glow`,
- * `motion` and `empty.pattern` from `dd.md §12.5.3` arrive with the layers and effects that consume
+ * `motion` and `empty.pattern` are planned and arrive with the layers and effects that consume
  * them (adding a field breaks nobody; having one that does nothing does mislead).
  */
 
@@ -74,7 +74,7 @@ const light: ChoroplethTheme = {
 /**
  * Dark: dark background, mid-gray "no data", dark borders and an inverted tooltip. Mind the palette: ramps
  * that are light at one end ("blues") blend into the background; `viridis` reads well. (Ramp reversal,
- * `{ name, reverse: true }` from `dd.md §12.5.3`, does not exist yet.)
+ * `{ name, reverse: true }` is planned and does not exist yet.)
  */
 const dark: ChoroplethTheme = {
   background: "#0f172a",

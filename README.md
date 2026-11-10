@@ -165,8 +165,9 @@ drillable region previews it and the second one drills down.
 `world110m` is Natural Earth 1:110m (public domain) with ISO alpha-2 ids, Kosovo (`XK`) included.
 Northern Cyprus and Somaliland have no id and are painted as a non-interactive layer.
 
-> ⚠️ **Disputed borders** (Western Sahara, Crimea, Kashmir…) are Natural Earth's. If you publish the map
-> in a product, validate with whoever is responsible (Legal/Communications) what to show.
+> ⚠️ **Disputed borders** (Western Sahara, Crimea, Kashmir…) follow Natural Earth's _de facto_ boundaries.
+> If you publish the map in a product, check that they are what you want to show. You can always pass your
+> own geography through the `geography` prop.
 
 ## Size
 
@@ -196,10 +197,17 @@ pnpm storybook        # living documentation: one story per case
 pnpm verify           # typecheck + lint + format + tests + build + size + publint/attw
 ```
 
-Design and build diary (in Spanish, kept as the MVP's historical record):
-[`coropleth-library.md`](./coropleth-library.md) (its §2 has a glossary of cartographic concepts) and
-[`choropleth-build-proccess.md`](./choropleth-build-proccess.md). Rules for coding agents: [`AGENTS.md`](./AGENTS.md).
-Publishing steps: [`PUBLISHING.md`](./PUBLISHING.md).
+Planned features and known issues: [`evolution-and-issues/`](./evolution-and-issues/README.md).
+Rules for coding agents: [`AGENTS.md`](./AGENTS.md). Publishing steps: [`PUBLISHING.md`](./PUBLISHING.md).
+
+## Data and third-party notices
+
+- **Geometry** in `choropleth-kit/geo` is derived from [`world-atlas`](https://github.com/topojson/world-atlas)
+  (ISC License, Copyright (c) Mike Bostock), which is built from [Natural Earth](https://www.naturalearthdata.com/)
+  (public domain).
+- The ISO 3166 numeric → alpha-2 table was generated at build time with
+  [`i18n-iso-countries`](https://github.com/michaelwittig/node-i18n-iso-countries) (MIT).
+- Runtime dependencies (`d3-*`, `topojson-client`, `polylabel`) are ISC-licensed and installed separately.
 
 ## License
 

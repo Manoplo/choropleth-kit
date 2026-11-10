@@ -11,7 +11,7 @@ import { feature } from "topojson-client";
 export type GeographyData = Topology | FeatureCollection;
 
 /**
- * What the `geography` prop accepts (dd.md §9.2): the data, a promise already in flight, or a
+ * What the `geography` prop accepts: the data, a promise already in flight, or a
  * function that loads it on demand (`() => import("…/world-110m")`; the whole module with `default` works).
  */
 export type GeographyInput =
@@ -80,7 +80,7 @@ export const toFeatureCollection = ({
   // ── STEP 3: choose the topology object. AFTER knowing it is a Topology. ──────────────────────
   // A TopoJSON can contain several layers (world-atlas ships `countries` and `land`). Painting the
   // wrong one would give a single-continental-polygon map with no id to join the data on. If the
-  // user does not say which, we use the first: that is what `dd.md §9.2` does.
+  // user does not say which, we use the first: that is the documented behavior.
   const availableNames = Object.keys(topology.objects);
   const name = objectName ?? availableNames[0];
 

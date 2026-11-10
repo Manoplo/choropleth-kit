@@ -23,7 +23,7 @@ const CORNERS: Record<Corner, CSSProperties> = {
 const STEP = 2;
 
 /**
- * `+` / `−` / `⟲` buttons (dd.md §11.1.2). They are real `<button>`s (focus, keyboard and screen
+ * `+` / `−` / `⟲` buttons. They are real `<button>`s (focus, keyboard and screen
  * reader for free), with `aria-label` from `labels`.
  *
  * They are disabled according to the confirmed camera: `−` at minimum zoom, `+` at maximum and `⟲` if

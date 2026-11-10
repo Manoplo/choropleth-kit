@@ -13,7 +13,7 @@ import {
 import type { MapItem } from "./map-item";
 
 /**
- * A drill-down level (dd.md §11.2.2): geometry + data + visual encoding of ONE depth (world, country,
+ * A drill-down level: geometry + data + visual encoding of ONE depth (world, country,
  * region…). Levels are described ONCE; the library takes care of the flight, the loading, the fade, the
  * breadcrumbs and the keyboard.
  */

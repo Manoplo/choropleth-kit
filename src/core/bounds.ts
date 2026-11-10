@@ -27,7 +27,7 @@ const polygonsOf = (geometry: Geometry): Polygon[] | null => {
  * The "main" sub-geometry of a feature: the polygon with the largest projected area plus the ones
  * close to it (Mallorca, Corsica or Sicily yes; Guyana, Hawaii or the Canary Islands no).
  *
- * Why it exists (dd.md §11.1.5): `geoPath.bounds` / `centroid` of the whole feature include the
+ * Why it exists: `geoPath.bounds` / `centroid` of the whole feature include the
  * distant territories. Zooming to "France" would show half the Atlantic, and its bubble would land
  * in the Bay of Biscay. It is used to frame the view and to anchor bubbles and labels.
  *
@@ -127,7 +127,7 @@ export const getAnchorPoint = ({
 
 export type Padding = { top: number; right: number; bottom: number; left: number };
 
-/** Default padding when fitting and when flying to a region, in px (dd.md §11.1.1). */
+/** Default padding when fitting and when flying to a region, in px. */
 export const DEFAULT_PADDING = 24;
 
 /** `number` = the same padding on all four sides. */
@@ -147,7 +147,7 @@ export type BoundsToTransformParams = {
 };
 
 /**
- * Camera that fits some bounds into the view, with padding in pixels (dd.md §11.1.5). It is the
+ * Camera that fits some bounds into the view, with padding in pixels. It is the
  * target of "zoom to a country" and of the initial framing. It honors `scaleExtent`: if the country
  * is so small that more zoom than allowed would be needed, it stays at the maximum (and the country
  * is centered).
@@ -233,7 +233,7 @@ export type GetFocusExtentParams = GetFocusGeometryParams & {
 };
 
 /**
- * Pixel bounds of a region's main body: what gets framed when flying to it (dd.md §11.1.5). It is
+ * Pixel bounds of a region's main body: what gets framed when flying to it. It is
  * `getFocusGeometry` + its projected bounds, with one special case:
  *
  * **Antimeridian.** The main polygon of Russia (and Fiji's or Alaska's) crosses the ±180° line

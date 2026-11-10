@@ -2,7 +2,7 @@ import { interpolateZoom } from "d3-interpolate";
 import type { Point } from "./variants";
 
 /**
- * The camera (dd.md §11.0): an affine `transform` `{ k, x, y }` over the already-projected canvas.
+ * The camera: an affine `transform` `{ k, x, y }` over the already-projected canvas.
  * A canvas point `[px, py]` appears on screen at `[px·k + x, py·k + y]`. `k = 1` is the level's fit
  * (the map fits the container exactly).
  *
@@ -52,7 +52,7 @@ export type ConstrainAxisParams = {
 };
 
 /**
- * Allowed translation on ONE axis (dd.md §11.1.4). d3's default `constrain` leaves a map smaller
+ * Allowed translation on ONE axis. d3's default `constrain` leaves a map smaller
  * than the view stuck in a corner; this one **centers** it if it fits and, if it does not fit,
  * prevents its edges from entering the view (plus an optional elastic slack).
  */
@@ -124,7 +124,7 @@ export type PreserveViewParams = {
 };
 
 /**
- * Equivalent camera after a resize (dd.md §11.1.3, point 2). When the size changes, the projection
+ * Equivalent camera after a resize. When the size changes, the projection
  * is refitted and the pixels change: without this, the view would "go back to the fit". The
  * **geographic center** and `k` are preserved: it looks at which [lon, lat] was at the center of the
  * view and places it at the center of the new view.
@@ -151,11 +151,11 @@ export const preserveView = ({
 
 // ── flights ─────────────────────────────────────────────────────────────────────────────────────────
 
-/** Minimum and maximum duration of a flight, in ms (dd.md §11.1.5). */
+/** Minimum and maximum duration of a flight, in ms. */
 export const MIN_FLIGHT_MS = 350;
 export const MAX_FLIGHT_MS = 1200;
 
-/** Default curvature (ρ) for dashboards: less "jump" than √2 (dd.md §11.1.5: 1.2–1.3). */
+/** Default curvature (ρ) for dashboards (1.2–1.3): less "jump" than √2. */
 export const DEFAULT_FLIGHT_CURVATURE = 1.25;
 
 /**
@@ -205,7 +205,7 @@ export const flightDuration = ({
 
 // ── inertia ────────────────────────────────────────────────────────────────────────────────────────
 
-/** Inertia time constant, in ms: iOS's (dd.md §11.1.4). */
+/** Inertia time constant, in ms: iOS's. */
 export const INERTIA_TAU_MS = 325;
 
 export type InertiaOffsetParams = {
@@ -229,10 +229,10 @@ export const inertiaOffset = ({
   return velocity * tau * (1 - Math.exp(-elapsed / tau));
 };
 
-/** Minimum speed (px/ms) for releasing a drag to start inertia (dd.md §11.1.4). */
+/** Minimum speed (px/ms) for releasing a drag to start inertia. */
 export const INERTIA_MIN_VELOCITY = 0.3;
 
-/** Window of samples used to measure the release velocity, in ms (dd.md §11.1.4). */
+/** Window of samples used to measure the release velocity, in ms. */
 export const INERTIA_WINDOW_MS = 100;
 
 /** A camera position at an instant (ms, from `performance.now()`). */
@@ -274,7 +274,7 @@ export const releaseVelocity = ({
 // ── bubble counter-scaling ─────────────────────────────────────────────────────────────────────
 
 /**
- * What bubbles do when zooming in (dd.md §11.1.6):
+ * What bubbles do when zooming in:
  *  - `"sqrt"` (default): they grow with √k (a sense of depth without covering the country);
  *  - `"screen"`: constant size on screen;
  *  - `"geo"`: they grow with the map (full scale).
@@ -299,10 +299,10 @@ export const bubbleScale = (k: number, scaling: BubbleScaling): number => {
 
 // ── public view state ───────────────────────────────────────────────────────────────────────────
 
-/** Drill-down level (dd.md §11.2). Same as `DrillLevelInfo` in `react/map-item.ts`. */
+/** Drill-down level. Same as `DrillLevelInfo` in `react/map-item.ts`. */
 export type ViewLevel = { id: string; depth: number };
 
-/** What `onViewChange` receives (dd.md §11.1.7). */
+/** What `onViewChange` receives. */
 export type ViewState = {
   /** Camera transform, in level pixels. */
   k: number;

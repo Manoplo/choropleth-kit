@@ -10,7 +10,7 @@ import world from "./world-110m.json";
  * non-interactive layer. At this scale microstates are missing: use `worldFallbackPoints`.
  *
  * ⚠️ Disputed borders (Western Sahara, Crimea, Kashmir…) are Natural Earth's.
- * Validate them with Legal/Communications before showing a map (dd.md §6.2).
+ * Validate them before showing a map in a product.
  */
 export const world110m = world as unknown as Topology;
 

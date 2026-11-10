@@ -1,7 +1,7 @@
 import type { Feature } from "geojson";
 import type { Point } from "../core";
 
-/** Drill-down level an item belongs to (dd.md §11.2). Without drill: always the root. */
+/** Drill-down level an item belongs to. Without drill: always the root. */
 export type DrillLevelInfo = { id: string; depth: number };
 
 /** Default level while the drill-down does not exist. */
@@ -31,7 +31,7 @@ export type PointItem<TDatum> = {
 };
 
 /**
- * ONE type for everything interactive (dd.md §9.2 and §12.1). `kind` discriminates: a store is not a
+ * ONE type for everything interactive. `kind` discriminates: a store is not a
  * region, but the consumer wants a single handler and a single tooltip.
  */
 export type MapItem<TDatum> = RegionItem<TDatum> | PointItem<TDatum>;

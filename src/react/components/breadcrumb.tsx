@@ -22,7 +22,7 @@ const CORNERS: Record<Corner, CSSProperties> = {
 };
 
 /**
- * Breadcrumbs for the drill route (dd.md §11.2.5): `<nav>` + `<ol>`, root with the first level's label
+ * Breadcrumbs for the drill route: `<nav>` + `<ol>`, root with the first level's label
  * (or `labels.breadcrumbRoot`), the last step with `aria-current="page"` and a "←" button if you can go
  * up. They are real `<button>`s: focus and keyboard for free. Each earlier crumb goes up to that level.
  *

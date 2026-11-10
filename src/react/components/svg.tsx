@@ -27,7 +27,7 @@ export type SvgProps = {
 /**
  * The `<svg>`. It exists as its own piece because `Root` mixes SVG (regions, borders) and HTML
  * (legend, tooltip), and an HTML element cannot live inside an `<svg>`.
- * (dd.md §9.3 does not name it: it is the only difference from its example.)
+ * (It is the only difference from the documented example.)
  *
  * While the asynchronous geometry has not arrived, it draws a skeleton with the same proportion the
  * map will have: the page does not jump when it appears.

@@ -106,7 +106,7 @@ export type Region<TDatum> = {
 };
 
 /**
- * Per-region style (dd.md §12.5.6): data-based exceptions the scale cannot express. It is evaluated in
+ * Per-region style: data-based exceptions the scale cannot express. It is evaluated in
  * render and its fields reach the `<path>` as primitives, so it does not break the regions' `memo`.
  */
 export type RegionStyle = {
@@ -124,7 +124,7 @@ export type RegionStyle = {
 };
 
 /**
- * A drill layer that is NOT the active one (dd.md §11.2.5). `context`: the levels above, in gray and
+ * A drill layer that is NOT the active one. `context`: the levels above, in gray and
  * with no data (the parent's scale and the child's are not comparable). `exiting`: the level that was
  * just left, fading out. The paths are in the pixels of THEIR projection; `transform` carries them to
  * those of the active level (it is the affine map `R` between the two projections), so the cached paths are reused.
@@ -144,7 +144,7 @@ export type DrillLayerView = {
   }[];
 };
 
-/** A crumb of the drill route (dd.md §11.2.5). */
+/** A crumb of the drill route. */
 export type DrillNavItem = {
   depth: number;
   /** `null` at the root. */
@@ -165,7 +165,7 @@ export type DrillNav = {
 
 export type JoinReport = Omit<JoinResult<unknown>, "joined">;
 
-/** What is dimmed when there is a selection or hover (dd.md §12.1). */
+/** What is dimmed when there is a selection or hover. */
 export type DimOthers = "never" | "selection" | "hover-and-selection";
 
 type BaseOptions<TDatum> = {
@@ -185,7 +185,7 @@ type BaseOptions<TDatum> = {
    */
   data: readonly TDatum[] | undefined | ((ctx: DrillContext) => readonly TDatum[] | undefined);
   /**
-   * Drill-down (dd.md §11.2): the list of levels (uncontrolled) or a `useDrillDown` (controlled).
+   * Drill-down: the list of levels (uncontrolled) or a `useDrillDown` (controlled).
    * With `drill`, the geometry comes from the levels and `geography` is ignored.
    */
   drill?: readonly DrillLevel<TDatum>[] | DrillController<TDatum>;
@@ -249,7 +249,7 @@ type BaseOptions<TDatum> = {
   onJoinReport?: (report: JoinReport) => void;
   /**
    * Flies to this region (id) when it changes; with `null` it returns to the fit. On the **first render**
-   * it does not fly: it places the camera directly. It is the declarative form of `zoomTo` (dd.md §11.1.5).
+   * it does not fly: it places the camera directly. It is the declarative form of `zoomTo`.
    */
   focusId?: string | null;
   /**
@@ -259,7 +259,7 @@ type BaseOptions<TDatum> = {
    */
   focusBounds?: Readonly<Record<string, LonLatBounds | null>>;
   /**
-   * Zoom and pan (dd.md §11.1). On by default; `false` = static map. The wheel zooms with the mouse over
+   * Zoom and pan. On by default; `false` = static map. The wheel zooms with the mouse over
    * the map (`wheel: "always"`); for maps inside a long page use `wheel: "cooperative"`.
    */
   zoom?: boolean | ZoomOptions;
@@ -390,7 +390,7 @@ export type UseChoroplethResult<TDatum> = {
  * What is memoized and why: only what is expensive and what must have a stable identity.
  *  - Geometry (`features`, `borders`): depends only on `geography` (and on the filter, by its RESULT).
  *  - SVG paths: depend on geometry, projection and size. NOT on the data, so changing indicator or
- *    `variant` recomputes not a single path (acceptance criterion of dd.md §20).
+ *    `variant` recomputes not a single path (an acceptance criterion).
  * The join and the scale are O(regions) and are recomputed on every render: memoizing them would
  * require the consumer to stabilize `getId`/`getValue`/`classification`, and almost nobody does.
  */
@@ -505,7 +505,7 @@ export const useChoropleth = <TDatum>(
   const width = options.width ?? measured.width;
   const height = options.height ?? measured.height;
 
-  // ── drill projection chain (rebase, dd.md §11.2.4) ──────────────────────────────────────────────
+  // ── drill projection chain (rebase) ──────────────────────────────────────────────
   // The root is fitted to the world and each level is its parent's readjusted to the chosen region's
   // main body: that way the child is painted at k = 1 with full precision and the flight ends on the same pixel.
   const rebasePadding = typeof options.zoom === "object" ? (options.zoom.padding ?? 24) : 24;
@@ -1022,7 +1022,7 @@ export const useChoropleth = <TDatum>(
   };
 
   // Touch: the first tap on a drillable region is a preview (tooltip + selection) and the second, on the
-  // same one, drills down (dd.md §11.2.5). `previewed` is the region already previewed; the hover forgets
+  // same one, drills down. `previewed` is the region already previewed; the hover forgets
   // it as soon as the finger goes to something else. (`pointerover` arrives BEFORE `click`, so hover
   // alone cannot tell the 1st from the 2nd.)
   const previewed = useRef<ItemRef | null>(null);
@@ -1218,7 +1218,7 @@ export const useChoropleth = <TDatum>(
   // ── camera: ZoomTarget → transform ──────────────────────────────────────────────────────────────
   const zoomOptions = resolveZoomOptions(options.zoom, {
     // With `drill` the click already does something (go down a level): the double click must NOT also zoom
-    // ×2, or the second click would interrupt the drill flight and end up as a plain zoom (dd.md §11.1.2).
+    // ×2, or the second click would interrupt the drill flight and end up as a plain zoom.
     clickIsBusy: onItemClick !== undefined || selectable || engine.active,
   });
   const focusBounds = { ...DEFAULT_FOCUS_BOUNDS, ...options.focusBounds };

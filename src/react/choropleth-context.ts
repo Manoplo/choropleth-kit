@@ -52,7 +52,7 @@ export const useChoroplethContext = <TDatum = unknown>(): {
 };
 
 /**
- * The imperative handle from INSIDE the compound (dd.md §9.5): a button that is a child of
+ * The imperative handle from INSIDE the compound: a button that is a child of
  * `<Choropleth.Root>` can call `zoomTo` without needing a `ref`.
  */
 export const useChoroplethApi = (): ChoroplethMapHandle => useChoroplethContext().api;

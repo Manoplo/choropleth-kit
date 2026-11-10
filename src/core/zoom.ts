@@ -12,7 +12,7 @@ export type ZoomControlsOptions = {
 };
 
 /**
- * Where to move the camera (dd.md §9.5): a region, some bounds or a center with zoom.
+ * Where to move the camera: a region, some bounds or a center with zoom.
  *  - `string`: id of a region on the map. Its **main body** is framed (France without Guiana).
  *  - `{ bounds }`: [[lonW, latS], [lonE, latN]].
  *  - `{ center, zoom }`: `zoom` relative to the fit (1 = fit).
@@ -28,10 +28,9 @@ export type CameraOptions = {
 };
 
 /**
- * Explicit framings per region, in lon/lat (dd.md §11.1.5, point 4). For Inditex, **the Canary Islands
- * are a business case, not a geometric detail**: Spain's default framing includes them, even though
- * the geometry's main body does not. It is merged with the consumer's `focusBounds`; with
- * `{ ES: null }` it returns to the geometric framing.
+ * Explicit framings per region, in lon/lat. **Spain is framed with the Canary Islands by default**,
+ * even though the geometry's main body does not include them. It is merged with the consumer's
+ * `focusBounds`; with `{ ES: null }` it returns to the geometric framing (peninsula only).
  */
 export const DEFAULT_FOCUS_BOUNDS: Readonly<Record<string, LonLatBounds>> = {
   ES: [
@@ -44,7 +43,7 @@ export const DEFAULT_FOCUS_BOUNDS: Readonly<Record<string, LonLatBounds>> = {
 export type TransitionResult = { completed: boolean };
 
 /**
- * Zoom and pan options (dd.md §11.1.1). Only the ones that already do something are here; `inertia`,
+ * Zoom and pan options. Only the ones that already do something are here; `inertia`,
  * `padding` and `initialView` are added in steps 26-27 with their behavior (declaring them earlier
  * would promise what does not exist).
  */
@@ -60,7 +59,7 @@ export type ZoomOptions = {
    *  - `"never"`: the wheel does not zoom (dragging and pinching still work).
    *
    * ⚠️ With `"always"`, a map on a scrolling page "eats" the wheel when passed over
-   * (_scroll-jacking_). dd.md §11.1.1 proposes `"cooperative"` as the default; `"always"` was chosen here.
+   * (_scroll-jacking_). `"cooperative"` is the alternative; the default is `"always"`.
    */
   wheel?: "cooperative" | "always" | "never";
   /** Two-finger pinch. Default `true`. (A trackpad pinch arrives as Ctrl + wheel.) */
@@ -72,7 +71,7 @@ export type ZoomOptions = {
    * meaning (`onItemClick` or selection), so as not to do both at once.
    */
   doubleClick?: boolean | "auto";
-  /** Margin when framing a region or some bounds, in px (dd.md §11.1.1). Default 24. */
+  /** Margin when framing a region or some bounds, in px. Default 24. */
   padding?: number | Padding;
   /**
    * Initial view: the camera is placed there **without animating** on first render. `focusId` takes
@@ -80,11 +79,11 @@ export type ZoomOptions = {
    */
   initialView?: ZoomTarget;
   /**
-   * Bubbles when zooming (dd.md §11.1.6): `"sqrt"` (default, they grow with √k), `"screen"` (constant
+   * Bubbles when zooming: `"sqrt"` (default, they grow with √k), `"screen"` (constant
    * size on screen) or `"geo"` (they grow with the map).
    */
   bubbleScaling?: BubbleScaling;
-  /** When a fast drag is released, the map keeps sliding and slows down (dd.md §11.1.4). Default `true`. */
+  /** When a fast drag is released, the map keeps sliding and slows down. Default `true`. */
   inertia?: boolean;
   /** `"contain"` (default): the content is not lost and is centered if it fits. `"free"`: no limits. */
   constrain?: "contain" | "free";
@@ -206,7 +205,7 @@ export type ZoomFilterParams = Pick<ResolvedZoom, "wheel" | "pinch" | "pan" | "d
 };
 
 /**
- * Which events trigger zoom (dd.md §11.1.2). Replaces d3-zoom's default filter, which is
+ * Which events trigger zoom. Replaces d3-zoom's default filter, which is
  * `(!ctrlKey || type === "wheel") && !button`.
  *
  * Returning `false` does NOT call `preventDefault`: in `cooperative` the wheel without a modifier and
@@ -258,7 +257,7 @@ const clamp = (value: number, [min, max]: readonly [number, number]): number =>
   Math.min(max, Math.max(min, value));
 
 /**
- * `ZoomTarget` → camera (dd.md §9.5 and §11.1.5). Pure: the projection and geometry arrive as
+ * `ZoomTarget` → camera. Pure: the projection and geometry arrive as
  * functions. Returns `null` if it cannot be resolved (nonexistent region, point outside the globe).
  *
  * It does not apply `constrain`: whoever moves the camera takes care of that, because d3-zoom only

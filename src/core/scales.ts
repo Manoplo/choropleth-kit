@@ -81,7 +81,7 @@ export const createColorScale = (options: ColorScaleOptions): ColorScale => {
   // ── STEP 3: breaks. Needs the domain (quantize) and the values (quantile). ───────────────────
   // By default: sequential → quantile (every class is used); diverging → quantize over the
   // symmetric domain, which with an odd number of classes leaves the midpoint at the center of the
-  // neutral class. (dd.md asks for "symmetric threshold"; this is the same thing, computed automatically.)
+  // neutral class. (This is a "symmetric threshold", computed automatically.)
   const classification: Classification =
     options.classification ??
     (options.variant === "diverging"

@@ -59,7 +59,7 @@ export type UseZoomParams = {
   ready: boolean;
 };
 
-/** Duration of the `+` / `−` buttons (dd.md §11.1.2). */
+/** Duration of the `+` / `−` buttons. */
 const BUTTON_ZOOM_MS = 300;
 
 /**
@@ -81,7 +81,7 @@ const CLICK_DISTANCE_PX = 4;
 const ZOOMED_EPSILON = 1.001;
 
 /**
- * Hooks `d3-zoom` to the `<svg>` (dd.md §11.1.3). It is the ONLY piece that uses `d3-selection`.
+ * Hooks `d3-zoom` to the `<svg>`. It is the ONLY piece that uses `d3-selection`.
  *
  * Rules that make this smooth and keep it from fighting React:
  *  - **React never writes the viewport's `transform`.** `d3-zoom` writes it every frame with
@@ -114,7 +114,7 @@ export const useZoom = ({
     latest.current = { invert, project, onViewChange, resolveCamera };
   });
   // Size and projection of the previous canvas, and the REAL camera when the behavior is unmounted: with
-  // them, a resize preserves the geographic center and `k` (dd.md §11.1.3, point 2).
+  // them, a resize preserves the geographic center and `k`.
   const previous = useRef<{
     size: { width: number; height: number };
     invert: (point: Point) => Point | null;
@@ -151,7 +151,7 @@ export const useZoom = ({
     // `true` while the camera is being restored on (re)install: it is not a gesture, it must not notify.
     let restoring = false;
 
-    // Inertia (dd.md §11.1.4). `samples`: recent drag positions, to measure the release velocity.
+    // Inertia. `samples`: recent drag positions, to measure the release velocity.
     // `glide`: the inertia in progress (animated by a rAF; it goes through neither React nor the store
     // until it ends).
     let samples: CameraSample[] = [];
@@ -280,7 +280,7 @@ export const useZoom = ({
       });
     }
 
-    // Programmatic flights (buttons, `resetView`) use the same curvature as dd.md §11.1.5.
+    // Programmatic flights (buttons, `resetView`) use the same curvature as `flyTo`.
     behavior.interpolate(createZoomInterpolator(DEFAULT_FLIGHT_CURVATURE));
 
     const selection = select(svg).call(behavior);
@@ -349,7 +349,7 @@ export const useZoom = ({
     svg.addEventListener("pointerdown", onPointerDown);
 
     // Programmatic moves go through the SAME `behavior`: that way d3-zoom always knows the real camera
-    // and a user gesture interrupts the flight naturally (dd.md §11.1.3, point 4).
+    // and a user gesture interrupts the flight naturally.
     let fade: Fade | null = null;
     type Target = typeof selection | ReturnType<typeof selection.transition>;
 

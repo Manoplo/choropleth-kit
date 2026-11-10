@@ -6,7 +6,7 @@ import { useIsApplePlatform } from "../platform";
 
 /**
  * The "Use Ctrl + scroll to zoom" hint (⌘ on macOS) or "Use two fingers to move the map"
- * (dd.md §11.1.2). It only appears with `wheel: "cooperative"`, when a gesture does NOT zoom but can
+ *. It only appears with `wheel: "cooperative"`, when a gesture does NOT zoom but can
  * be taught how: with `"always"` there is nothing to teach. It lasts 1.5 s.
  *
  * It is `aria-hidden`: a visual aid, not a message for screen readers (keyboard zoom and the buttons

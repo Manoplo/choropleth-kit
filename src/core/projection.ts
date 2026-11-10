@@ -114,7 +114,7 @@ export const computeAspectRatio = ({
   return Math.min(MAX_ASPECT_RATIO, Math.max(MIN_ASPECT_RATIO, ratio));
 };
 
-// ── rebase (drill-down, dd.md §11.2.4) ─────────────────────────────────────────────────────────────
+// ── rebase (drill-down) ─────────────────────────────────────────────────────────────
 
 /**
  * The affine map `R` such that `to(p) === R(from(p))` for every `p`, where `R(q) = k·q + (x, y)`.
@@ -151,7 +151,7 @@ export type RebaseResult = {
 };
 
 /**
- * Child-level projection with perfect continuity (dd.md §11.2.4).
+ * Child-level projection with perfect continuity.
  *
  * Two naive solutions fail: a single projection with a huge `k` (at `k ≈ 300` the 3 decimals of
  * `geoPath` give jagged edges) and a new `fitSize` per level (the child appears at another scale and

@@ -1,6 +1,6 @@
 import type { TransitionResult } from "../core";
 
-/** Durations of the "reduce motion" fade (dd.md §11.1.5), in ms. */
+/** Durations of the "reduce motion" fade, in ms. */
 export const FADE_OUT_MS = 100;
 export const FADE_IN_MS = 150;
 
@@ -12,10 +12,10 @@ export type Fade = {
 };
 
 /**
- * Camera change WITHOUT motion and WITHOUT a hard cut (dd.md §11.1.5: "a hard cut disorients"):
+ * Camera change WITHOUT motion and WITHOUT a hard cut ("a hard cut disorients"):
  * opacity to 0 in 100 ms, camera **jump**, opacity to 1 in 150 ms. Motion is removed, not continuity.
  *
- * It uses the native Web Animations API (dd.md §12.6: no animation libraries) on the element, without
+ * It uses the native Web Animations API (no animation libraries) on the element, without
  * going through React. If the environment lacks it (jsdom, very old browsers), it jumps directly.
  */
 export const fadeThrough = (element: Element, jump: () => void): Fade => {

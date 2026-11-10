@@ -1,7 +1,7 @@
 import { classifyDrill, type DrillDirection } from "./drill";
 
 /**
- * Pure drill-down pieces that depend on neither React nor the DOM (dd.md §11.2.2): a route's
+ * Pure drill-down pieces that depend on neither React nor the DOM: a route's
  * context, the breadcrumbs, the geometry cache key, the LRU cache and level validation.
  */
 
@@ -31,7 +31,7 @@ export type LevelShape = {
 
 /**
  * Validates the list of levels when it is defined. Errors explain what to change (DX principle from
- * dd.md): an empty list, repeated ids (the level id is used as a key) or a first level that
+ * the design): an empty list, repeated ids (the level id is used as a key) or a first level that
  * "inherits" geometry from a parent that does not exist.
  */
 export const validateLevels = (levels: readonly LevelShape[]): void => {
@@ -99,7 +99,7 @@ export const buildBreadcrumbs = ({
 ];
 
 /**
- * Cache key of the geometry of the level at `path.length` (dd.md §11.2.2): the consumer's
+ * Cache key of the geometry of the level at `path.length`: the consumer's
  * (`geographyKey`), or `${id}:${parentId}` if the geometry depends on the parent (it is a function),
  * or just the id. With `"inherit"` the geometry is the parent's, so the key is too (stores over a
  * country share the country's geometry).
@@ -118,7 +118,7 @@ export const geographyKeyFor = (levels: readonly LevelShape[], path: readonly st
 
 /**
  * `data` as a list or as a selector for the current level. `undefined` means "loading" and is
- * respected (dd.md §11.2.6): the map keeps the previous layer, with no warnings.
+ * respected: the map keeps the previous layer, with no warnings.
  */
 export const resolveDrillData = <TDatum>(
   data: readonly TDatum[] | undefined | ((ctx: DrillContext) => readonly TDatum[] | undefined),
@@ -148,7 +148,7 @@ export type LruCache<V> = {
   readonly size: number;
 };
 
-/** Cache of the levels already computed (dd.md §11.2.4: 8 entries). Going up recomputes nothing. */
+/** Cache of the levels already computed (8 entries). Going up recomputes nothing. */
 export const DEFAULT_LEVEL_CACHE_SIZE = 8;
 
 export const createLruCache = <V>(capacity: number = DEFAULT_LEVEL_CACHE_SIZE): LruCache<V> => {

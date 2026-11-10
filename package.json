@@ -65,7 +65,7 @@
   },
   "scripts": {
     "prepare": "node -e \"const ua=process.env.npm_config_user_agent||''; if(!ua.includes('pnpm')){console.error('Usa pnpm. Este proyecto no admite npm ni yarn.');process.exit(1)}\"",
-    "build": "tsup",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint .",

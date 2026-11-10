@@ -3,13 +3,13 @@ import { isProduction } from "./env";
 import type { MapStore } from "./map-store";
 
 /**
- * The imperative handle (dd.md §9.5): what you get with `ref` on `<ChoroplethMap>` / `<Choropleth.Root>`
+ * The imperative handle: what you get with `ref` on `<ChoroplethMap>` / `<Choropleth.Root>`
  * and with `useChoroplethApi()` inside the compound. **Everything animated returns a `Promise`** that
  * resolves when done, or when interrupted (`completed: false`); that way flights can be chained
  * without timers: `await map.zoomTo("ES"); await map.zoomTo("FR");`.
  *
  * `drillDown`, `drillUp` and `drillTo` (step 34) navigate the `drill` levels; they resolve on returning
- * to rest at the requested route. (`toSVGString` and `toPNG` from dd.md §9.5 arrive with export.)
+ * to rest at the requested route. (`toSVGString` and `toPNG` are planned and arrive with export.)
  */
 export type ChoroplethMapHandle = {
   /** Flies to a region (id), some `{ bounds }` or a center with zoom `{ center, zoom }`. */

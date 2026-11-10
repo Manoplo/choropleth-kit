@@ -4,7 +4,7 @@
 //
 //   pnpm smoke:package
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -64,3 +64,19 @@ console.log("smoke test ok: " + regions + " regions rendered");
 );
 console.log("› render from the installed package");
 run("node", ["smoke.mjs"], consumer);
+
+// Bundlers (Vite, webpack, esbuild) replace only the dotted `process.env.NODE_ENV`, and a browser has no `process`.
+// A `typeof process` guard or bracket access would keep the development diagnostics alive in consumers' production
+// builds, and Node (where `process` exists) would never notice. Check the shipped code for the safe form.
+console.log("› NODE_ENV is read in a form bundlers can replace");
+const shipped = join(consumer, "node_modules", "choropleth-kit", "dist");
+for (const file of readdirSync(shipped).filter((name) => name.endsWith(".js"))) {
+  const code = readFileSync(join(shipped, file), "utf8");
+  if (/typeof\s+process/.test(code))
+    throw new Error(`${file}: \`typeof process\` guard defeats NODE_ENV replacement`);
+  const reads = code.match(/NODE_ENV/g) ?? [];
+  const dotted = code.match(/process\.env\.NODE_ENV/g) ?? [];
+  if (reads.length !== dotted.length)
+    throw new Error(`${file}: NODE_ENV must be read as process.env.NODE_ENV`);
+}
+console.log("NODE_ENV usage ok");

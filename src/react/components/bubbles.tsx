@@ -5,7 +5,7 @@ import { useChoroplethContext } from "../choropleth-context";
  * Bubbles (`bubble` variant). They already come sorted from largest to smallest, so the small ones end
  * up on top.
  *
- * Two kinds, with different interaction (dd.md §12.1):
+ * Two kinds, with different interaction:
  *  - **At a region's centroid** (`coordinates: null`): they do not capture the mouse; hover and click
  *    are handled by the region underneath (a `region` item).
  *  - **With their own coordinates** (stores): they are `point` items, with their own hover, click and tooltip.

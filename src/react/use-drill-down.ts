@@ -97,7 +97,7 @@ const warn = (message: string) => {
 };
 
 /**
- * Drill-down navigation state (dd.md §11.2.2): the route, in controlled or uncontrolled mode, and
+ * Drill-down navigation state: the route, in controlled or uncontrolled mode, and
  * what is deduced from it (level, context, breadcrumbs). It loads no geometry and moves no camera:
  * the map does that, and it also reports its phase back (`status`).
  *

@@ -70,7 +70,7 @@ const hintFor = (
 };
 
 /**
- * Turns the result of `joinData` into the warning text for the developer (dd.md §9.6), or `null` if
+ * Turns the result of `joinData` into the warning text for the developer, or `null` if
  * there is nothing to warn about. Pure: it does not write to the console, so it is tested without mocking it.
  */
 export const formatJoinDiagnostics = ({

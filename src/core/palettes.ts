@@ -28,7 +28,7 @@ export type Interpolator = (t: number) => string;
 
 // Two different name types on purpose: using a diverging palette on a sequential map (or the other
 // way round) is a cartographic error, and this way TypeScript catches it at compile time instead of
-// the end user's eye. It is the same principle as the `variant` discriminated union in dd.md §9.2.
+// the end user's eye. It is the same principle as the `variant` discriminated union used for `variant`.
 export const SEQUENTIAL_PALETTES = {
   blues: interpolateBlues,
   greens: interpolateGreens,

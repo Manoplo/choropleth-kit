@@ -4,7 +4,7 @@ import { useChoroplethContext } from "./choropleth-context";
 import type { MapStore } from "./map-store";
 
 /**
- * Selector subscription to the CONFIRMED camera (dd.md §11.1.7): it is re-evaluated when a gesture, a
+ * Selector subscription to the CONFIRMED camera: it is re-evaluated when a gesture, a
  * flight or a level change ends, **never per frame** (during the gesture `d3-zoom` writes to the DOM
  * and React is unaware). Use it inside `<Choropleth.Root>`:
  *

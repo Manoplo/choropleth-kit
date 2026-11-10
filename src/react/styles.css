@@ -1,7 +1,7 @@
 /*
  * choropleth-kit base styles. Import them once: `import "choropleth-kit/styles.css"`.
  *
- * Customization mechanisms (dd.md §9.7 and §12.5), from least to most effort:
+ * Customization mechanisms, from least to most effort:
  *  1. `theme="dark"` / `theme={{ … }}`: the library writes the `--cm-*` variables inline on `.cm-root`.
  *  2. `--cm-*` CSS variables on ANY ancestor of `.cm-root` (or on `.cm-root` itself).
  *  3. `classNames` per piece (Tailwind, CSS Modules) and the `data-*` attributes as a contract.
@@ -48,7 +48,7 @@
 :where(.cm-root:not([data-unstyled])) .cm-regions[data-outlined] .cm-region {
   stroke: var(--cm-border-color, #ffffff);
   stroke-width: var(--cm-border-width, 0.5px);
-  /* The stroke does not thicken when zooming (dd.md §11.1.6). */
+  /* The stroke does not thicken when zooming. */
   vector-effect: non-scaling-stroke;
 }
 
@@ -78,7 +78,7 @@
   stroke: var(--cm-bubble-stroke, #ffffff);
   stroke-width: 0.5px;
   fill-opacity: var(--cm-bubble-opacity, 0.75);
-  /* Counter-scaling (dd.md §11.1.6): `use-zoom` writes ONE variable per frame (1/√k, 1/k or 1). */
+  /* Counter-scaling: `use-zoom` writes ONE variable per frame (1/√k, 1/k or 1). */
   transform: scale(var(--cm-bubble-scale, 1));
   transform-box: fill-box;
   transform-origin: center;
@@ -88,7 +88,7 @@
     fill var(--cm-transition-duration, 250ms);
 }
 
-/* You can drill down from this region (dd.md §11.2.5): the cursor promises it, and only if it is true. */
+/* You can drill down from this region: the cursor promises it, and only if it is true. */
 :where(.cm-root:not([data-unstyled])) .cm-region[data-drillable] {
   cursor: zoom-in;
 }
@@ -116,7 +116,7 @@
 }
 
 /*
- * There is no hover during a gesture (dd.md §11.1.2): dragging across 200 countries would fire 200 hovers
+ * There is no hover during a gesture: dragging across 200 countries would fire 200 hovers
  * and the tooltip would flicker behind the cursor. No color transitions either.
  */
 :where(.cm-root:not([data-unstyled]))[data-interacting]
@@ -130,7 +130,7 @@
   display: none;
 }
 
-/* Keyboard focus: always visible with a keyboard, never just a fill change (dd.md §13). */
+/* Keyboard focus: always visible with a keyboard, never just a fill change. */
 :where(.cm-root:not([data-unstyled])) .cm-svg:focus-visible {
   outline: var(--cm-focus-ring-width, 2px) solid var(--cm-focus-ring, #0b5fff);
   outline-offset: -2px;

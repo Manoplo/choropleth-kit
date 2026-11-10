@@ -40,7 +40,7 @@ import {
 import type { GeographyStatus } from "./use-geography";
 
 /**
- * The drill-down engine inside the map (dd.md §11.2). To the rest of the `useChoropleth` hook, a map
+ * The drill-down engine inside the map. To the rest of the `useChoropleth` hook, a map
  * with `drill` is a ONE-level map (the one being shown) with different options: this engine decides
  * which level that is, loads its geometry (and that of its ancestors, for the projection chain) and
  * hands over the effective options. That way the join, the scale, the bubbles and the legend know nothing about it.
@@ -122,7 +122,7 @@ export type DrillEngine<TDatum> = {
   target: readonly string[];
   /**
    * Loads the geometry of `path` (and its ancestors) into the cache without showing it: intent prefetch
-   * (dd.md §11.2.3). Idempotent, silent and with no effect if it is already there or already being requested.
+   *. Idempotent, silent and with no effect if it is already there or already being requested.
    */
   prefetch: (path: readonly string[]) => void;
   /**

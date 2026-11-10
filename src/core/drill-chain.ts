@@ -89,7 +89,7 @@ const mainBody = (geometry: GeoPermissibleObjects | null): GeoPermissibleObjects
 };
 
 /**
- * The projection chain for the whole route (dd.md §11.2.4): the root is fitted to the world and each
+ * The projection chain for the whole route: the root is fitted to the world and each
  * level is its parent's with `scale`/`translate` readjusted to the chosen region's main body
  * (`rebaseProjection`). A pure function of (levels, route, size, padding). On resize it is
  * recomputed entirely: one `fitExtent` per level.

@@ -17,7 +17,7 @@ const isPositive = (v: number | null | undefined): v is number =>
   typeof v === "number" && Number.isFinite(v) && v > 0;
 
 /**
- * SQUARE-ROOT radius scale (dd.md §3.2): the eye compares areas, not radii. If a store sells twice
+ * SQUARE-ROOT radius scale: the eye compares areas, not radii. If a store sells twice
  * as much, its circle must have twice the AREA (radius ×1.41), not twice the radius, which would be
  * four times the area.
  *

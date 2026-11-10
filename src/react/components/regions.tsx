@@ -65,7 +65,7 @@ const regionIdFrom = (event: SyntheticEvent): string | null =>
   (event.target as Element).closest?.("[data-region-id]")?.getAttribute("data-region-id") ?? null;
 
 /**
- * The colored regions. ONE listener per event type on the `<g>` (delegation, dd.md §14) instead of one
+ * The colored regions. ONE listener per event type on the `<g>` (delegation) instead of one
  * per `<path>`: with hundreds of regions it is less work and no closures are recreated.
  * Pointer Events: the same code for mouse, pen and touch.
  */

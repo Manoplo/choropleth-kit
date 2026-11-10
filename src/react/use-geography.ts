@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { unwrapGeography, type GeographyData, type GeographyInput } from "../core";
 
 /**
- * Cache of loaded geometries (dd.md §21 task 8). Two maps with the same `() => import("…")` do not
+ * Cache of loaded geometries. Two maps with the same `() => import("…")` do not
  * download twice. It is keyed by `geographyKey` if the consumer gives one, and otherwise by the
  * identity of the function / promise. An inline function (`() => import(…)`) has a new identity on
  * every render: it breaks nothing (the already-loaded module returns the same object and React does

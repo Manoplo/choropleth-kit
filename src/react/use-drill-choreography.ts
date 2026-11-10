@@ -12,7 +12,7 @@ import type { MapStore } from "./map-store";
 import type { DrillEngine } from "./use-drill-engine";
 
 /**
- * Duration of the reveal (dd.md §11.2.3): 200 ms of fade + up to 250 ms of staggering by distance from
+ * Duration of the reveal: 200 ms of fade + up to 250 ms of staggering by distance from
  * the click point. With "reduce motion" it is 0: the new level appears without animating.
  */
 export const REVEAL_MS = 450;
@@ -29,7 +29,7 @@ export type UseDrillChoreographyParams<TDatum> = {
 const lastOf = <T>(items: readonly T[]): T | undefined => items[items.length - 1];
 
 /**
- * The part of the choreography that needs the size and the projections (dd.md §11.2.3): it moves the
+ * The part of the choreography that needs the size and the projections: it moves the
  * camera and marks the reveal as done. It reads from the reducer (`engine.machine`) WHAT to do and
  * reports back WHAT happened (`FLIGHT_END`, `REVEAL_END`).
  *

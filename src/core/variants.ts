@@ -18,7 +18,7 @@ import { createColorScale, type ColorScale } from "./scales";
 export type Point = readonly [number, number];
 
 /**
- * Configuration per `variant` (dd.md §9.2 and §10). A discriminated union: each variant requires its
+ * Configuration per `variant`. A discriminated union: each variant requires its
  * own things (`categorical` asks for `getCategory`, `bubble` accepts `getCoordinates`…) and TypeScript
  * rejects invalid combinations, such as a diverging palette on a sequential map.
  */
@@ -125,7 +125,7 @@ export const DEFAULT_BUBBLE_FILL = "#2563eb";
 const isUsable = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 
 /**
- * Each variant's "preset" (dd.md §10): a PURE function that receives the data already joined with the
+ * Each variant's "preset": a PURE function that receives the data already joined with the
  * regions and returns how it is painted (colors, legend, bubbles). The hook only orchestrates; adding
  * a new variant means adding a branch here and a case in the type union.
  */
