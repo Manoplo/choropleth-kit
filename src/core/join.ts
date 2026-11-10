@@ -3,42 +3,42 @@ import type { Feature } from "geojson";
 export type JoinDataOptions<TDatum> = {
   features: readonly Feature[];
   data: readonly TDatum[];
-  /** Id de cada dato del usuario (p. ej. `(d) => d.countryCode`). */
+  /** Id of each user datum (e.g. `(d) => d.countryCode`). */
   getId: (datum: TDatum) => string;
   /**
-   * Id de cada región si no es `feature.id` (p. ej. `(f) => f.properties?.iso_a2`).
-   * Devolver `undefined` significa "esta región no tiene id": no se puede cruzar y se ignora.
+   * Id of each region if it is not `feature.id` (e.g. `(f) => f.properties?.iso_a2`).
+   * Returning `undefined` means "this region has no id": it cannot be joined and is ignored.
    */
   getFeatureId?: (feature: Feature) => string | undefined;
 };
 
 export type JoinResult<TDatum> = {
-  /** id de región → dato. Solo contiene cruces que SÍ ocurrieron. */
+  /** region id → datum. Only contains joins that DID happen. */
   joined: Map<string, TDatum>;
-  /** ids de datos que no corresponden a ninguna región (p. ej. "ES" cuando la geometría usa "724"). */
+  /** ids of data that do not match any region (e.g. "ES" when the geometry uses "724"). */
   unmatchedData: string[];
-  /** ids de regiones que se quedaron sin dato (se pintarán con `emptyFill`). */
+  /** ids of regions left without data (they will be painted with `emptyFill`). */
   featuresWithoutData: string[];
-  /** ids repetidos en `data`: solo se conserva el primero de cada uno. */
+  /** repeated ids in `data`: only the first of each is kept. */
   duplicateDataIds: string[];
 };
 
-// GeoJSON permite que `feature.id` sea string O number, pero nuestros ids de datos son string.
-// Sin esta conversión, el `724` numérico de una geometría nunca igualaría al "724" de los datos
-// (Map y Set comparan con ===, y 724 !== "724"): todo el mapa saldría gris sin ningún error.
+// GeoJSON allows `feature.id` to be a string OR a number, but our data ids are strings.
+// Without this conversion, a geometry's numeric `724` would never equal the data's "724"
+// (Map and Set compare with ===, and 724 !== "724"): the whole map would come out gray with no error.
 const defaultGetFeatureId = (feature: Feature): string | undefined =>
   feature.id === undefined ? undefined : String(feature.id);
 
 /**
- * Cruza los datos del usuario con las regiones del mapa por un identificador común.
+ * Joins the user's data with the map's regions by a common identifier.
  *
- * Es el paso donde nace la causa n.º 1 de "mi mapa sale gris": el dato dice "ES" y la geometría
- * dice "724". Esta función NO intenta adivinar ni corregir ids (eso sería esconder el error):
- * los cruza tal cual y **informa** de lo que no ha cruzado. Quien muestre el aviso al desarrollador
- * (console.warn, `onJoinReport`) lo hará con este resultado, en otra capa.
+ * This is the step where the #1 cause of "my map is gray" is born: the datum says "ES" and the
+ * geometry says "724". This function does NOT try to guess or fix ids (that would hide the error):
+ * it joins them as they are and **reports** what did not join. Whoever shows the warning to the
+ * developer (console.warn, `onJoinReport`) will do it with this result, in another layer.
  *
- * Es pura: no escribe en consola ni lee `process.env`. Complejidad O(regiones + datos) gracias
- * a Map/Set; con `data.find(...)` por región sería O(regiones × datos).
+ * It is pure: it does not write to the console or read `process.env`. Complexity O(regions + data)
+ * thanks to Map/Set; with `data.find(...)` per region it would be O(regions × data).
  */
 export const joinData = <TDatum>({
   features,
@@ -46,23 +46,23 @@ export const joinData = <TDatum>({
   getId,
   getFeatureId = defaultGetFeatureId,
 }: JoinDataOptions<TDatum>): JoinResult<TDatum> => {
-  // ── PASO 1: sacar los ids de las regiones. Va PRIMERO. ────────────────────────────────────────
-  // Hasta que no sabemos qué ids existen en la geometría no se puede decir si un dato "sobra".
-  // Un Set (en vez de array) da pertenencia en O(1) y, de paso, absorbe ids repetidos en la
-  // geometría. Orden de inserción = orden de las features, así que la salida es determinista.
-  // Las regiones sin id (world-atlas tiene algunos territorios así) se saltan: no hay forma de
-  // cruzarlas ni de nombrarlas en un aviso. Se pintarán con `emptyFill` igualmente.
+  // ── STEP 1: extract the region ids. FIRST. ───────────────────────────────────────────────────
+  // Until we know which ids exist in the geometry we cannot say whether a datum is "extra".
+  // A Set (rather than an array) gives O(1) membership and, incidentally, absorbs repeated ids in the
+  // geometry. Insertion order = feature order, so the output is deterministic.
+  // Regions without an id (world-atlas has a few such territories) are skipped: there is no way to
+  // join them or name them in a warning. They will be painted with `emptyFill` regardless.
   const featureIds = new Set<string>();
   for (const feature of features) {
     const id = getFeatureId(feature);
     if (id !== undefined) featureIds.add(id);
   }
 
-  // ── PASO 2: indexar los datos por id. Va SEGUNDO, antes de comparar. ──────────────────────────
-  // Convertimos el array del usuario en un Map para poder preguntar "¿hay dato para este id?" sin
-  // recorrerlo cada vez. Aquí también se detectan duplicados: dos filas con el mismo id es un
-  // error silencioso típico (una fila pisaría a la otra y el color dependería del orden). Nos
-  // quedamos con la PRIMERA y lo reportamos, en vez de dejar que la última gane sin avisar.
+  // ── STEP 2: index the data by id. SECOND, before comparing. ──────────────────────────────────
+  // We turn the user's array into a Map so we can ask "is there data for this id?" without scanning
+  // it every time. Duplicates are also detected here: two rows with the same id is a typical silent
+  // error (one row would overwrite the other and the color would depend on order). We keep the FIRST
+  // and report it, instead of letting the last one win silently.
   const dataById = new Map<string, TDatum>();
   const duplicates = new Set<string>();
   for (const datum of data) {
@@ -71,9 +71,9 @@ export const joinData = <TDatum>({
     else dataById.set(id, datum);
   }
 
-  // ── PASO 3: clasificar. Va ÚLTIMO porque necesita los dos índices ya construidos. ─────────────
-  // `joined` solo guarda ids que existen en la geometría: es lo que el render consultará por región
-  // (`joined.get(regionId)`), así que no arrastra datos huérfanos.
+  // ── STEP 3: classify. LAST because it needs both indexes already built. ─────────────────────
+  // `joined` only keeps ids that exist in the geometry: it is what rendering will query per region
+  // (`joined.get(regionId)`), so it does not drag along orphan data.
   const joined = new Map<string, TDatum>();
   const unmatchedData: string[] = [];
   for (const [id, datum] of dataById) {
@@ -81,9 +81,9 @@ export const joinData = <TDatum>({
     else unmatchedData.push(id);
   }
 
-  // Ojo: "sin dato" ≠ "dato con valor 0" ≠ "dato con valor null". Aquí solo se decide lo primero
-  // (no hay fila para esa región). Un dato con `value: null` SÍ cruza y se queda en `joined`;
-  // convertirlo en `emptyFill` es trabajo de la escala de color (paso posterior).
+  // Careful: "no data" ≠ "datum with value 0" ≠ "datum with value null". Only the first is decided here
+  // (there is no row for that region). A datum with `value: null` DOES join and stays in `joined`;
+  // turning it into `emptyFill` is the color scale's job (a later step).
   const featuresWithoutData = [...featureIds].filter((id) => !dataById.has(id));
 
   return { joined, unmatchedData, featuresWithoutData, duplicateDataIds: [...duplicates] };

@@ -7,23 +7,23 @@ type RegionPathProps = {
   d: string;
   fill: string;
   drillable: boolean;
-  /** Sin valor que pintar (sin fila de datos, o con valor nulo): `data-empty`, para estilarlas por CSS. */
+  /** No value to paint (no data row, or a null value): `data-empty`, to style them via CSS. */
   empty: boolean;
-  /** Índice de clase de la leyenda, o `"empty"`: el CSS resalta una clase atenuando el resto, sin re-renderizar. */
+  /** Legend class index, or `"empty"`: the CSS highlights a class by dimming the rest, without re-rendering. */
   dataClass: string;
-  /** Clases del consumidor (`classNames.region` + `getRegionStyle().className`). */
+  /** The consumer's classes (`classNames.region` + `getRegionStyle().className`). */
   className: string | undefined;
-  /** De `getRegionStyle`; `undefined` = la del CSS (1). */
+  /** From `getRegionStyle`; `undefined` = the CSS one (1). */
   opacity: number | undefined;
-  /** Es la región hacia la que se baja (se atenúa el resto; si tarda, «respira»). */
+  /** It is the region being drilled into (the rest dims; if it takes long, it "breathes"). */
   target: boolean;
-  /** 0…1: retraso de su entrada en el revelado. */
+  /** 0…1: delay of its entrance in the reveal. */
   wave: number | undefined;
 };
 
-// Solo se re-renderiza si cambia su color o su ruta: ni el hover ni la selección lo tocan
-// (eso lo pinta `Selection` encima). Todas las props son primitivos para que `memo` sirva.
-// `fill` va en `style` (no como atributo) porque puede ser `var(--cm-empty-fill, …)`.
+// Only re-renders if its color or path changes: neither hover nor selection touch it (`Selection`
+// paints that on top). All props are primitives so that `memo` works. `fill` goes in `style` (not as
+// an attribute) because it can be `var(--cm-empty-fill, …)`.
 const RegionPath = memo(
   ({
     id,
@@ -56,7 +56,7 @@ const RegionPath = memo(
   ),
 );
 
-// Regiones sin id (Kosovo en world-atlas): se ven, pero no se pueden cruzar ni seleccionar.
+// Regions without an id (Kosovo in world-atlas): they are visible, but cannot be joined or selected.
 const AnonymousPath = memo(({ d, fill }: { d: string; fill: string }) => (
   <path className="cm-region cm-region--anonymous" d={d} style={{ fill, cursor: "default" }} />
 ));
@@ -65,9 +65,9 @@ const regionIdFrom = (event: SyntheticEvent): string | null =>
   (event.target as Element).closest?.("[data-region-id]")?.getAttribute("data-region-id") ?? null;
 
 /**
- * Las regiones coloreadas. UN listener por tipo de evento en el `<g>` (delegación, dd.md §14)
- * en vez de uno por `<path>`: con cientos de regiones es menos trabajo y no se recrean closures.
- * Pointer Events: el mismo código para ratón, lápiz y táctil.
+ * The colored regions. ONE listener per event type on the `<g>` (delegation) instead of one
+ * per `<path>`: with hundreds of regions it is less work and no closures are recreated.
+ * Pointer Events: the same code for mouse, pen and touch.
  */
 export const Regions = () => {
   const { choropleth, store, classNames } = useChoroplethContext();
@@ -88,7 +88,7 @@ export const Regions = () => {
     return id !== null && known.has(id) ? ({ kind: "region", id } as const) : null;
   };
 
-  // Con GeoJSON no hay `borders` (mesh): el CSS dibuja el contorno de cada región.
+  // With GeoJSON there are no `borders` (mesh): the CSS draws each region's outline.
   const outlined = borders === null;
 
   return (
@@ -105,13 +105,13 @@ export const Regions = () => {
         if (ref !== null) {
           hoverItem(ref);
         } else if (store.getState().hovered?.kind === "region") {
-          // Cursor sobre el océano (dentro del <g> pero fuera de toda región). Si el hover es de
-          // un punto, no es nuestro: lo gestionan las burbujas.
+          // Cursor over the ocean (inside the <g> but outside every region). If the hover belongs to a
+          // point, it is not ours: the bubbles handle it.
           hoverItem(null);
         }
       }}
       onPointerLeave={(event) => {
-        // En táctil el navegador manda «leave» al levantar el dedo: no es salir del mapa.
+        // On touch the browser sends "leave" when the finger lifts: it is not leaving the map.
         if (event.pointerType === "touch") return;
         if (store.getState().hovered?.kind === "region") hoverItem(null);
       }}

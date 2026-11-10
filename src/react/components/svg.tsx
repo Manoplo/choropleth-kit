@@ -15,9 +15,9 @@ import { Viewport } from "./viewport";
 
 export type SvgProps = {
   /**
-   * Capas del mapa, de abajo arriba. Por defecto, dentro de un `Viewport` (la cámara): `Regions`,
-   * `Borders`, `Bubbles`, `FallbackPoints` y `Selection`. Si pasas tus capas, envuélvelas en
-   * `<Choropleth.Viewport>` para que se muevan con el zoom.
+   * Map layers, bottom to top. By default, inside a `Viewport` (the camera): `Regions`, `Borders`,
+   * `Bubbles`, `FallbackPoints` and `Selection`. If you pass your own layers, wrap them in
+   * `<Choropleth.Viewport>` so they move with the zoom.
    */
   children?: ReactNode;
   className?: string;
@@ -25,12 +25,12 @@ export type SvgProps = {
 };
 
 /**
- * El `<svg>`. Existe como pieza propia porque `Root` mezcla SVG (regiones, fronteras) y HTML
- * (leyenda, tooltip), y un elemento HTML no puede vivir dentro de un `<svg>`.
- * (dd.md §9.3 no lo nombra: es la única diferencia con su ejemplo.)
+ * The `<svg>`. It exists as its own piece because `Root` mixes SVG (regions, borders) and HTML
+ * (legend, tooltip), and an HTML element cannot live inside an `<svg>`.
+ * (It is the only difference from the documented example.)
  *
- * Mientras la geometría asíncrona no llega, pinta un esqueleto con la misma proporción que tendrá
- * el mapa: la página no salta cuando aparece.
+ * While the asynchronous geometry has not arrived, it draws a skeleton with the same proportion the
+ * map will have: the page does not jump when it appears.
  */
 export const Svg = ({ children, className, ariaLabel }: SvgProps) => {
   const { choropleth, store, viewportRef, classNames } = useChoroplethContext();
@@ -49,8 +49,8 @@ export const Svg = ({ children, className, ariaLabel }: SvgProps) => {
   } = choropleth;
   const svgRef = useRef<SVGSVGElement | null>(null);
 
-  // Antes de los `return` tempranos (los hooks no pueden ser condicionales): mientras carga no hay
-  // `<svg>`, y `ready` reengancha el zoom cuando aparece.
+  // Before the early `return`s (hooks cannot be conditional): while loading there is no `<svg>`, and
+  // `ready` re-hooks the zoom when it appears.
   useZoom({
     svgRef,
     viewportRef,
@@ -78,8 +78,8 @@ export const Svg = ({ children, className, ariaLabel }: SvgProps) => {
     );
   }
 
-  // Atajos de teclado con el mapa enfocado. `tabIndex` solo si hay atajos: no se añade un tab stop vacío.
-  // El teclado del drill (Escape / Retroceso suben) es independiente del de zoom.
+  // Keyboard shortcuts with the map focused. `tabIndex` only if there are shortcuts: an empty tab stop is not added.
+  // The drill's keyboard (Escape / Backspace go up) is independent of the zoom's.
   const { drillNav } = choropleth;
   const keyboard = (zoom !== null && zoom.keyboard) || drillNav !== null;
   const handleKeyDown = (event: KeyboardEvent<SVGSVGElement>) => {

@@ -40,108 +40,108 @@ import {
 import type { GeographyStatus } from "./use-geography";
 
 /**
- * El motor del drill-down dentro del mapa (dd.md §11.2). Para el resto del hook `useChoropleth`, un mapa
- * con `drill` es un mapa de UN nivel (el que se está mostrando) con otras opciones: este motor decide
- * cuál es ese nivel, carga su geometría (y la de sus ancestros, para la cadena de proyecciones) y
- * entrega las opciones efectivas. Así el join, la escala, las burbujas y la leyenda no se enteran.
+ * The drill-down engine inside the map. To the rest of the `useChoropleth` hook, a map
+ * with `drill` is a ONE-level map (the one being shown) with different options: this engine decides
+ * which level that is, loads its geometry (and that of its ancestors, for the projection chain) and
+ * hands over the effective options. That way the join, the scale, the bubbles and the legend know nothing about it.
  *
- * **La coreografía la gobierna `drillReducer`** (`core/drill.ts`, pura). Este hook es el pegamento con el
- * mundo real: traduce lo que pasa (el consumidor cambia la ruta, llega la geometría, falla una carga) a
- * eventos del reducer, y pinta el estado resultante. El vuelo de cámara y el temporizador del revelado
- * viven en `use-drill-choreography.ts`, porque necesitan el tamaño y las proyecciones.
+ * **The choreography is governed by `drillReducer`** (`core/drill.ts`, pure). This hook is the glue with
+ * the real world: it translates what happens (the consumer changes the route, geometry arrives, a load
+ * fails) into reducer events, and renders the resulting state. The camera flight and the reveal timer
+ * live in `use-drill-choreography.ts`, because they need the size and the projections.
  *
- *  - **Bajar / lateral:** el vuelo empieza YA (optimista) y la carga va en paralelo; el nivel nuevo no se
- *    muestra hasta que acaban las dos cosas.
- *  - **Subir / saltar:** no se piden hasta tener geometría y datos (suele ser inmediato: está en caché).
- *  - **Mientras carga** se sigue mostrando el nivel anterior con SUS datos (nunca datos nuevos sobre
- *    geometría vieja).
+ *  - **Down / lateral:** the flight starts NOW (optimistic) and the load runs in parallel; the new
+ *    level is not shown until both are done.
+ *  - **Up / jump:** they are not requested until geometry and data are available (usually immediate: it is cached).
+ *  - **While loading** the previous level keeps showing with ITS data (never new data over old geometry).
  */
 
 export type DrillEngineParams<TDatum> = {
   drill: readonly DrillLevel<TDatum>[] | DrillController<TDatum> | undefined;
-  /** `data` tal cual: lista, `undefined` (cargando) o selector del nivel. */
+  /** `data` as is: a list, `undefined` (loading) or a level selector. */
   data: readonly TDatum[] | undefined | ((ctx: DrillContext) => readonly TDatum[] | undefined);
-  /** El filtro del mapa (Antártida…). Se aplica solo a la geometría raíz y a lo que la hereda. */
+  /** The map's filter (Antarctica…). Applied only to the root geometry and whatever inherits it. */
   filterFeatures: ((feature: Feature) => boolean) | undefined;
-  /** Para leer la cámara al empezar a bajar (se guarda para volver a ella al subir). */
+  /** To read the camera when starting to go down (saved to return to it when going up). */
   store: MapStore;
   onDrill: ((event: DrillEvent<TDatum>) => void) | undefined;
   onDrillEnd: ((event: DrillEvent<TDatum>) => void) | undefined;
   onDrillError: ((event: { error: unknown; ctx: DrillContext }) => void) | undefined;
 };
 
-/** Lo que se dibujó antes del último cambio de nivel: las capas que salen (`exiting`) lo necesitan. */
+/** What was drawn before the last level change: the exiting layers (`exiting`) need it. */
 export type DrillPrevious = {
   path: readonly string[];
   chain: readonly ChainLevel[];
-  /** Color con el que estaba pintada cada región: la capa que sale se desvanece CON su color, no en gris. */
+  /** Color each region was painted with: the exiting layer fades WITH its color, not in gray. */
   fills: ReadonlyMap<string, string>;
 };
 
 export type DrillEngine<TDatum> = {
-  /** `false` sin prop `drill`: el hook se comporta como siempre. */
+  /** `false` without the `drill` prop: the hook behaves as always. */
   active: boolean;
   controller: DrillController<TDatum> | null;
   levels: readonly DrillLevel<TDatum>[];
-  /** La ruta de lo que se está mostrando (no la pedida, si la nueva aún carga o el vuelo no acabó). */
+  /** The route of what is being shown (not the requested one, if the new one is still loading or the flight has not ended). */
   shownPath: readonly string[];
-  /** Cambia solo cuando cambia lo mostrado: sirve de clave para efectos. */
+  /** Changes only when what is shown changes: serves as a key for effects. */
   shownKey: string;
   depth: number;
   level: DrillLevel<TDatum> | null;
-  /** La geometría del nivel mostrado, ya resuelta. */
+  /** The geometry of the shown level, already resolved. */
   geography: GeographyData | undefined;
   status: GeographyStatus;
   objectName: string | undefined;
-  /** Features del nivel mostrado, ya filtradas. */
+  /** Features of the shown level, already filtered. */
   features: FeatureCollection | undefined;
-  /** Features de CADA profundidad `0..depth` de lo mostrado (las capas de contexto). */
+  /** Features of EACH depth `0..depth` of what is shown (the context layers). */
   levelFeatures: readonly (FeatureCollection | undefined)[];
   getFeatureId: ((feature: Feature) => string | undefined) | undefined;
-  /** Qué se dibuja a cada profundidad `0..depth`: para la cadena de proyecciones. */
+  /** What is drawn at each depth `0..depth`: for the projection chain. */
   chain: readonly ChainLevel[];
-  /** Cambia solo si cambia el contenido de `chain` (úsala de dependencia en vez de `chain`). */
+  /** Changes only if the content of `chain` changes (use it as a dependency instead of `chain`). */
   chainSig: string;
-  /** El filtro compuesto del nivel mostrado: lo necesitan las fronteras (`createBorders`). */
+  /** The composite filter of the shown level: the borders (`createBorders`) need it. */
   filterFeatures: ((feature: Feature) => boolean) | undefined;
-  /** La geometría raíz (para la proporción `"auto"`, que no debe cambiar al bajar). */
+  /** The root geometry (for the `"auto"` aspect ratio, which must not change when going down). */
   rootFeatures: FeatureCollection | undefined;
-  /** Los datos del nivel mostrado (`undefined` = cargando). */
+  /** The shown level's data (`undefined` = loading). */
   data: readonly TDatum[] | undefined;
-  /** Apunta qué item provocó el próximo cambio de ruta (lo recibe `onDrill`). */
+  /** Notes which item caused the next route change (received by `onDrill`). */
   noteItem: (item: MapItem<TDatum>) => void;
-  /** La máquina de estados (fase, capas, vuelo pendiente…). */
+  /** The state machine (phase, layers, pending flight…). */
   machine: DrillMachineState;
   dispatch: Dispatch<DrillMachineEvent>;
-  /** Lo que se mostraba antes del último cambio (para dibujar la capa que sale). */
+  /** What was shown before the last change (to draw the exiting layer). */
   previous: DrillPrevious | null;
-  /** Anota los colores de lo que se está mostrando; se leen al cambiar de nivel (`previous.fills`). */
+  /** Records the colors of what is being shown; they are read on a level change (`previous.fills`). */
   rememberFills: (fills: ReadonlyMap<string, string>) => void;
-  /** La cadena de niveles de una ruta (para calcular a dónde vuela la cámara); `null` si faltan. */
+  /** The chain of levels of a route (to compute where the camera flies); `null` if any are missing. */
   chainLevelsFor: (path: readonly string[]) => ChainLevel[] | null;
-  /** La ruta PEDIDA (la del controlador), no la mostrada. */
+  /** The REQUESTED route (the controller's), not the shown one. */
   target: readonly string[];
   /**
-   * Carga la geometría de `path` (y de sus ancestros) en la caché sin mostrarla: el prefetch por intención
-   * (dd.md §11.2.3). Idempotente, silencioso y sin efecto si ya está o ya se está pidiendo.
+   * Loads the geometry of `path` (and its ancestors) into the cache without showing it: intent prefetch
+   *. Idempotent, silent and with no effect if it is already there or already being requested.
    */
   prefetch: (path: readonly string[]) => void;
   /**
-   * Navega con `run` (que llama al controlador y devuelve la ruta que ha quedado pedida) y devuelve una
-   * `Promise` que resuelve al volver a reposo en ella (`completed: false` si se cortó o no llegó a aplicarse).
+   * Navigates with `run` (which calls the controller and returns the route that ended up requested) and
+   * returns a `Promise` that resolves when it returns to rest on it (`completed: false` if it was cut
+   * short or never got applied).
    */
   navigate: (
     run: (controller: DrillController<TDatum>) => readonly string[],
   ) => Promise<TransitionResult>;
 };
 
-/** Si el controlador no aplica la ruta pedida en este tiempo (un padre `controlled` que la rechaza), la promesa resuelve `false`. */
+/** If the controller does not apply the requested route within this time (a `controlled` parent that rejects it), the promise resolves `false`. */
 const REJECTED_AFTER_MS = 1000;
 
 type Waiter = {
   target: readonly string[];
   resolve: (result: TransitionResult) => void;
-  /** Ya se vio la ruta pedida como destino del controlador. */
+  /** The requested route has already been seen as the controller's target. */
   seen: boolean;
   timer: ReturnType<typeof setTimeout> | undefined;
 };
@@ -149,7 +149,7 @@ type Waiter = {
 const defaultFeatureId = (feature: Feature): string | undefined =>
   feature.id === undefined ? undefined : String(feature.id);
 
-// Identidad numérica de cada colección: permite resumir «estas colecciones» en una cadena estable.
+// Numeric identity of each collection: lets "these collections" be summarized in a stable string.
 const collectionIds = new WeakMap<object, number>();
 let nextCollectionId = 1;
 const idOfCollection = (collection: object | undefined): string => {
@@ -165,10 +165,10 @@ const idOfCollection = (collection: object | undefined): string => {
 const samePath = (a: readonly string[], b: readonly string[]) =>
   a.length === b.length && a.every((id, i) => id === b[i]);
 
-// ── features estables ──────────────────────────────────────────────────────────────────────────────
-// `toFeatureCollection` de un Topology devuelve un objeto NUEVO en cada llamada y un filtro produce un
-// array nuevo: sin estas cachés, cada render recalcularía todas las rutas. Se indexan por la identidad
-// de la geometría (un `WeakMap`: no retiene lo que ya nadie usa) y por el RESULTADO del filtro.
+// ── stable features ─────────────────────────────────────────────────────────────────────────────
+// `toFeatureCollection` of a Topology returns a NEW object on every call and a filter produces a new
+// array: without these caches, every render would recompute all the paths. They are indexed by the
+// geometry's identity (a `WeakMap`: it does not retain what nobody uses anymore) and by the filter's RESULT.
 const collections = new WeakMap<object, Map<string, FeatureCollection>>();
 const filtered = new WeakMap<FeatureCollection, Map<string, FeatureCollection>>();
 
@@ -208,18 +208,18 @@ const stableFilter = (
   return created;
 };
 
-// ── geometrías ─────────────────────────────────────────────────────────────────────────────────────
+// ── geometries ──────────────────────────────────────────────────────────────────────────────────
 
 const isSync = (input: GeographyInput): input is GeographyData =>
   typeof input !== "function" && !("then" in input);
 
-/** Resuelve un `GeographyInput` (módulo ES incluido) a su dato. */
+/** Resolves a `GeographyInput` (including an ES module) to its data. */
 const resolveInput = (input: GeographyInput): Promise<GeographyData> =>
   isSync(input)
     ? Promise.resolve(input)
     : (typeof input === "function" ? input() : input).then(unwrapGeography);
 
-/** Una geometría fija (no función) no necesita carga ni caché: se lee en el render. */
+/** A fixed geometry (not a function) needs neither loading nor cache: it is read during render. */
 const fixedGeography = (level: DrillLevel<never>): GeographyData | undefined => {
   const { geography } = level;
   return typeof geography === "function" || geography === "inherit" || !isSync(geography)
@@ -244,7 +244,7 @@ export const useDrillEngine = <TDatum>({
   onDrillError,
 }: DrillEngineParams<TDatum>): DrillEngine<TDatum> => {
   const active = drill !== undefined;
-  // Siempre se llama (los hooks no son condicionales); sin `drill` se queda con un nivel de relleno.
+  // Always called (hooks are not conditional); without `drill` it keeps a filler level.
   const internal = useDrillDown<TDatum>({
     levels:
       drill === undefined || isDrillController(drill)
@@ -257,19 +257,19 @@ export const useDrillEngine = <TDatum>({
   const target = controller?.path ?? EMPTY_PATH;
   const targetKey = JSON.stringify(target);
 
-  // La máquina de estados de la coreografía. Nace en reposo en la ruta inicial (una URL al montar no anima).
+  // The choreography state machine. It starts at rest on the initial route (a URL on mount does not animate).
   const [machine, dispatch] = useReducer(drillReducer, target, createDrillState);
 
-  // ── geometrías de los niveles de la ruta pedida ─────────────────────────────────────────────────
-  // `cache` guarda lo que viene de funciones (`geography: (ctx) => import(…)`); las geometrías fijas se
-  // leen directamente. `failed` guarda las claves que dieron error; `pending`, las que vuelan.
+  // ── geometries of the requested route's levels ──────────────────────────────────────────────────
+  // `cache` holds what comes from functions (`geography: (ctx) => import(…)`); fixed geometries are
+  // read directly. `failed` holds the keys that errored; `pending`, the ones in flight.
   const [cache] = useState<LruCache<GeographyData>>(() => createLruCache<GeographyData>());
   const [version, setVersion] = useState(0);
   const [failed, setFailed] = useState<ReadonlyMap<string, unknown>>(new Map());
   const pending = useRef(new Set<string>());
 
   const sourceOf = useCallback((depth: number) => sourceDepth(levels, depth), [levels]);
-  /** Clave de caché de la geometría que se dibuja a `depth` bajo `path`. */
+  /** Cache key of the geometry drawn at `depth` under `path`. */
   const keyAt = (depth: number, path: readonly string[]) =>
     geographyKeyFor(levels, path.slice(0, sourceOf(depth)));
   const geographyAt = (depth: number, path: readonly string[]): GeographyData | undefined => {
@@ -278,9 +278,10 @@ export const useDrillEngine = <TDatum>({
     return fixedGeography(level) ?? cache.get(keyAt(depth, path));
   };
 
-  // Pide lo que falta de una ruta (carga asíncrona) y avisa al llegar. Lo usan el efecto del destino y el
-  // prefetch. Un prefetch que falla no marca la clave como fallida: el error real, si lo hay, lo dará el
-  // clic (que volverá a pedirla); `version` en las dependencias del efecto lo reintenta en cuanto vuelve.
+  // Requests whatever a route is missing (async load) and notifies on arrival. Used by the target effect
+  // and by the prefetch. A failing prefetch does not mark the key as failed: the real error, if any, will
+  // come from the click (which will request it again); `version` in the effect's dependencies retries it
+  // as soon as it comes back.
   const mounted = useRef(false);
   useEffect(() => {
     mounted.current = true;
@@ -328,18 +329,18 @@ export const useDrillEngine = <TDatum>({
     [active],
   );
 
-  // Una clave que falló se reintenta al volver a pedir ESA ruta (un clic nuevo), no en cada recarga ajena.
+  // A key that failed is retried when THAT route is requested again (a new click), not on every unrelated reload.
   const requestedTarget = useRef("");
   useEffect(() => {
     const retryFailed = requestedTarget.current !== targetKey;
     requestedTarget.current = targetKey;
     if (active) request(target, false, retryFailed);
-    // `target`/`levels` se resumen en `targetKey`; `version` reintenta lo que un prefetch fallido dejó sin cargar.
+    // `target`/`levels` are summarized in `targetKey`; `version` retries whatever a failed prefetch left unloaded.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [active, targetKey, levels, version]);
 
-  // ── features por profundidad ────────────────────────────────────────────────────────────────────
-  /** El filtro del nivel de `depth`: el del mapa (solo en la raíz) y el de cada nivel, con SU contexto. */
+  // ── features per depth ────────────────────────────────────────────────────────────────────
+  /** The filter of the level at `depth`: the map's (root only) and each level's, with ITS context. */
   const keepFor = (depth: number, path: readonly string[]) => {
     const source = sourceOf(depth);
     return (feature: Feature): boolean => {
@@ -364,8 +365,8 @@ export const useDrillEngine = <TDatum>({
     idOf: levels[depth]?.getFeatureId ?? levels[sourceOf(depth)]?.getFeatureId ?? defaultFeatureId,
   });
   /**
-   * La cadena de niveles de una ruta. Para encuadrar la región `path[d − 1]` solo hace falta lo de los
-   * niveles PADRE; el último (el que se va a mostrar) puede estar sin cargar todavía: se rellena vacío.
+   * The chain of levels of a route. To frame region `path[d − 1]` only the PARENT levels' data is
+   * needed; the last one (the one about to be shown) may still be unloaded: it is filled in empty.
    */
   const chainLevelsFor = (path: readonly string[]): ChainLevel[] | null => {
     const collectionsByDepth = featuresFor(path);
@@ -374,24 +375,24 @@ export const useDrillEngine = <TDatum>({
     return collectionsByDepth.map((fc, depth) => chainLevelOf(depth, fc ?? EMPTY_COLLECTION));
   };
 
-  // ── ¿qué está listo y qué se muestra? ───────────────────────────────────────────────────────────
+  // ── what is ready and what is shown? ────────────────────────────────────────────────────────────
   const targetFeatures = active ? featuresFor(target) : [];
   const targetGeometry = active && targetFeatures.every((f) => f !== undefined);
   const targetEmpty = targetGeometry && (targetFeatures[target.length]?.features.length ?? 0) === 0;
   const liveData = resolveDrillData(data, contextOf(target));
-  /** Geometría y datos del destino listos: ya se puede mostrar sin gris ni avisos falsos. */
+  /** The target's geometry and data are ready: it can now be shown without gray or false warnings. */
   const targetReady = targetGeometry && !targetEmpty && liveData !== undefined;
 
-  // Lo mostrado lo manda la máquina: el destino solo cuenta al revelar (o al subir / saltar, que no vuelan).
+  // What is shown is dictated by the machine: the target only counts on reveal (or when going up / jumping, which do not fly).
   const shownPath = machine.phase === "revealing" ? machine.path : machine.settledPath;
   const shownKey = JSON.stringify(shownPath);
   const shownIsTarget = samePath(shownPath, target);
   const shownFeatures = active ? (shownIsTarget ? targetFeatures : featuresFor(shownPath)) : [];
   const hasShown = active && shownFeatures.every((f) => f !== undefined);
 
-  // Los datos del nivel mostrado. Si el destino aún no se muestra, los del nivel viejo: están en un
-  // objeto que se actualiza tras cada commit (un efecto), no en el render, para no depender de que el
-  // selector devuelva la misma lista (casi nadie lo hace).
+  // The shown level's data. If the target is not shown yet, the old level's: they sit in an object that
+  // is updated after each commit (an effect), not during render, so as not to depend on the selector
+  // returning the same list (almost nobody does).
   const [latest] = useState(() => ({
     data: undefined as readonly TDatum[] | undefined,
     path: shownPath,
@@ -405,8 +406,8 @@ export const useDrillEngine = <TDatum>({
     [latest],
   );
 
-  // Las colecciones son estables por construcción (cachés de arriba): su identidad, resumida en una
-  // cadena, dice si `chain` cambió. (No se puede pasar un número variable de dependencias a `useMemo`.)
+  // The collections are stable by construction (the caches above): their identity, summarized in a
+  // string, tells whether `chain` changed. (A variable number of dependencies cannot be passed to `useMemo`.)
   const chainSig = `${shownKey}|${shownFeatures.map(idOfCollection).join(",")}`;
   const chain = useMemo<ChainLevel[]>(
     () => shownFeatures.flatMap((fc, depth) => (fc === undefined ? [] : [chainLevelOf(depth, fc)])),
@@ -414,8 +415,8 @@ export const useDrillEngine = <TDatum>({
     [chainSig, levels],
   );
 
-  // Lo que se mostraba ANTES del último cambio de nivel (la capa que sale lo necesita): se toma en el render
-  // en que cambia la ruta mostrada (ajuste de estado durante el render), de lo guardado tras el commit anterior.
+  // What was shown BEFORE the last level change (the exiting layer needs it): taken during the render in
+  // which the shown route changes (a state adjustment during render), from what was saved after the previous commit.
   const [seen, setSeen] = useState<readonly string[]>(shownPath);
   const [previous, setPrevious] = useState<DrillPrevious | null>(null);
   if (!samePath(seen, shownPath)) {
@@ -434,9 +435,9 @@ export const useDrillEngine = <TDatum>({
   const features = hasShown ? shownFeatures[depth] : undefined;
   const geography = hasShown ? geographyAt(depth, shownPath) : undefined;
 
-  // ── errores: se avisan, y la máquina deshace la bajada ──────────────────────────────────────────
-  // El error de «0 regiones» se memoiza por destino: si se construyera en cada render, cada render sería un
-  // error «nuevo» y se avisaría una y otra vez.
+  // ── errors: they are reported, and the machine undoes the descent ───────────────────────────────
+  // The "0 regions" error is memoized per target: if it were built on every render, each render would
+  // be a "new" error and it would be reported over and over.
   const emptyError = useMemo(() => {
     if (!targetEmpty) return null;
     const parent = target.at(-1) ?? null;
@@ -460,7 +461,7 @@ export const useDrillEngine = <TDatum>({
     latestProps.current = { onDrill, onDrillEnd, onDrillError, controller, target, machine };
   });
 
-  // ── navegación del handle: la Promise resuelve al volver a reposo en la ruta pedida ───────────────
+  // ── handle navigation: the Promise resolves on returning to rest at the requested route ──────────
   const waiters = useRef<Waiter[]>([]);
   const finish = (waiter: Waiter, completed: boolean) => {
     clearTimeout(waiter.timer);
@@ -482,21 +483,21 @@ export const useDrillEngine = <TDatum>({
       waiter.timer = setTimeout(() => {
         if (!waiter.seen) finish(waiter, false);
       }, REJECTED_AFTER_MS);
-      // Una navegación nueva sustituye a las anteriores que iban a otra parte: esas ya no llegarán.
+      // A new navigation replaces earlier ones that were heading elsewhere: those will no longer arrive.
       for (const other of waiters.current) {
         if (!samePath(other.target, wanted)) finish(other, false);
       }
       waiters.current.push(waiter);
-      // Ya estaba allí (nada que esperar), o ya iba hacia allí (esperar a que acabe).
+      // Already there (nothing to wait for), or already heading there (wait for it to finish).
       if (arrived(waiter)) finish(waiter, true);
     });
-    // `finish`/`arrived` solo tocan refs: no cambian de significado entre renders.
+    // `finish`/`arrived` only touch refs: they do not change meaning between renders.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
     for (const waiter of waiters.current) {
       if (arrived(waiter)) finish(waiter, true);
-      // Otra ruta pasó a ser el destino tras haber visto el pedido: lo sustituyeron o la máquina lo deshizo.
+      // Another route became the target after the request was seen: it was replaced or the machine undid it.
       else if (waiter.seen && !samePath(target, waiter.target)) finish(waiter, false);
     }
   });
@@ -508,9 +509,9 @@ export const useDrillEngine = <TDatum>({
     [],
   );
 
-  // ── del mundo real a eventos del reducer ────────────────────────────────────────────────────────
-  // `dispatched`: la última ruta pedida a la máquina. `machineAtDispatch`: la máquina en ese instante; sirve
-  // para no tomar por «rechazo» el render en que el reducer aún no ha procesado la petición.
+  // ── from the real world to reducer events ───────────────────────────────────────────────────────
+  // `dispatched`: the last route requested from the machine. `machineAtDispatch`: the machine at that
+  // instant; it avoids mistaking for a "rejection" the render in which the reducer has not yet processed the request.
   const dispatched = useRef<readonly string[]>(target);
   const machineAtDispatch = useRef<DrillMachineState>(machine);
   const clicked = useRef<MapItem<TDatum> | undefined>(undefined);
@@ -518,8 +519,8 @@ export const useDrillEngine = <TDatum>({
     clicked.current = item;
   }, []);
 
-  // 1) La ruta pedida cambió. Bajar y lateral empiezan YA; subir y saltar esperan a tener todo (suele estar
-  //    en caché). Volver al origen mientras se baja (`equal`) cancela, y es inmediato.
+  // 1) The requested route changed. Down and lateral start NOW; up and jump wait until everything is
+  //    available (usually cached). Returning to the origin while descending (`equal`) cancels, and is immediate.
   const settledKey = JSON.stringify(machine.settledPath);
   useEffect(() => {
     if (!active || controller === null) return;
@@ -539,7 +540,7 @@ export const useDrillEngine = <TDatum>({
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [active, targetKey, targetReady, settledKey]);
 
-  // 2) Llegó la geometría y los datos del destino.
+  // 2) The target's geometry and data arrived.
   useEffect(() => {
     if (!active || machine.geometry !== "pending" || machine.geometryKey === null) return;
     if (targetReady && samePath(machine.path, target)) {
@@ -548,7 +549,7 @@ export const useDrillEngine = <TDatum>({
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [active, targetReady, machine.geometry, machine.geometryKey]);
 
-  // 3) Falló la carga (o el nivel viene vacío): se avisa una vez y se deshace.
+  // 3) The load failed (or the level came back empty): it is reported once and undone.
   const reported = useRef<unknown>(null);
   useEffect(() => {
     if (!active || failure === null || reported.current === failure.error) return;
@@ -565,22 +566,22 @@ export const useDrillEngine = <TDatum>({
       );
     }
     if (samePath(dispatched.current, wanted) && machine.geometryKey !== null) {
-      // Ya se pidió a la máquina: ella decide la vuelta atrás (vuelo inverso).
+      // Already requested from the machine: it decides the backing out (reverse flight).
       dispatch({ type: "GEOMETRY_ERROR", key: machine.geometryKey });
     } else if (ctl !== null) {
-      // Todavía esperaba (subida / salto): no se llegó a pedir, basta con devolver la ruta.
+      // Still waiting (up / jump): it was never requested, so returning the route is enough.
       dispatched.current = current.settledPath;
       ctl.drillTo(current.settledPath);
     }
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [active, failure]);
 
-  // 4) La máquina deshizo la bajada (error, gesto que cortó el vuelo, «volver al origen»): el controlador
-  //    debe enterarse, que es quien manda sobre la ruta.
+  // 4) The machine undid the descent (error, a gesture that cut the flight, "back to origin"): the
+  //    controller must find out, since it is the one in charge of the route.
   const machinePathKey = JSON.stringify(machine.path);
   useEffect(() => {
     if (!active || controller === null) return;
-    if (machine === machineAtDispatch.current) return; // aún no ha procesado la petición
+    if (machine === machineAtDispatch.current) return; // has not processed the request yet
     if (!samePath(dispatched.current, target) || samePath(machine.path, target)) return;
     dispatched.current = machine.path;
     machineAtDispatch.current = machine;
@@ -588,7 +589,7 @@ export const useDrillEngine = <TDatum>({
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [active, machinePathKey, targetKey]);
 
-  // ── eventos al consumidor y estado ──────────────────────────────────────────────────────────────
+  // ── events to the consumer and state ──────────────────────────────────────────────────────────────
   const lastTarget = useRef<readonly string[]>(target);
   useEffect(() => {
     if (!active || samePath(lastTarget.current, target)) return;
@@ -603,7 +604,7 @@ export const useDrillEngine = <TDatum>({
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [active, targetKey]);
 
-  // `onDrillEnd`: al terminar la coreografía (la máquina vuelve a reposo en una ruta distinta).
+  // `onDrillEnd`: when the choreography ends (the machine returns to rest on a different route).
   const lastEnd = useRef<readonly string[]>(machine.settledPath);
   useEffect(() => {
     if (!active || machine.phase !== "idle") return;

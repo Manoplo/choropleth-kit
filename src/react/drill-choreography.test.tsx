@@ -6,10 +6,10 @@ import type { RootProps } from "./components/root";
 import { defineDrillLevels, type DrillEvent } from "./drill-levels";
 import { useDrillDown, type DrillController } from "./use-drill-down";
 
-// Paso 32: la coreografía del drill-down (dd.md §11.2.3). A diferencia de `drill.test.tsx`, aquí hay
-// vuelos REALES de cámara (350-1200 ms, temporizadores reales): se comprueba el orden de las fases, la
-// atenuación, el contexto gris, que el rebase no se nota (cámara de llegada == transform de la capa de
-// contexto) y los bordes (subir, lateral, interrumpir, fallar).
+// Step 32: the drill-down choreography (dd.md §11.2.3). Unlike `drill.test.tsx`, here there are
+// REAL camera flights (350-1200 ms, real timers): it checks the order of the phases, the
+// dimming, the gray context, that the rebase is not noticeable (arrival camera == context layer's
+// transform) and the edge cases (going up, lateral, interrupting, failing).
 
 const square = (id: string, west: number, south: number, size: number): Feature => ({
   type: "Feature",
@@ -33,7 +33,7 @@ const collection = (...features: Feature[]): FeatureCollection => ({
   features,
 });
 
-// C está lejos: hace que A y B sean pequeñas en la raíz (si no, encuadrarlas las alejaría).
+// C is far away: it makes A and B small at the root (otherwise framing them would zoom out).
 const world = collection(square("A", 0, 0, 4), square("B", 6, 0, 4), square("C", 60, 40, 4));
 const children: Record<string, FeatureCollection> = {
   A: collection(square("A1", 0, 0, 2), square("A2", 2, 0, 2)),
@@ -66,10 +66,10 @@ const baseProps = {
   data: select,
 } as const;
 
-/** Un mapa cuyo controlador `useDrillDown` se puede manejar desde el test. */
+/** A map whose `useDrillDown` controller can be driven from the test. */
 const mount = (props: Partial<RootProps<Row>> = {}, drillLevels = levels) => {
   const handle: { controller: DrillController<Row> | undefined } = { controller: undefined };
-  // `tick` solo sirve para volver a renderizar desde el test (p. ej. cuando llegan los datos).
+  // `tick` only serves to re-render from the test (e.g. when data arrives).
   const Harness = ({ tick }: { tick: number }) => {
     const controller = useDrillDown<Row>({ levels: drillLevels });
     handle.controller = controller;
@@ -99,7 +99,7 @@ const mount = (props: Partial<RootProps<Row>> = {}, drillLevels = levels) => {
 
 const TIMEOUT = { timeout: 4000, interval: 15 };
 
-/** `translate(x,y) scale(k)` → números. */
+/** `translate(x,y) scale(k)` → numbers. */
 const parseTransform = (value: string | null) => {
   const m = /translate\(([-\d.e]+),([-\d.e]+)\) scale\(([-\d.e]+)\)/.exec(value ?? "");
   if (m === null) throw new Error(`transform inesperado: ${value}`);
@@ -107,7 +107,7 @@ const parseTransform = (value: string | null) => {
 };
 
 beforeEach(() => {
-  // Sin «reducir movimiento»: vuelos reales.
+  // Without "reduce motion": real flights.
   vi.stubGlobal(
     "matchMedia",
     (query: string) => ({ matches: false, media: query }) as MediaQueryList,
@@ -115,15 +115,15 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-describe("bajar: las fases", () => {
-  it("vuela primero (el nivel viejo sigue ahí), luego revela, luego reposo", async () => {
+describe("going down: the phases", () => {
+  it("flies first (the old level is still there), then reveals, then rest", async () => {
     const { phase, ids, path, root, handle } = mount();
-    expect(phase()).toBeNull(); // en reposo no hay atributo
+    expect(phase()).toBeNull(); // at rest there is no attribute
     fireEvent.click(path("A"));
 
     await waitFor(() => expect(phase()).toBe("flying"), TIMEOUT);
-    expect(ids()).toEqual(["A", "B", "C"]); // aún el nivel viejo
-    expect(handle.controller?.path).toEqual(["A"]); // pero la ruta es optimista: ya cambió
+    expect(ids()).toEqual(["A", "B", "C"]); // still the old level
+    expect(handle.controller?.path).toEqual(["A"]); // but the route is optimistic: it already changed
 
     await waitFor(() => expect(phase()).toBe("revealing"), TIMEOUT);
     expect(ids()).toEqual(["A1", "A2"]);
@@ -131,7 +131,7 @@ describe("bajar: las fases", () => {
     expect(root().hasAttribute("data-drill-phase")).toBe(false);
   });
 
-  it("durante el vuelo solo la región elegida lleva `data-drill-target` (el resto se atenúa por CSS)", async () => {
+  it("during the flight only the chosen region carries `data-drill-target` (the rest is dimmed by CSS)", async () => {
     const { phase, container, path } = mount();
     fireEvent.click(path("B"));
     await waitFor(() => expect(phase()).toBe("flying"), TIMEOUT);
@@ -144,7 +144,7 @@ describe("bajar: las fases", () => {
     expect(container.querySelector("[data-drill-target]")).toBeNull();
   });
 
-  it("el vuelo NO muestra el nivel nuevo hasta terminar (sin salto a mitad)", async () => {
+  it("the flight does NOT show the new level until it ends (no mid-flight jump)", async () => {
     const { phase, ids, path } = mount();
     fireEvent.click(path("A"));
     const seen = new Set<string>();
@@ -156,7 +156,7 @@ describe("bajar: las fases", () => {
     expect([...seen]).toEqual(["A,B,C"]);
   });
 
-  it("el nivel nuevo entra con `--cm-wave` (revelado escalonado) y se quita al terminar", async () => {
+  it("the new level enters with `--cm-wave` (staggered reveal) and it is removed when done", async () => {
     const { phase, path, container } = mount();
     fireEvent.click(path("A"));
     await waitFor(() => expect(phase()).toBe("revealing"), TIMEOUT);
@@ -178,12 +178,12 @@ describe("bajar: las fases", () => {
   });
 });
 
-describe("el rebase no se nota", () => {
-  it("la cámara con la que acaba el vuelo == el transform de la capa de contexto (mismos píxeles)", async () => {
+describe("the rebase is not noticeable", () => {
+  it("the camera the flight ends with == the context layer's transform (same pixels)", async () => {
     const { phase, viewport, layers, path } = mount();
     fireEvent.click(path("A"));
 
-    // La última cámara vista mientras vuela (justo antes del cambio de proyección).
+    // The last camera seen while flying (right before the projection change).
     let lastFlying = "";
     await waitFor(() => {
       if (phase() === "flying") lastFlying = viewport().getAttribute("transform") ?? "";
@@ -193,20 +193,20 @@ describe("el rebase no se nota", () => {
     const before = parseTransform(lastFlying);
     const group = layers("context")[0] as SVGGElement;
     const after = parseTransform(group.getAttribute("transform"));
-    // El padre se pinta ahora con la afín R en lugar de con la cámara: tienen que coincidir.
+    // The parent is now painted with the affine map R instead of the camera: they have to match.
     expect(after.k).toBeCloseTo(before.k, 1);
     expect(after.x).toBeCloseTo(before.x, 0);
     expect(after.y).toBeCloseTo(before.y, 0);
-    // Y el hijo empieza con la cámara en el encaje (k = 1).
+    // And the child starts with the camera at the fit (k = 1).
     expect(parseTransform(viewport().getAttribute("transform"))).toEqual({ x: 0, y: 0, k: 1 });
   });
 });
 
 describe("contexto gris", () => {
-  it("tras bajar, el nivel de arriba queda como capa de contexto (sus regiones, sin color de dato)", async () => {
+  it("after going down, the level above remains as a context layer (its regions, without datum color)", async () => {
     const { phase, layers } = mount();
     expect(layers("context")).toHaveLength(0);
-    fireEvent.click(layers("context")[0] ?? document.body); // sin efecto
+    fireEvent.click(layers("context")[0] ?? document.body); // no effect
     const { path } = {
       path: (id: string) =>
         document.querySelector(`.cm-regions [data-region-id="${id}"]`) as Element,
@@ -219,13 +219,13 @@ describe("contexto gris", () => {
       el.getAttribute("data-context-id"),
     );
     expect(ids).toEqual(["A", "B", "C"]);
-    // La región en la que se entró está marcada (su contorno no debe verse doble bajo sus hijas).
+    // The region that was entered is marked (its outline must not look doubled under its children).
     expect(context?.querySelector("[data-focus]")?.getAttribute("data-context-id")).toBe("A");
-    // Sin color de dato: el relleno lo da el CSS (`--cm-context-fill`), no un `style` en línea.
+    // No datum color: the fill comes from the CSS (`--cm-context-fill`), not an inline `style`.
     expect(context?.querySelector("path")?.getAttribute("style")).toBeNull();
   });
 
-  it('`context: "none"` no deja capa de contexto', async () => {
+  it('`context: "none"` leaves no context layer', async () => {
     const none = defineDrillLevels<Row>([
       levels[0] as never,
       { ...(levels[1] as object), context: "none" } as never,
@@ -237,7 +237,7 @@ describe("contexto gris", () => {
     expect(layers("context")).toHaveLength(0);
   });
 
-  it('un nivel "inherit" no duplica la capa: dibuja ya las mismas regiones', async () => {
+  it('an "inherit" level does not duplicate the layer: it already draws the same regions', async () => {
     const inherited = defineDrillLevels<Row>([
       levels[0] as never,
       { id: "store", geography: "inherit" },
@@ -257,7 +257,7 @@ describe("subir", () => {
     expect(utils.ids()).toEqual([`${id}1`, `${id}2`]);
   };
 
-  it("el nivel de arriba vuelve YA (con sus colores) y el hijo sale desvaneciéndose", async () => {
+  it("the level above comes back NOW (with its colors) and the child leaves fading out", async () => {
     const utils = mount();
     const fillBefore = utils.path("A").getAttribute("style");
     await down(utils);
@@ -265,7 +265,7 @@ describe("subir", () => {
 
     await waitFor(() => expect(utils.ids()).toEqual(["A", "B", "C"]), TIMEOUT);
     expect(utils.phase()).toBe("flying");
-    expect(utils.path("A").getAttribute("style")).toBe(fillBefore); // recupera el color de dato
+    expect(utils.path("A").getAttribute("style")).toBe(fillBefore); // recovers the datum color
     const [exiting] = utils.layers("exiting");
     expect(exiting).toBeDefined();
     expect(
@@ -275,7 +275,7 @@ describe("subir", () => {
     ).toEqual(["A1", "A2"]);
   });
 
-  it("la capa que sale se desvanece CON el color que tenía (no en gris)", async () => {
+  it("the leaving layer fades out WITH the color it had (not in gray)", async () => {
     const utils = mount();
     await down(utils);
     const fills = ["A1", "A2"].map((id) => utils.path(id).getAttribute("style"));
@@ -290,28 +290,28 @@ describe("subir", () => {
     expect(leaving).toEqual(fills);
   });
 
-  it("al empezar a subir la cámara reproduce lo que se veía (R), no el encaje: sin salto", async () => {
+  it("when starting to go up the camera reproduces what was seen (R), not the fit: no jump", async () => {
     const utils = mount();
     await down(utils);
     act(() => utils.handle.controller?.drillUp());
     await waitFor(() => expect(utils.phase()).toBe("flying"), TIMEOUT);
 
     const start = parseTransform(utils.viewport().getAttribute("transform"));
-    expect(start.k).toBeGreaterThan(2); // zoom del nivel de arriba para encuadrar A, no k = 1
+    expect(start.k).toBeGreaterThan(2); // zoom of the level above to frame A, not k = 1
   });
 
-  it("espera a tener los DATOS del nivel de arriba: no vuela ni pinta un mapa gris mientras tanto", async () => {
+  it("waits for the DATA of the level above: it neither flies nor paints a gray map meanwhile", async () => {
     let parentReady = true;
     const utils = mount({
       data: (ctx: DrillContext) => (ctx.depth === 0 && !parentReady ? undefined : select(ctx)),
     });
     await down(utils);
-    parentReady = false; // p. ej. la consulta del nivel de arriba se invalidó
+    parentReady = false; // e.g. the level-above query was invalidated
     act(() => utils.handle.controller?.drillUp());
-    await new Promise((resolve) => setTimeout(resolve, 600)); // más que un vuelo corto
+    await new Promise((resolve) => setTimeout(resolve, 600)); // more than a short flight
 
-    expect(utils.handle.controller?.path).toEqual([]); // la ruta ya cambió…
-    expect(utils.ids()).toEqual(["A1", "A2"]); // …pero se sigue viendo el hijo, sin vuelo ni gris
+    expect(utils.handle.controller?.path).toEqual([]); // the route already changed…
+    expect(utils.ids()).toEqual(["A1", "A2"]); // …but the child is still visible, with no flight or gray
     expect(utils.phase()).toBeNull();
 
     parentReady = true;
@@ -320,7 +320,7 @@ describe("subir", () => {
     await waitFor(() => expect(utils.phase()).toBeNull(), TIMEOUT);
   });
 
-  it("termina en reposo, en la cámara que había antes de bajar, y sin capa saliente", async () => {
+  it("ends at rest, on the camera from before going down, and without a leaving layer", async () => {
     const utils = mount();
     await down(utils);
     act(() => utils.handle.controller?.drillUp());
@@ -335,7 +335,7 @@ describe("subir", () => {
     expect(utils.layers("context")).toHaveLength(0);
   });
 
-  it("vuelve a la cámara EXACTA de antes de bajar (si el usuario había acercado, no al encaje)", async () => {
+  it("returns to the EXACT camera from before going down (if the user had zoomed in, not to the fit)", async () => {
     const utils = mount({ zoom: { max: 6 } });
     const svg = utils.container.querySelector("svg") as SVGSVGElement;
     fireEvent.wheel(svg, { deltaY: -600, clientX: 40, clientY: 20 });
@@ -343,7 +343,7 @@ describe("subir", () => {
       () => expect(utils.viewport().getAttribute("transform")).not.toBe("translate(0,0) scale(1)"),
       TIMEOUT,
     );
-    await new Promise((resolve) => setTimeout(resolve, 250)); // acaba el gesto de rueda
+    await new Promise((resolve) => setTimeout(resolve, 250)); // the wheel gesture ends
     const zoomed = parseTransform(utils.viewport().getAttribute("transform"));
     expect(zoomed.k).toBeGreaterThan(1);
 
@@ -359,7 +359,7 @@ describe("subir", () => {
 });
 
 describe("lateral", () => {
-  it("clic en un hermano de la capa de contexto: vuela y revela el otro; el contexto sigue", async () => {
+  it("a click on a sibling in the context layer: flies and reveals the other; the context stays", async () => {
     const utils = mount();
     fireEvent.click(utils.path("A"));
     await waitFor(() => expect(utils.phase()).toBeNull(), TIMEOUT);
@@ -371,7 +371,7 @@ describe("lateral", () => {
     fireEvent.click(context);
     await waitFor(() => expect(utils.phase()).toBe("flying"), TIMEOUT);
     expect(utils.handle.controller?.path).toEqual(["B"]);
-    expect(utils.ids()).toEqual(["A1", "A2"]); // aún las de España mientras vuela
+    expect(utils.ids()).toEqual(["A1", "A2"]); // still Spain's while flying
     await waitFor(() => expect(utils.phase()).toBeNull(), TIMEOUT);
 
     expect(utils.ids()).toEqual(["B1", "B2"]);
@@ -379,7 +379,7 @@ describe("lateral", () => {
     expect(stillContext?.querySelector("[data-focus]")?.getAttribute("data-context-id")).toBe("B");
   });
 
-  it("los items NO navegables del contexto no responden al clic", async () => {
+  it("the NON-navigable context items do not respond to a click", async () => {
     const closed = defineDrillLevels<Row>([
       { ...(levels[0] as object), canDrill: (item: { id: string }) => item.id !== "C" } as never,
       levels[1] as never,
@@ -398,8 +398,8 @@ describe("lateral", () => {
   });
 });
 
-describe("carga lenta y fallos", () => {
-  it("si la carga tarda más que el vuelo: fase `loading` (la región respira) y luego revela", async () => {
+describe("slow loading and failures", () => {
+  it("if the load takes longer than the flight: `loading` phase (the region breathes) and then reveal", async () => {
     let release: (value: FeatureCollection) => void = () => {};
     const slow = defineDrillLevels<Row>([
       levels[0] as never,
@@ -412,7 +412,7 @@ describe("carga lenta y fallos", () => {
     fireEvent.click(utils.path("A"));
 
     await waitFor(() => expect(utils.phase()).toBe("loading"), TIMEOUT);
-    expect(utils.ids()).toEqual(["A", "B", "C"]); // el nivel viejo se mantiene
+    expect(utils.ids()).toEqual(["A", "B", "C"]); // the old level is kept
     expect(
       utils.container.querySelector("[data-drill-target]")?.getAttribute("data-region-id"),
     ).toBe("A");
@@ -423,7 +423,7 @@ describe("carga lenta y fallos", () => {
     await waitFor(() => expect(utils.phase()).toBeNull(), TIMEOUT);
   });
 
-  it("si la carga falla: espera al fin del vuelo, vuela de vuelta y avisa UNA vez", async () => {
+  it("if the load fails: waits for the end of the flight, flies back and warns ONCE", async () => {
     const failing = defineDrillLevels<Row>([
       levels[0] as never,
       { id: "region", geography: () => Promise.reject(new Error("boom")) },
@@ -445,14 +445,14 @@ describe("carga lenta y fallos", () => {
   });
 });
 
-describe("interrumpir y redirigir", () => {
-  it("un gesto del usuario durante el vuelo cancela la bajada (no se sigue contra la mano)", async () => {
+describe("interrupt and redirect", () => {
+  it("a user gesture during the flight cancels the descent (it does not go on against the hand)", async () => {
     const onDrill = vi.fn<(e: DrillEvent<Row>) => void>();
     const utils = mount({ onDrill });
     fireEvent.click(utils.path("A"));
     await waitFor(() => expect(utils.phase()).toBe("flying"), TIMEOUT);
     const svg = utils.container.querySelector("svg") as SVGSVGElement;
-    // Acercar (no alejar): con `k` en el mínimo d3 sale antes de interrumpir y no hace nada.
+    // Zoom in (not out): with `k` at the minimum d3 exits before interrupting and does nothing.
     fireEvent.wheel(svg, { deltaY: -100, clientX: 100, clientY: 50 });
 
     await waitFor(() => expect(utils.handle.controller?.path).toEqual([]), TIMEOUT);
@@ -460,7 +460,7 @@ describe("interrumpir y redirigir", () => {
     expect(utils.ids()).toEqual(["A", "B", "C"]);
   });
 
-  it("clic en otra región durante el vuelo: redirige sin pasar por el primer destino", async () => {
+  it("a click on another region during the flight: redirects without going through the first target", async () => {
     const utils = mount();
     fireEvent.click(utils.path("A"));
     await waitFor(() => expect(utils.phase()).toBe("flying"), TIMEOUT);
@@ -470,7 +470,7 @@ describe("interrumpir y redirigir", () => {
     await waitFor(() => expect(utils.phase()).toBeNull(), TIMEOUT);
   });
 
-  it("subir antes de terminar de bajar: vuelve sin llegar a mostrar el hijo", async () => {
+  it("going up before finishing going down: comes back without ever showing the child", async () => {
     const utils = mount();
     fireEvent.click(utils.path("A"));
     await waitFor(() => expect(utils.phase()).toBe("flying"), TIMEOUT);
@@ -486,7 +486,7 @@ describe("interrumpir y redirigir", () => {
   });
 });
 
-// d3-zoom engancha `mousemove`/`mouseup` a `event.view`; jsdom no deja pasarlo en el constructor.
+// d3-zoom hooks `mousemove`/`mouseup` to `event.view`; jsdom does not let it be passed in the constructor.
 const mouse = (type: "mouseDown" | "mouseUp", target: Element | Window, init: MouseEventInit) => {
   const event = createEvent[type](target, init);
   Object.defineProperty(event, "view", { value: window });
@@ -494,7 +494,7 @@ const mouse = (type: "mouseDown" | "mouseUp", target: Element | Window, init: Mo
 };
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** Un clic como lo manda un navegador: `mousedown`, una pausa, `mouseup` y `click`. */
+/** A click as a browser sends it: `mousedown`, a pause, `mouseup` and `click`. */
 const realClick = async (target: Element, x = 40, y = 50) => {
   mouse("mouseDown", target, { clientX: x, clientY: y, button: 0 });
   await sleep(50);
@@ -502,15 +502,15 @@ const realClick = async (target: Element, x = 40, y = 50) => {
   fireEvent.click(target);
 };
 
-describe("clic y doble clic (eventos de ratón reales)", () => {
-  it("un clic baja de nivel", async () => {
+describe("click and double click (real mouse events)", () => {
+  it("a click goes down a level", async () => {
     const utils = mount();
     await realClick(utils.path("A"));
 
     await waitFor(() => expect(utils.ids()).toEqual(["A1", "A2"]), TIMEOUT);
   });
 
-  it("el doble clic NO hace zoom ×2 en el mapa: el clic ya hace drill", () => {
+  it("the double click does NOT zoom ×2 on the map: the click already drills", () => {
     const utils = mount();
     const before = utils.viewport().getAttribute("transform");
     fireEvent.doubleClick(utils.container.querySelector("svg") as SVGSVGElement, {
@@ -521,13 +521,13 @@ describe("clic y doble clic (eventos de ratón reales)", () => {
     expect(utils.viewport().getAttribute("transform")).toBe(before);
   });
 
-  it("doble clic sobre una región: acaba en el nivel de abajo, sin zoom suelto ni drill doble", async () => {
+  it("double click on a region: ends at the level below, with no stray zoom or double drill", async () => {
     const onDrill = vi.fn<(e: DrillEvent<Row>) => void>();
     const utils = mount({ onDrill });
     const svg = utils.container.querySelector("svg") as SVGSVGElement;
     await realClick(utils.path("A"));
     await sleep(120);
-    await realClick(utils.path("A")); // el segundo clic cae sobre la región a la que se vuela
+    await realClick(utils.path("A")); // the second click lands on the region being flown to
     fireEvent.doubleClick(svg, { clientX: 40, clientY: 50 });
 
     await waitFor(() => expect(utils.ids()).toEqual(["A1", "A2"]), TIMEOUT);
@@ -537,12 +537,12 @@ describe("clic y doble clic (eventos de ratón reales)", () => {
       y: 0,
       k: 1,
     });
-    // Pulsar la región de destino NO interrumpe el vuelo: un solo `onDrill` (no «down, up, down»).
+    // Pressing the target region does NOT interrupt the flight: a single `onDrill` (not "down, up, down").
     expect(onDrill).toHaveBeenCalledTimes(1);
     expect(onDrill.mock.calls[0]?.[0].direction).toBe("down");
   });
 
-  it("pulsar OTRA región durante el vuelo sí interrumpe y redirige", async () => {
+  it("pressing ANOTHER region during the flight does interrupt and redirect", async () => {
     const utils = mount();
     await realClick(utils.path("A"));
     await waitFor(() => expect(utils.phase()).toBe("flying"), TIMEOUT);
@@ -555,7 +555,7 @@ describe("clic y doble clic (eventos de ratón reales)", () => {
 });
 
 describe("eventos", () => {
-  it("onDrill al instante del clic (ruta ya cambiada); onDrillEnd al acabar el revelado", async () => {
+  it("onDrill at the instant of the click (route already changed); onDrillEnd when the reveal ends", async () => {
     const calls: string[] = [];
     const onDrill = vi.fn<(e: DrillEvent<Row>) => void>(() => void calls.push("drill"));
     const onDrillEnd = vi.fn<(e: DrillEvent<Row>) => void>(() => void calls.push("end"));
@@ -563,15 +563,15 @@ describe("eventos", () => {
     fireEvent.click(utils.path("A"));
 
     await waitFor(() => expect(onDrill).toHaveBeenCalledOnce(), TIMEOUT);
-    expect(utils.phase()).toBe("flying"); // aún no ha terminado
+    expect(utils.phase()).toBe("flying"); // has not finished yet
     expect(onDrillEnd).not.toHaveBeenCalled();
     await waitFor(() => expect(onDrillEnd).toHaveBeenCalledOnce(), TIMEOUT);
     expect(calls).toEqual(["drill", "end"]);
   });
 });
 
-describe("sin zoom", () => {
-  it("con `zoom={false}` no hay vuelo: el nivel se revela directamente", async () => {
+describe("without zoom", () => {
+  it("with `zoom={false}` there is no flight: the level is revealed directly", async () => {
     const utils = mount({ zoom: false });
     fireEvent.click(utils.path("A"));
 
@@ -580,8 +580,8 @@ describe("sin zoom", () => {
   });
 });
 
-describe("«reducir movimiento»", () => {
-  it("el vuelo es un salto y el revelado dura 0: el nivel aparece enseguida", async () => {
+describe("reduce motion", () => {
+  it("the flight is a jump and the reveal lasts 0: the level appears right away", async () => {
     vi.stubGlobal(
       "matchMedia",
       (query: string) =>
@@ -592,7 +592,7 @@ describe("«reducir movimiento»", () => {
     fireEvent.click(utils.path("A"));
 
     await waitFor(() => expect(utils.ids()).toEqual(["A1", "A2"]), { timeout: 1000 });
-    expect(Date.now() - start).toBeLessThan(900); // un vuelo real tardaría ≥ 350 ms + revelado
+    expect(Date.now() - start).toBeLessThan(900); // a real flight would take ≥ 350 ms + reveal
     await waitFor(() => expect(utils.phase()).toBeNull(), TIMEOUT);
   });
 });

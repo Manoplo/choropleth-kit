@@ -7,19 +7,19 @@ describe("formatJoinDiagnostics", () => {
     expect(formatJoinDiagnostics(clean)).toBeNull();
   });
 
-  it("sin datos aún (cargando) → null aunque todas las regiones estén sin dato", () => {
+  it("no data yet (loading) → null even if every region has no data", () => {
     expect(
       formatJoinDiagnostics({ ...clean, dataCount: 0, featuresWithoutData: ["724", "250"] }),
     ).toBeNull();
   });
 
-  it("datos huérfanos: cuenta y lista los ids", () => {
+  it("orphan data: counts and lists the ids", () => {
     const msg = formatJoinDiagnostics({ ...clean, unmatchedData: ["XK", "GI"] });
 
     expect(msg).toContain('[choropleth] 2 datum(s) have no matching geometry: "XK", "GI".');
   });
 
-  it("regiones sin dato: avisa de que usarán emptyFill", () => {
+  it("regions without data: warns that they will use emptyFill", () => {
     const msg = formatJoinDiagnostics({ ...clean, featuresWithoutData: ["A", "B", "C"] });
 
     expect(msg).toContain("3 region(s) have no data and will use `emptyFill`.");
@@ -41,7 +41,7 @@ describe("formatJoinDiagnostics", () => {
   });
 
   describe("pistas", () => {
-    it("alpha-2 en los datos frente a numérico en la geometría", () => {
+    it("alpha-2 in the data versus numeric in the geometry", () => {
       const msg = formatJoinDiagnostics({
         ...clean,
         unmatchedData: ["ES", "FR"],
@@ -53,7 +53,7 @@ describe("formatJoinDiagnostics", () => {
       expect(msg).toContain("getFeatureId");
     });
 
-    it("alpha-3 en los datos frente a alpha-2 en la geometría", () => {
+    it("alpha-3 in the data versus alpha-2 in the geometry", () => {
       const msg = formatJoinDiagnostics({
         ...clean,
         unmatchedData: ["ESP"],
@@ -63,7 +63,7 @@ describe("formatJoinDiagnostics", () => {
       expect(msg).toContain("alpha-3");
     });
 
-    it("ceros a la izquierda perdidos", () => {
+    it("lost leading zeros", () => {
       const msg = formatJoinDiagnostics({
         ...clean,
         unmatchedData: ["4"],
@@ -74,7 +74,7 @@ describe("formatJoinDiagnostics", () => {
       expect(msg).toContain('"004"');
     });
 
-    it("mayúsculas y minúsculas", () => {
+    it("upper and lower case", () => {
       const msg = formatJoinDiagnostics({
         ...clean,
         unmatchedData: ["es"],
@@ -84,18 +84,18 @@ describe("formatJoinDiagnostics", () => {
       expect(msg).toContain("case-sensitive");
     });
 
-    it("sin pista si los estilos son iguales, mezclados o irreconocibles", () => {
+    it("no hint if the styles are the same, mixed or unrecognizable", () => {
       const noHint = (unmatchedData: string[], featuresWithoutData: string[]) =>
         formatJoinDiagnostics({ ...clean, unmatchedData, featuresWithoutData })?.includes("Hint");
 
       expect(noHint(["ZZ"], ["QQ"])).toBe(false); // mismo estilo: es un id desconocido, no un formato
-      expect(noHint(["ES", "724"], ["250", "FR"])).toBe(false); // mezclados
-      expect(noHint(["Madrid"], ["724"])).toBe(false); // irreconocible
-      expect(noHint(["ES"], [])).toBe(false); // nada con qué comparar
+      expect(noHint(["ES", "724"], ["250", "FR"])).toBe(false); // mixed
+      expect(noHint(["Madrid"], ["724"])).toBe(false); // unrecognizable
+      expect(noHint(["ES"], [])).toBe(false); // nothing to compare with
     });
   });
 
-  it("varias incidencias van en un único mensaje", () => {
+  it("several issues go in a single message", () => {
     const msg = formatJoinDiagnostics({
       unmatchedData: ["ES"],
       featuresWithoutData: ["724"],

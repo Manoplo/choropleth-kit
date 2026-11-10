@@ -36,17 +36,17 @@ export type RootProps<TDatum> = UseChoroplethOptions<TDatum> & {
   children?: ReactNode;
   className?: string;
   style?: CSSProperties;
-  /** No aplica los estilos base de `styles.css` (las variables `--cm-*` que pongas siguen valiendo). */
+  /** Does not apply the base styles of `styles.css` (the `--cm-*` variables you set still work). */
   unstyled?: boolean;
   /**
-   * Tema: un nombre (`"light"`, `"dark"`, `"minimal"`, `"contrast"`) o un objeto (`defineTheme`, `extendTheme`).
-   * Se traduce a variables `--cm-*` en línea en `.cm-root` (`themeToCssVars`), así que ganan a las que pongas en
-   * el CSS; para tocar una a mano, usa `style`.
+   * Theme: a name (`"light"`, `"dark"`, `"minimal"`, `"contrast"`) or an object (`defineTheme`, `extendTheme`).
+   * It is translated into inline `--cm-*` variables on `.cm-root` (`themeToCssVars`), so they beat those you
+   * put in the CSS; to override one by hand, use `style`.
    */
   theme?: ThemeName | ChoroplethTheme;
-  /** Trama sobre las regiones sin dato. Gana a la del tema (`empty.pattern`); `"none"` la quita. */
+  /** Pattern over regions without data. It beats the theme's (`empty.pattern`); `"none"` removes it. */
   emptyPattern?: "none" | "hatch" | "dots";
-  /** Una clase tuya por pieza, SUMADA a la `cm-*` (Tailwind, CSS Modules). */
+  /** One class of yours per piece, ADDED to the `cm-*` one (Tailwind, CSS Modules). */
   classNames?: ChoroplethClassNames;
 };
 
@@ -71,9 +71,9 @@ const RootInner = <TDatum,>(
   const { containerRef, store, status, dataLoading, selectedId, drillPhase } = choropleth;
   const viewportRef = useRef<SVGGElement | null>(null);
 
-  // `data-interacting` se escribe en el DOM, NO como prop: si fuera estado de `Root`, empezar y
-  // terminar cada gesto re-renderizaría todo el mapa (join, escala, leyenda). Con el atributo el CSS
-  // quita transiciones y eventos de las regiones y oculta el tooltip sin un solo render.
+  // `data-interacting` is written to the DOM, NOT as a prop: if it were `Root` state, starting and
+  // ending each gesture would re-render the whole map (join, scale, legend). With the attribute the CSS
+  // removes transitions and events from the regions and hides the tooltip without a single render.
   useEffect(() => {
     const sync = () => {
       containerRef.current?.toggleAttribute("data-interacting", store.getState().interacting);
@@ -82,8 +82,8 @@ const RootInner = <TDatum,>(
     return store.subscribe(sync);
   }, [store, containerRef]);
 
-  // El handle imperativo (`ref` y `useChoroplethApi()`): un objeto estable que consulta el store en cada
-  // llamada. Sin zoom no hay cámara que consultar: la vista es siempre el encaje, y se registra aquí.
+  // The imperative handle (`ref` and `useChoroplethApi()`): a stable object that queries the store on each
+  // call. Without zoom there is no camera to query: the view is always the fit, and it is registered here.
   const { width, height, invert } = choropleth;
   useEffect(() => {
     store.registerFallbackView(() =>
@@ -94,10 +94,10 @@ const RootInner = <TDatum,>(
   const api = useMemo(() => createHandle(store), [store]);
   useImperativeHandle(ref, () => api, [api]);
 
-  // Las variables del tema: se recalculan solo si cambia el tema (un nombre casi siempre; un objeto, su identidad).
+  // The theme variables: recomputed only if the theme changes (a name almost always; an object, its identity).
   const themeVars = useMemo(() => themeToCssVars(resolveTheme(theme)), [theme]);
   const slots = useMemo(() => classNames ?? {}, [classNames]);
-  // Ids de las definiciones SVG: únicos por instancia (dos mapas en una página no se pisan las tramas).
+  // Ids of the SVG definitions: unique per instance (two maps on a page do not overwrite each other's patterns).
   const instance = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const defId = useCallback((name: string) => `cm${instance}-${name}`, [instance]);
   const pattern = emptyPattern ?? resolveTheme(theme)?.empty?.pattern;
@@ -107,7 +107,7 @@ const RootInner = <TDatum,>(
     const rect = event.currentTarget.getBoundingClientRect();
     store.setState({
       pointer: { x: event.clientX - rect.left, y: event.clientY - rect.top },
-      // El drill pide uno o dos toques según con qué se toque (la rueda de un lápiz cuenta como ratón).
+      // The drill asks for one or two taps depending on what is touching (a pen's wheel counts as a mouse).
       pointerType:
         event.pointerType === "touch" ? "touch" : event.pointerType === "pen" ? "pen" : "mouse",
     });
@@ -128,18 +128,18 @@ const RootInner = <TDatum,>(
       <div
         ref={containerRef}
         className={cx("cm-root", slots.root, className)}
-        // `relative`: el tooltip y la leyenda se posicionan respecto a este contenedor.
+        // `relative`: the tooltip and the legend are positioned relative to this container.
         data-unstyled={unstyled ? "" : undefined}
         data-theme={theme === undefined ? undefined : isThemeName(theme) ? theme : "custom"}
-        // Atributos en el contenedor + CSS: atenuar, mostrar carga… sin tocar las regiones.
+        // Attributes on the container + CSS: dim, show loading… without touching the regions.
         data-status={status}
         data-loading={dataLoading ? "" : undefined}
         data-dim={dimOthers}
-        // La fase del drill en el contenedor + CSS: atenuar, «respirar» y revelar sin tocar las regiones.
+        // The drill phase on the container + CSS: dim, "breathe" and reveal without touching the regions.
         data-drill-phase={drillPhase === null || drillPhase === "idle" ? undefined : drillPhase}
         data-has-selection={selectedId === null ? undefined : ""}
         style={{ position: "relative", ...themeVars, ...style }}
-        // `pointerdown` además de `move`: un toque no mueve el puntero, y el tooltip necesita posición.
+        // `pointerdown` as well as `move`: a tap does not move the pointer, and the tooltip needs a position.
         onPointerMove={handlePointer}
         onPointerDown={handlePointer}
         onPointerLeave={(event) => {
@@ -153,11 +153,11 @@ const RootInner = <TDatum,>(
 };
 
 /**
- * Nivel 2: llama a `useChoropleth` UNA vez y reparte el resultado por Context a sus hijos.
- * Es el contenedor medido (`containerRef`) y la referencia de posición del tooltip.
+ * Level 2: calls `useChoropleth` ONCE and distributes the result by Context to its children.
+ * It is the measured container (`containerRef`) and the tooltip's position reference.
  *
- * `ref` da el handle imperativo (`zoomTo`, `zoomBy`, `resetView`, `getView`). Se usa `forwardRef`
- * (y no `ref` como prop, que solo existe en React 19) para que funcione también en React 18.
+ * `ref` gives the imperative handle (`zoomTo`, `zoomBy`, `resetView`, `getView`). `forwardRef` is used
+ * (and not `ref` as a prop, which only exists in React 19) so that it also works in React 18.
  */
 export const Root = forwardRef(RootInner) as <TDatum>(
   props: RootProps<TDatum> & { ref?: Ref<ChoroplethMapHandle> },

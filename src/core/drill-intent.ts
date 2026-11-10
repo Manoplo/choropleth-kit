@@ -1,32 +1,32 @@
 /**
- * Piezas puras del cierre del drill (paso 34): la «intención» de bajar (hover sostenido) y los avisos de
- * desarrollo de las peticiones de navegación. Sin React ni DOM: los temporizadores se inyectan.
+ * Pure pieces of the drill's closing (step 34): the "intent" to go down (sustained hover) and the
+ * development warnings for navigation requests. No React or DOM: timers are injected.
  */
 
-/** Cuánto hay que permanecer sobre una región navegable para que cuente como intención (dd.md §12.1). */
+/** How long the pointer must stay over a drillable region to count as intent. */
 export const DRILL_INTENT_MS = 150;
 
 export type IntentTimer = {
   /**
-   * Sobre qué está el puntero ahora. Un `key` distinto reinicia la espera; el mismo no la prolonga;
-   * `null` la cancela. Al cumplirse, `onIntent(key)` se llama UNA vez por permanencia.
+   * What the pointer is over now. A different `key` restarts the wait; the same one does not extend
+   * it; `null` cancels it. When it elapses, `onIntent(key)` is called ONCE per dwell.
    */
   hover: (key: string | null) => void;
-  /** Cancela cualquier espera pendiente (al desmontar). */
+  /** Cancels any pending wait (on unmount). */
   dispose: () => void;
 };
 
 export type IntentTimerOptions = {
   onIntent: (key: string) => void;
   delay?: number;
-  /** Inyectables para los tests; por defecto, los globales. */
+  /** Injectable for tests; the globals by default. */
   setTimer?: (callback: () => void, ms: number) => unknown;
   clearTimer?: (handle: unknown) => void;
 };
 
 /**
- * Temporizador de intención. «Una vez por permanencia»: salir y volver a entrar en la misma región
- * (pasando por otra o por `null`) cuenta como una permanencia nueva.
+ * Intent timer. "Once per dwell": leaving and re-entering the same region (via another one or via
+ * `null`) counts as a new dwell.
  */
 export const createIntentTimer = ({
   onIntent,
@@ -60,18 +60,18 @@ export const createIntentTimer = ({
   };
 };
 
-// ── avisos de desarrollo ──────────────────────────────────────────────────────────────────────────
+// ── development warnings ──────────────────────────────────────────────────────────────────────────
 
 export type DrillRequestProblem =
-  /** El id no existe en el nivel desde el que se baja. */
+  /** The id does not exist at the level being drilled from. */
   | { kind: "unknown-id"; id: string; depth: number; levelId: string }
-  /** El nivel tiene `canDrill` en `false` para esa región. */
+  /** The level has `canDrill` set to `false` for that region. */
   | { kind: "cannot-drill"; id: string; depth: number; levelId: string };
 
 /**
- * ¿Es válido bajar a `id` desde un nivel cuyas regiones son `knownIds`? Devuelve el problema o `null`.
- * `knownIds` es `undefined` si ese nivel aún no está cargado: no se puede juzgar y se deja pasar.
- * `drillable` es `undefined` si no se puede evaluar `canDrill` (no hay item con su dato).
+ * Is it valid to go down to `id` from a level whose regions are `knownIds`? Returns the problem or
+ * `null`. `knownIds` is `undefined` if that level is not loaded yet: it cannot be judged and is let
+ * through. `drillable` is `undefined` if `canDrill` cannot be evaluated (no item with its datum).
  */
 export const checkDrillStep = ({
   id,
@@ -93,7 +93,7 @@ export const checkDrillStep = ({
   return null;
 };
 
-/** Texto del aviso (en inglés, para el desarrollador). `source` dice quién pidió la navegación. */
+/** Warning text (in English, for the developer). `source` says who requested the navigation. */
 export const formatDrillRequestProblem = (problem: DrillRequestProblem, source: string): string => {
   const where = `level "${problem.levelId}" (depth ${problem.depth})`;
   return problem.kind === "unknown-id"
@@ -101,7 +101,7 @@ export const formatDrillRequestProblem = (problem: DrillRequestProblem, source: 
     : `[choropleth] ${source}: region ${JSON.stringify(problem.id)} cannot be drilled into: \`canDrill\` is false for it in ${where}; navigation was ignored.`;
 };
 
-/** Pedir una ruta más profunda que los niveles definidos: se ignora (el último nivel no se puede perforar). */
+/** Requesting a route deeper than the defined levels: ignored (the last level cannot be drilled into). */
 export const formatTooDeepRequest = (
   path: readonly string[],
   levelCount: number,
@@ -110,8 +110,8 @@ export const formatTooDeepRequest = (
   `[choropleth] ${source}: cannot go to ${JSON.stringify(path)}: only ${levelCount} level(s) are defined (max depth ${Math.max(0, levelCount - 1)}); navigation was ignored.`;
 
 /**
- * Aviso de que NINGUNA región del nivel tiene id (así que ningún dato puede cruzar): casi siempre es un
- * `getFeatureId` que lee una propiedad que no existe. `null` si no hay nada que avisar.
+ * Warning that NO region of the level has an id (so no datum can join): almost always a
+ * `getFeatureId` that reads a property that does not exist. `null` if there is nothing to warn about.
  */
 export const formatNoIdsDiagnostic = ({
   featureCount,
@@ -133,8 +133,8 @@ export const formatNoIdsDiagnostic = ({
 };
 
 /**
- * Pista extra del cruce cuando hay `drill` y NINGÚN dato cruza con la geometría mostrada: lo normal es
- * pasar una lista fija de otro nivel. `null` si no procede.
+ * Extra hint for the join when there is a `drill` and NO datum joins with the displayed geometry: the
+ * usual cause is passing a fixed list from another level. `null` if it does not apply.
  */
 export const formatWrongLevelDataHint = ({
   drillActive,

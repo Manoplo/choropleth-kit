@@ -23,12 +23,12 @@ import {
   schemeTableau10,
 } from "d3-scale-chromatic";
 
-// Un interpolador es una función t ∈ [0, 1] → color CSS ("rgb(8, 81, 156)").
+// An interpolator is a function t ∈ [0, 1] → CSS color ("rgb(8, 81, 156)").
 export type Interpolator = (t: number) => string;
 
-// Dos tipos de nombre distintos a propósito: usar una paleta divergente en un mapa secuencial
-// (o al revés) es un error cartográfico, y así lo detecta TypeScript al compilar y no el ojo del
-// usuario final. Es el mismo principio que la unión discriminada por `variant` de dd.md §9.2.
+// Two different name types on purpose: using a diverging palette on a sequential map (or the other
+// way round) is a cartographic error, and this way TypeScript catches it at compile time instead of
+// the end user's eye. It is the same principle as the `variant` discriminated union used for `variant`.
 export const SEQUENTIAL_PALETTES = {
   blues: interpolateBlues,
   greens: interpolateGreens,
@@ -56,13 +56,13 @@ export type DivergingPaletteName = keyof typeof DIVERGING_PALETTES;
 export const DEFAULT_SEQUENTIAL_PALETTE: SequentialPaletteName = "blues";
 export const DEFAULT_DIVERGING_PALETTE: DivergingPaletteName = "rdbu";
 
-// Las paletas secuenciales de ColorBrewer empiezan casi en blanco (blues(0) ≈ #f7fbff). Con el
-// fondo de la página también blanco, la región de la clase más baja parecería "sin dato".
-// Se empieza en 0.15 para que la clase más baja siga siendo visiblemente un color.
+// ColorBrewer's sequential palettes start almost white (blues(0) ≈ #f7fbff). With the page
+// background also white, the lowest-class region would look like "no data".
+// We start at 0.15 so the lowest class is still visibly a color.
 const SEQUENTIAL_START = 0.15;
 
 /**
- * Un color por clase, tomado de la paleta. Sirve para los métodos con clases discretas
+ * One color per class, taken from the palette. Used for the methods with discrete classes
  * (quantize, quantile, threshold).
  */
 export const sampleSequentialColors = ({
@@ -73,7 +73,7 @@ export const sampleSequentialColors = ({
   classes: number;
 }): string[] =>
   Array.from({ length: classes }, (_, i) =>
-    // Con una sola clase no hay "de menos a más": se usa un tono medio, no el extremo claro.
+    // With a single class there is no "from less to more": a mid tone is used, not the light extreme.
     interpolate(
       classes === 1 ? 0.6 : SEQUENTIAL_START + ((1 - SEQUENTIAL_START) * i) / (classes - 1),
     ),
@@ -86,13 +86,13 @@ export const sampleDivergingColors = ({
   interpolate: Interpolator;
   classes: number;
 }): string[] =>
-  // Centro de cada tramo: con 5 clases t = 0.1, 0.3, 0.5, 0.7, 0.9. Con número impar la clase
-  // central cae exactamente en t = 0.5, el color neutro de la paleta, que es el que debe
-  // representar al punto medio. Por eso el divergente no usa SEQUENTIAL_START: su claro está en
-  // el centro y es intencionado.
+  // Center of each band: with 5 classes t = 0.1, 0.3, 0.5, 0.7, 0.9. With an odd number the middle
+  // class falls exactly at t = 0.5, the palette's neutral color, which is the one that must
+  // represent the midpoint. That is why the diverging one does not use SEQUENTIAL_START: its light
+  // end is in the center, and that is intentional.
   Array.from({ length: classes }, (_, i) => interpolate((i + 0.5) / classes));
 
-/** Paletas categóricas: colores sueltos sin orden (a diferencia de las rampas de arriba). */
+/** Categorical palettes: loose colors with no order (unlike the ramps above). */
 export const CATEGORICAL_PALETTES = {
   tableau10: schemeTableau10,
   set2: schemeSet2,

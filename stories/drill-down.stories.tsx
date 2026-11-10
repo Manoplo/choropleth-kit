@@ -1,5 +1,5 @@
-// Fase C (v0.4), pasos 31-32: la prop `drill` y su coreografía (vuelo a R, contexto gris, revelado
-// escalonado, subir a la cámara de antes, navegación lateral). Datos SINTÉTICOS deterministas.
+// Phase C (v0.4), steps 31-32: the `drill` prop and its choreography (flight to R, gray context,
+// staggered reveal, going up to the earlier camera, lateral navigation). Deterministic SYNTHETIC data.
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect, useRef, useState } from "react";
 import { geoBounds, geoCentroid } from "d3-geo";
@@ -16,19 +16,19 @@ import { seed } from "./seed";
 
 type Row = {
   id: string;
-  /** `country` en el nivel raíz; `store` en el siguiente. */
+  /** `country` at the root level; `store` at the next one. */
   kind: "country" | "store";
   parentId?: string;
   value: number;
-  /** [lon, lat] de una tienda. */
+  /** A store's [lon, lat]. */
   at?: [number, number];
 };
 
 const features = toFeatureCollection({ geography: world110m, objectName: "countries" }).features;
-// Sin la Antártida: el nivel raíz la filtra y sus datos darían un aviso de «sin cruzar».
+// Without Antarctica: the root level filters it out and its data would give an "unjoined" warning.
 const ids = features.flatMap((f) => (f.id === undefined || f.id === "AQ" ? [] : [String(f.id)]));
 
-/** Países con tiendas (los demás no son navegables: un clic los selecciona). */
+/** Countries with stores (the others are not navigable: a click selects them). */
 const WITH_STORES = ["ES", "FR", "DE", "IT", "GB", "US", "BR", "JP", "AU", "ZA", "IN", "MX"];
 
 const countries: Row[] = ids.map((id) => ({
@@ -37,7 +37,7 @@ const countries: Row[] = ids.map((id) => ({
   value: Math.round(((seed(id) * 9301) % 1000) / 10),
 }));
 
-/** 8-14 tiendas repartidas por el país (sintéticas; algunas caen en el mar y es normal). */
+/** 8-14 stores spread across the country (synthetic; some land in the sea and that is normal). */
 const storesOf = (countryId: string): Row[] => {
   const feature = features.find((f) => f.id === countryId);
   if (feature === undefined) return [];
@@ -60,12 +60,12 @@ const storesOf = (countryId: string): Row[] => {
 };
 const storesByCountry = new Map(WITH_STORES.map((id) => [id, storesOf(id)]));
 
-/** El selector de `data`: filas del nivel que se muestra. */
+/** The `data` selector: rows of the level being shown. */
 const select = ({ depth, parentId }: DrillContext): readonly Row[] =>
   depth === 0 ? countries : (storesByCountry.get(parentId ?? "") ?? []);
 
-// Ejemplo A de dd.md §11.2.2: mundo → país → tiendas. Aquí el segundo nivel hereda la geometría del
-// mundo ("inherit") y dibuja las tiendas como burbujas en sus coordenadas.
+// Example A from dd.md §11.2.2: world → country → stores. Here the second level inherits the world's
+// geometry ("inherit") and draws the stores as bubbles at their coordinates.
 const levels = defineDrillLevels<Row>([
   {
     id: "country",
@@ -110,8 +110,8 @@ const describe = (e: DrillEvent<Row>) =>
 const Uncontrolled = () => {
   const [lines, setLines] = useState<string[]>([]);
   const push = (line: string) => setLines((prev) => [...prev.slice(-5), line]);
-  // Ejemplo A de dd.md §11.2.2 tal cual: `drill={levels}` y listo. Las migas, «←», Escape y Retroceso vienen
-  // incluidos en el preset.
+  // Example A from dd.md §11.2.2 as is: `drill={levels}` and done. The breadcrumbs, "←", Escape and
+  // Backspace come included in the preset.
   return (
     <div style={{ maxWidth: 1100, font: "13px sans-serif" }}>
       <ChoroplethMap<Row>
@@ -128,7 +128,7 @@ const Uncontrolled = () => {
 
 // ── Controlled ────────────────────────────────────────────────────────────────────────────────────
 
-/** Simula una consulta con latencia: `undefined` (cargando) durante 900 ms tras cada cambio de ruta. */
+/** Simulates a query with latency: `undefined` (loading) for 900 ms after each route change. */
 const useFakeQuery = (path: readonly string[]) => {
   const key = path.join(".");
   const [ready, setReady] = useState<string | null>(null);
@@ -140,7 +140,7 @@ const useFakeQuery = (path: readonly string[]) => {
 };
 
 const Controlled = () => {
-  // El «URL» vive en un estado del consumidor (con React Router sería `useSearchParams`).
+  // The "URL" lives in the consumer's state (with React Router it would be `useSearchParams`).
   const [url, setUrl] = useState<readonly string[]>([]);
   const drill = useDrillDown<Row>({ levels, path: url, onPathChange: setUrl });
   const loaded = useFakeQuery(drill.path);
@@ -149,24 +149,24 @@ const Controlled = () => {
       <div
         style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}
       >
-        <code>?path={drill.path.join(".") || "(raíz)"}</code>
+        <code>?path={drill.path.join(".") || "(root)"}</code>
         <button disabled={!drill.canDrillUp} onClick={() => drill.drillUp()}>
-          ← Subir
+          ← Up
         </button>
         <button disabled={!drill.canDrillUp} onClick={() => drill.reset()}>
-          Raíz
+          Root
         </button>
-        <button onClick={() => drill.drillTo(["ES"])}>Saltar a España</button>
+        <button onClick={() => drill.drillTo(["ES"])}>Jump to Spain</button>
         <span>
-          estado: <b>{drill.status}</b>
-          {!loaded && " · cargando datos…"}
+          status: <b>{drill.status}</b>
+          {!loaded && " · loading data…"}
         </span>
       </div>
       <ChoroplethMap<Row>
         {...common}
         drill={drill}
-        // Sin `keepPreviousData` ENTRE niveles: `undefined` le dice al mapa «cargando» y mantiene el
-        // nivel anterior (con SUS datos) en vez de pintar datos nuevos sobre la geometría vieja.
+        // No `keepPreviousData` BETWEEN levels: `undefined` tells the map "loading" and it keeps the
+        // previous level (with ITS data) instead of painting new data over the old geometry.
         data={(ctx) => (loaded ? select(ctx) : undefined)}
       />
     </div>
@@ -184,7 +184,7 @@ const failing = defineDrillLevels<Row>([
   },
   {
     id: "region",
-    // España: falla la carga. Francia: llega vacío. El resto: la geometría del mundo.
+    // Spain: the load fails. France: it arrives empty. The rest: the world's geometry.
     geography: ({ parentId }) => {
       if (parentId === "ES") return Promise.reject(new Error("network error (simulated)"));
       if (parentId === "FR")
@@ -201,8 +201,8 @@ const Errors = () => {
   return (
     <div style={{ maxWidth: 1100, font: "13px sans-serif" }}>
       <p style={{ margin: "0 0 8px" }}>
-        Pulsa <b>España</b> (la carga falla) o <b>Francia</b> (0 regiones): el mapa se queda donde
-        estaba y<code> onDrillError </code> lo cuenta. Cualquier otro país carga bien.
+        Click <b>Spain</b> (the load fails) or <b>France</b> (0 regions): the map stays where it was
+        and<code> onDrillError </code> reports it. Any other country loads fine.
       </p>
       <ChoroplethMap<Row>
         {...common}
@@ -220,7 +220,7 @@ const Errors = () => {
   );
 };
 
-// ── Handle e intención (paso 34) ──────────────────────────────────────────────────────────────────
+// ── Handle and intent (step 34) ─────────────────────────────────────────────────────────────────
 
 const HandleDemo = () => {
   const ref = useRef<ChoroplethMapHandle>(null);
@@ -229,7 +229,7 @@ const HandleDemo = () => {
   const push = (line: string) => setLines((prev) => [...prev.slice(-7), line]);
   const api = () => ref.current as ChoroplethMapHandle;
 
-  /** Cada paso se `await`ea: no hay temporizadores, solo promesas que resuelven al volver a reposo. */
+  /** Each step is `await`ed: there are no timers, only promises that resolve on returning to rest. */
   const tour = async () => {
     setBusy(true);
     const step = async (name: string, run: () => Promise<{ completed: boolean }>) => {
@@ -240,7 +240,9 @@ const HandleDemo = () => {
     await step('drillTo(["FR"])', () => api().drillTo(["FR"]));
     await step('drillTo(["DE"])', () => api().drillTo(["DE"]));
     await step("drillUp()", () => api().drillUp());
-    await step('drillDown("ZZ")  (no existe: avisa en consola)', () => api().drillDown("ZZ"));
+    await step('drillDown("ZZ")  (does not exist: warns on the console)', () =>
+      api().drillDown("ZZ"),
+    );
     setBusy(false);
   };
 
@@ -260,7 +262,7 @@ const HandleDemo = () => {
         drill={levels}
         data={select}
         onDrillIntent={(ctx) =>
-          push(`onDrillIntent  [${ctx.path.join(" › ")}]  (hover de 150 ms: precarga de datos)`)
+          push(`onDrillIntent  [${ctx.path.join(" › ")}]  (150 ms hover: data prefetch)`)
         }
         onDrillEnd={(e) => push(`onDrillEnd     ${describe(e)}`)}
       />
@@ -277,23 +279,24 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /**
- * Mundo → país → tiendas, no controlado. Solo los 12 países con tiendas tienen cursor `zoom-in`. Al pulsar: el
- * resto se atenúa, la cámara VUELA al país y las tiendas aparecen en abanico desde el centro. Los demás países
- * quedan en gris (contexto) y los 12 con tiendas son pulsables (navegación lateral). Subir vuelve a la cámara
- * de antes de bajar. Migas arriba a la izquierda; «←», Escape y Retroceso suben.
+ * World → country → stores, uncontrolled. Only the 12 countries with stores get a `zoom-in` cursor. On
+ * click: the rest dims, the camera FLIES to the country and the stores fan out from the center. The
+ * other countries stay gray (context) and the 12 with stores are clickable (lateral navigation). Going
+ * up returns to the camera from before going down. Breadcrumbs top-left; "←", Escape and Backspace go up.
  */
 export const UncontrolledStory: Story = { name: "Uncontrolled", render: () => <Uncontrolled /> };
 
-/** Ruta en el «URL», `useDrillDown` controlado y latencia artificial: mientras llegan los datos se mantiene el nivel anterior. */
+/** Route in the "URL", controlled `useDrillDown` and artificial latency: while the data arrives the previous level is kept. */
 export const ControlledUrl: Story = { render: () => <Controlled /> };
 
-/** Una geometría que falla y un nivel vacío: vuelta al nivel anterior y `onDrillError`. */
+/** A geometry that fails and an empty level: back to the previous level and `onDrillError`. */
 export const ErrorsStory: Story = { name: "Errors", render: () => <Errors /> };
 
 /**
- * El handle del drill (`ref`): `drillDown` / `drillUp` / `drillTo` devuelven una `Promise` que resuelve al volver
- * a reposo, así un guion es un `await` tras otro. Además, `onDrillIntent`: deja el ratón 150 ms sobre un país con
- * tiendas y se anota (la geometría del nivel de abajo ya se precarga). **Táctil** (emulación en las devtools):
- * el primer toque en un país muestra el tooltip «Tap again to enter» y el segundo baja.
+ * The drill handle (`ref`): `drillDown` / `drillUp` / `drillTo` return a `Promise` that resolves on
+ * returning to rest, so a script is one `await` after another. Also, `onDrillIntent`: leave the mouse
+ * 150 ms over a country with stores and it is logged (the geometry of the level below is already
+ * preloaded). **Touch** (emulation in devtools): the first tap on a country shows the "Tap again to
+ * enter" tooltip and the second drills down.
  */
 export const HandleStory: Story = { name: "Handle + intent", render: () => <HandleDemo /> };

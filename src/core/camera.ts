@@ -2,59 +2,59 @@ import { interpolateZoom } from "d3-interpolate";
 import type { Point } from "./variants";
 
 /**
- * La cámara (dd.md §11.0): un `transform` afín `{ k, x, y }` sobre el lienzo ya proyectado.
- * Un punto del lienzo `[px, py]` se ve en pantalla en `[px·k + x, py·k + y]`. `k = 1` es el encaje
- * del nivel (el mapa cabe justo en el contenedor).
+ * The camera: an affine `transform` `{ k, x, y }` over the already-projected canvas.
+ * A canvas point `[px, py]` appears on screen at `[px·k + x, py·k + y]`. `k = 1` is the level's fit
+ * (the map fits the container exactly).
  *
- * Todo este archivo es matemática pura, sin DOM ni d3-zoom: se testea sin navegador. Lo que escribe
- * el transform en el DOM (`use-zoom.ts`) llega en el paso siguiente.
+ * This whole file is pure math, with no DOM or d3-zoom: it is tested without a browser. What writes
+ * the transform to the DOM (`use-zoom.ts`) comes in the next step.
  */
 export type CameraTransform = { k: number; x: number; y: number };
 
-/** La cámara en el encaje del nivel. */
+/** The camera at the level's fit. */
 export const FIT_TRANSFORM: CameraTransform = { k: 1, x: 0, y: 0 };
 
-/** ¿La cámara está (casi) en el encaje? Sirve para deshabilitar «restablecer vista». */
+/** Is the camera (almost) at the fit? Used to disable "reset view". */
 export const isFitTransform = (t: CameraTransform, epsilon = 1e-3): boolean =>
   Math.abs(t.k - 1) < epsilon && Math.abs(t.x) < epsilon && Math.abs(t.y) < epsilon;
 
 export type Size = { width: number; height: number };
 
-/** Rectángulo [[x0, y0], [x1, y1]]. */
+/** Rectangle [[x0, y0], [x1, y1]]. */
 export type Extent = readonly [Point, Point];
 
-/** Lienzo → pantalla. */
+/** Canvas → screen. */
 export const applyTransform = ({ k, x, y }: CameraTransform, [px, py]: Point): Point => [
   px * k + x,
   py * k + y,
 ];
 
-/** Pantalla → lienzo. */
+/** Screen → canvas. */
 export const invertTransform = ({ k, x, y }: CameraTransform, [sx, sy]: Point): Point => [
   (sx - x) / k,
   (sy - y) / k,
 ];
 
-// ── límites (`constrain`) ──────────────────────────────────────────────────────────────────────────
+// ── limits (`constrain`) ────────────────────────────────────────────────────────────────────────
 
 export type ConstrainAxisParams = {
-  /** Traslación actual en este eje. */
+  /** Current translation on this axis. */
   t: number;
   k: number;
-  /** Extremos del contenido en el lienzo (antes de escalar). */
+  /** Extremes of the content on the canvas (before scaling). */
   c0: number;
   c1: number;
-  /** Extremos de la vista en pantalla. */
+  /** Extremes of the view on screen. */
   v0: number;
   v1: number;
-  /** Holgura elástica como fracción del tamaño de la vista. Por defecto 0 (límite duro). */
+  /** Elastic slack as a fraction of the view size. Defaults to 0 (hard limit). */
   overscroll?: number;
 };
 
 /**
- * Traslación permitida en UN eje (dd.md §11.1.4). El `constrain` por defecto de d3 deja un mapa más
- * pequeño que la vista pegado a una esquina; este lo **centra** si cabe y, si no cabe, impide que
- * sus bordes entren en la vista (más una holgura elástica opcional).
+ * Allowed translation on ONE axis. d3's default `constrain` leaves a map smaller
+ * than the view stuck in a corner; this one **centers** it if it fits and, if it does not fit,
+ * prevents its edges from entering the view (plus an optional elastic slack).
  */
 export const constrainAxis = ({
   t,
@@ -69,21 +69,21 @@ export const constrainAxis = ({
   const view = v1 - v0;
   if (size <= view) return v0 + (view - size) / 2 - c0 * k; // cabe: centrado
   const slack = view * overscroll;
-  const min = v1 - c1 * k - slack; // el borde derecho del contenido no entra en la vista
-  const max = v0 - c0 * k + slack; // ni el izquierdo
+  const min = v1 - c1 * k - slack; // the content's right edge does not enter the view
+  const max = v0 - c0 * k + slack; // nor does the left one
   return Math.min(max, Math.max(min, t));
 };
 
 export type ConstrainTransformParams = {
   transform: CameraTransform;
-  /** El lienzo: normalmente [[0, 0], [width, height]]. */
+  /** The canvas: normally [[0, 0], [width, height]]. */
   content: Extent;
-  /** La vista: normalmente [[0, 0], [width, height]]. */
+  /** The view: normally [[0, 0], [width, height]]. */
   view: Extent;
   overscroll?: number;
 };
 
-/** `constrainAxis` en los dos ejes. La escala `k` no se toca. */
+/** `constrainAxis` on both axes. The scale `k` is not touched. */
 export const constrainTransform = ({
   transform,
   content,
@@ -111,26 +111,26 @@ export const constrainTransform = ({
   }),
 });
 
-// ── cambio de tamaño sin salto ─────────────────────────────────────────────────────────────────────
+// ── resizing without a jump ─────────────────────────────────────────────────────────────────────
 
 export type PreserveViewParams = {
   transform: CameraTransform;
   oldSize: Size;
   newSize: Size;
-  /** Píxeles del lienzo ANTIGUO → [lon, lat] (`oldProjection.invert`). */
+  /** OLD canvas pixels → [lon, lat] (`oldProjection.invert`). */
   invertOld: (point: Point) => Point | null;
-  /** [lon, lat] → píxeles del lienzo NUEVO (`newProjection`). */
+  /** [lon, lat] → NEW canvas pixels (`newProjection`). */
   projectNew: (coordinates: Point) => Point | null;
 };
 
 /**
- * Cámara equivalente tras redimensionar (dd.md §11.1.3, punto 2). Al cambiar el tamaño, la
- * proyección se reajusta y los píxeles cambian: sin esto, la vista «volvería al encaje». Se conserva
- * el **centro geográfico** y la `k`: se mira qué [lon, lat] había en el centro de la vista y se
- * coloca en el centro de la vista nueva.
+ * Equivalent camera after a resize. When the size changes, the projection
+ * is refitted and the pixels change: without this, the view would "go back to the fit". The
+ * **geographic center** and `k` are preserved: it looks at which [lon, lat] was at the center of the
+ * view and places it at the center of the new view.
  *
- * Si el centro cae fuera de la proyección (océano más allá del globo) no hay centro geográfico que
- * conservar: se devuelve el encaje.
+ * If the center falls outside the projection (ocean beyond the globe) there is no geographic center
+ * to preserve: the fit is returned.
  */
 export const preserveView = ({
   transform,
@@ -149,27 +149,27 @@ export const preserveView = ({
   };
 };
 
-// ── vuelos ─────────────────────────────────────────────────────────────────────────────────────────
+// ── flights ─────────────────────────────────────────────────────────────────────────────────────────
 
-/** Duración mínima y máxima de un vuelo, en ms (dd.md §11.1.5). */
+/** Minimum and maximum duration of a flight, in ms. */
 export const MIN_FLIGHT_MS = 350;
 export const MAX_FLIGHT_MS = 1200;
 
-/** Curvatura (ρ) por defecto para dashboards: menos «salto» que √2 (dd.md §11.1.5: 1,2–1,3). */
+/** Default curvature (ρ) for dashboards (1.2–1.3): less "jump" than √2. */
 export const DEFAULT_FLIGHT_CURVATURE = 1.25;
 
 /**
- * La cámara como «vista» de `interpolateZoom` (van Wijk y Nuij): [centro x, centro y, ancho visible],
- * los tres en coordenadas del lienzo.
+ * The camera as a `interpolateZoom` "view" (van Wijk and Nuij): [center x, center y, visible width],
+ * all three in canvas coordinates.
  */
 export const transformToZoomView = (
   { k, x, y }: CameraTransform,
   { width, height }: Size,
 ): [number, number, number] => [(width / 2 - x) / k, (height / 2 - y) / k, width / k];
 
-// OJO: en runtime `rho` es un método de la FUNCIÓN `interpolateZoom` (devuelve otra función con esa
-// curvatura), pero `@types/d3-interpolate` lo declara en el interpolador ya creado, y ahí no existe
-// (es `undefined`). Se tipa lo que hace de verdad; hay un test que lo comprueba.
+// NOTE: at runtime `rho` is a method of the `interpolateZoom` FUNCTION (it returns another function
+// with that curvature), but `@types/d3-interpolate` declares it on the already-created interpolator,
+// where it does not exist (it is `undefined`). What it really does is typed here; a test checks it.
 export const createZoomInterpolator = (rho: number): typeof interpolateZoom =>
   (interpolateZoom as unknown as { rho: (rho: number) => typeof interpolateZoom }).rho(rho);
 
@@ -177,15 +177,15 @@ export type FlightDurationParams = {
   from: CameraTransform;
   to: CameraTransform;
   size: Size;
-  /** Multiplicador de velocidad (> 1 = más lento). Por defecto 1. */
+  /** Speed multiplier (> 1 = slower). Defaults to 1. */
   speed?: number;
   curvature?: number;
 };
 
 /**
- * Duración de un vuelo entre dos cámaras: la «natural» de `interpolateZoom` (depende de la
- * distancia y del cambio de escala) × `speed`, acotada a [350, 1200] ms. Vuelos cortos, rápidos;
- * largos, legibles.
+ * Duration of a flight between two cameras: the "natural" one from `interpolateZoom` (depends on the
+ * distance and the scale change) × `speed`, clamped to [350, 1200] ms. Short flights are fast;
+ * long ones, readable.
  */
 export const flightDuration = ({
   from,
@@ -203,22 +203,22 @@ export const flightDuration = ({
   return Math.min(MAX_FLIGHT_MS, Math.max(MIN_FLIGHT_MS, scaled));
 };
 
-// ── inercia ────────────────────────────────────────────────────────────────────────────────────────
+// ── inertia ────────────────────────────────────────────────────────────────────────────────────────
 
-/** Constante de tiempo de la inercia, en ms: la de iOS (dd.md §11.1.4). */
+/** Inertia time constant, in ms: iOS's. */
 export const INERTIA_TAU_MS = 325;
 
 export type InertiaOffsetParams = {
-  /** Velocidad al soltar en este eje, px/ms. */
+  /** Release velocity on this axis, px/ms. */
   velocity: number;
-  /** ms desde que se soltó. */
+  /** ms since release. */
   elapsed: number;
   tau?: number;
 };
 
 /**
- * Desplazamiento acumulado (px) `elapsed` ms después de soltar, con decaimiento exponencial:
- * `v·τ·(1 − e^(−t/τ))`. Tiende a `v·τ` y nunca lo supera; con `elapsed` negativo o `NaN` no se mueve.
+ * Accumulated displacement (px) `elapsed` ms after release, with exponential decay:
+ * `v·τ·(1 − e^(−t/τ))`. It tends to `v·τ` and never exceeds it; with negative or `NaN` `elapsed` it does not move.
  */
 export const inertiaOffset = ({
   velocity,
@@ -229,28 +229,28 @@ export const inertiaOffset = ({
   return velocity * tau * (1 - Math.exp(-elapsed / tau));
 };
 
-/** Velocidad mínima (px/ms) para que soltar un arrastre arranque la inercia (dd.md §11.1.4). */
+/** Minimum speed (px/ms) for releasing a drag to start inertia. */
 export const INERTIA_MIN_VELOCITY = 0.3;
 
-/** Ventana de muestras para medir la velocidad de suelta, en ms (dd.md §11.1.4). */
+/** Window of samples used to measure the release velocity, in ms. */
 export const INERTIA_WINDOW_MS = 100;
 
-/** Una posición de la cámara en un instante (ms, de `performance.now()`). */
+/** A camera position at an instant (ms, from `performance.now()`). */
 export type CameraSample = { time: number; k: number; x: number; y: number };
 
 export type ReleaseVelocityParams = {
   samples: readonly CameraSample[];
-  /** Instante de la suelta. */
+  /** Instant of release. */
   now: number;
   windowMs?: number;
   minVelocity?: number;
 };
 
 /**
- * Velocidad `[vx, vy]` (px/ms) con la que se soltó un arrastre, o `null` si no debe haber inercia:
- *  - hubo un zoom (la `k` cambió dentro de la ventana): la inercia es solo de **pan**;
- *  - la mano se detuvo antes de soltar (la última muestra es más vieja que la ventana);
- *  - no hay dos muestras en la ventana, o la velocidad queda por debajo del umbral (0,3 px/ms).
+ * Velocity `[vx, vy]` (px/ms) at which a drag was released, or `null` if there must be no inertia:
+ *  - there was a zoom (`k` changed within the window): inertia is **pan** only;
+ *  - the hand stopped before releasing (the last sample is older than the window);
+ *  - there are no two samples in the window, or the velocity is below the threshold (0.3 px/ms).
  */
 export const releaseVelocity = ({
   samples,
@@ -271,19 +271,19 @@ export const releaseVelocity = ({
   return Math.hypot(vx, vy) >= minVelocity ? [vx, vy] : null;
 };
 
-// ── contraescalado de burbujas ─────────────────────────────────────────────────────────────────────
+// ── bubble counter-scaling ─────────────────────────────────────────────────────────────────────
 
 /**
- * Qué hacen las burbujas al acercar (dd.md §11.1.6):
- *  - `"sqrt"` (default): crecen con √k (sensación de profundidad sin tapar el país);
- *  - `"screen"`: tamaño constante en pantalla;
- *  - `"geo"`: crecen con el mapa (escala completa).
+ * What bubbles do when zooming in:
+ *  - `"sqrt"` (default): they grow with √k (a sense of depth without covering the country);
+ *  - `"screen"`: constant size on screen;
+ *  - `"geo"`: they grow with the map (full scale).
  */
 export type BubbleScaling = "sqrt" | "screen" | "geo";
 
 /**
- * El valor de `--cm-bubble-scale` para una `k`: la burbuja se dibuja dentro del viewport (que ya
- * multiplica por `k`), así que se compensa con `1/√k`, `1/k` o `1`.
+ * The value of `--cm-bubble-scale` for a given `k`: the bubble is drawn inside the viewport (which
+ * already multiplies by `k`), so it is compensated with `1/√k`, `1/k` or `1`.
  */
 export const bubbleScale = (k: number, scaling: BubbleScaling): number => {
   if (!(k > 0) || !Number.isFinite(k)) return 1;
@@ -297,22 +297,22 @@ export const bubbleScale = (k: number, scaling: BubbleScaling): number => {
   }
 };
 
-// ── estado público de la vista ─────────────────────────────────────────────────────────────────────
+// ── public view state ───────────────────────────────────────────────────────────────────────────
 
-/** Nivel del drill-down (dd.md §11.2). Igual que `DrillLevelInfo` de `react/map-item.ts`. */
+/** Drill-down level. Same as `DrillLevelInfo` in `react/map-item.ts`. */
 export type ViewLevel = { id: string; depth: number };
 
-/** Lo que recibe `onViewChange` (dd.md §11.1.7). */
+/** What `onViewChange` receives. */
 export type ViewState = {
-  /** Transform de cámara, en píxeles del nivel. */
+  /** Camera transform, in level pixels. */
   k: number;
   x: number;
   y: number;
-  /** = `k` (1 = encaje del nivel): alias legible. */
+  /** = `k` (1 = the level's fit): a readable alias. */
   zoom: number;
-  /** [lon, lat] del centro de la vista. */
+  /** [lon, lat] of the view's center. */
   center: Point;
-  /** [[lonO, latS], [lonE, latN]] visibles. Aproximado: no contempla el antimeridiano. */
+  /** Visible [[lonW, latS], [lonE, latN]]. Approximate: does not account for the antimeridian. */
   bounds: readonly [Point, Point];
   level: ViewLevel;
 };
@@ -320,7 +320,7 @@ export type ViewState = {
 export type ToViewStateParams = {
   transform: CameraTransform;
   size: Size;
-  /** Píxeles del lienzo → [lon, lat] (`projection.invert`); `null` si cae fuera del globo. */
+  /** Canvas pixels → [lon, lat] (`projection.invert`); `null` if it falls outside the globe. */
   invert: (point: Point) => Point | null;
   level?: ViewLevel;
 };
@@ -330,14 +330,14 @@ const WORLD_BOUNDS: readonly [Point, Point] = [
   [180, 90],
 ];
 
-/** Puntos por lado con los que se muestrea la vista para estimar los límites geográficos. */
+/** Points per side used to sample the view to estimate the geographic bounds. */
 const BOUNDS_SAMPLES = 5;
 
 /**
- * Convierte la cámara en un `ViewState` con coordenadas geográficas. Las esquinas de la vista a
- * menudo caen fuera del globo (un mapa del mundo en Equal Earth no es un rectángulo), así que los
- * límites se estiman muestreando una rejilla de la vista y quedándose con los puntos que sí
- * proyectan. Si ninguno lo hace, devuelve el mundo entero y el centro `[0, 0]`.
+ * Turns the camera into a `ViewState` with geographic coordinates. The view's corners often fall
+ * outside the globe (a world map in Equal Earth is not a rectangle), so the bounds are estimated by
+ * sampling a grid over the view and keeping the points that do project. If none does, it returns the
+ * whole world and the center `[0, 0]`.
  */
 export const toViewState = ({
   transform,

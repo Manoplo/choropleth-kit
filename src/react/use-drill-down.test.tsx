@@ -5,7 +5,7 @@ import type { MapItem } from "./map-item";
 import { ROOT_LEVEL } from "./map-item";
 import { DRILL_BRIDGE, isDrillController, useDrillDown } from "./use-drill-down";
 
-// Paso 30: el estado de navegación del drill-down. Sin mapa: el hook no pinta nada.
+// Step 30: the drill-down navigation state. Without a map: the hook draws nothing.
 
 type Row = { id: string };
 const levels = defineDrillLevels<Row>([
@@ -31,13 +31,13 @@ const region = (id: string): MapItem<Row> => ({
 afterEach(() => vi.restoreAllMocks());
 
 describe("defineDrillLevels", () => {
-  it("devuelve la misma lista (identidad con tipos)", () => {
+  it("returns the same list (identity with types)", () => {
     const list: DrillLevel<Row>[] = [{ id: "a", geography: {} as never }];
 
     expect(defineDrillLevels(list)).toBe(list);
   });
 
-  it("falla al definirla si está mal formada", () => {
+  it("fails on definition if malformed", () => {
     expect(() => defineDrillLevels([])).toThrow(/at least one level/);
     expect(() =>
       defineDrillLevels([
@@ -48,8 +48,8 @@ describe("defineDrillLevels", () => {
   });
 });
 
-describe("useDrillDown · no controlado", () => {
-  it("empieza en la raíz: nivel 0, contexto vacío, una miga, no se puede subir", () => {
+describe("useDrillDown · uncontrolled", () => {
+  it("starts at the root: level 0, empty context, one crumb, cannot go up", () => {
     const { result } = renderHook(() => useDrillDown({ levels }));
 
     expect(result.current.path).toEqual([]);
@@ -60,7 +60,7 @@ describe("useDrillDown · no controlado", () => {
     expect(result.current.status).toBe("idle");
   });
 
-  it("defaultPath: monta ya en esa ruta", () => {
+  it("defaultPath: mounts already on that route", () => {
     const { result } = renderHook(() => useDrillDown({ levels, defaultPath: ["ES"] }));
 
     expect(result.current.path).toEqual(["ES"]);
@@ -68,7 +68,7 @@ describe("useDrillDown · no controlado", () => {
     expect(result.current.canDrillUp).toBe(true);
   });
 
-  it("drillDown / drillUp / reset cambian la ruta y avisan con onPathChange", () => {
+  it("drillDown / drillUp / reset change the route and notify with onPathChange", () => {
     const onPathChange = vi.fn<(path: readonly string[]) => void>();
     const { result } = renderHook(() => useDrillDown({ levels, onPathChange }));
 
@@ -88,21 +88,21 @@ describe("useDrillDown · no controlado", () => {
     expect(onPathChange).toHaveBeenCalledTimes(4);
   });
 
-  it("drillUp(n) sube n niveles, y de más = a la raíz", () => {
+  it("drillUp(n) goes up n levels, and too many = to the root", () => {
     const { result } = renderHook(() => useDrillDown({ levels, defaultPath: ["ES", "MD"] }));
     act(() => result.current.drillUp(5));
 
     expect(result.current.path).toEqual([]);
   });
 
-  it("drillUp(profundidad + 1) también llega a la raíz (no se queda con un id por un slice negativo)", () => {
+  it("drillUp(depth + 1) also reaches the root (it does not keep an id because of a negative slice)", () => {
     const { result } = renderHook(() => useDrillDown({ levels, defaultPath: ["ES", "MD"] }));
     act(() => result.current.drillUp(3));
 
     expect(result.current.path).toEqual([]);
   });
 
-  it("drillUp(0), negativo o NaN: no hace nada", () => {
+  it("drillUp(0), negative or NaN: does nothing", () => {
     const onPathChange = vi.fn<(path: readonly string[]) => void>();
     const { result } = renderHook(() =>
       useDrillDown({ levels, defaultPath: ["ES"], onPathChange }),
@@ -117,7 +117,7 @@ describe("useDrillDown · no controlado", () => {
     expect(onPathChange).not.toHaveBeenCalled();
   });
 
-  it("drillTo: lateral y saltos", () => {
+  it("drillTo: lateral and jumps", () => {
     const { result } = renderHook(() => useDrillDown({ levels, defaultPath: ["ES"] }));
     act(() => result.current.drillTo(["FR"]));
     expect(result.current.path).toEqual(["FR"]);
@@ -126,7 +126,7 @@ describe("useDrillDown · no controlado", () => {
     expect(result.current.path).toEqual(["US", "CA"]);
   });
 
-  it("ir a la ruta actual no avisa ni re-renderiza", () => {
+  it("going to the current route neither notifies nor re-renders", () => {
     const onPathChange = vi.fn<(path: readonly string[]) => void>();
     const { result } = renderHook(() =>
       useDrillDown({ levels, defaultPath: ["ES"], onPathChange }),
@@ -138,7 +138,7 @@ describe("useDrillDown · no controlado", () => {
     expect(result.current).toBe(before);
   });
 
-  it("dos llamadas en el mismo tick se componen (la segunda ve la primera)", () => {
+  it("two calls in the same tick compose (the second sees the first)", () => {
     const { result } = renderHook(() => useDrillDown({ levels }));
     act(() => {
       result.current.drillDown("ES");
@@ -148,7 +148,7 @@ describe("useDrillDown · no controlado", () => {
     expect(result.current.path).toEqual(["ES", "MD"]);
   });
 
-  it("no se baja más allá del último nivel: se ignora y avisa en desarrollo", () => {
+  it("does not go deeper than the last level: it is ignored and warns in development", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const onPathChange = vi.fn<(path: readonly string[]) => void>();
     const { result } = renderHook(() =>
@@ -161,7 +161,7 @@ describe("useDrillDown · no controlado", () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("[choropleth] useDrillDown"));
   });
 
-  it("las funciones son estables entre renders (se pasan a efectos del mapa)", () => {
+  it("the functions are stable across renders (they are passed to the map's effects)", () => {
     const { result, rerender } = renderHook(() => useDrillDown({ levels }));
     const first = result.current;
     rerender();
@@ -176,7 +176,7 @@ describe("useDrillDown · no controlado", () => {
 });
 
 describe("useDrillDown · controlado", () => {
-  it("manda `path`: pedir un cambio avisa pero NO cambia la ruta hasta que el padre la cambia", () => {
+  it("`path` rules: requesting a change notifies but does NOT change the route until the parent changes it", () => {
     const onPathChange = vi.fn<(path: readonly string[]) => void>();
     const { result, rerender } = renderHook(
       ({ path }: { path: readonly string[] }) => useDrillDown({ levels, path, onPathChange }),
@@ -192,7 +192,7 @@ describe("useDrillDown · controlado", () => {
     expect(result.current.level.id).toBe("region");
   });
 
-  it("el padre puede rechazar el cambio: la ruta no se mueve", () => {
+  it("the parent can reject the change: the route does not move", () => {
     const { result } = renderHook(() =>
       useDrillDown({ levels, path: ["ES"], onPathChange: () => {} }),
     );
@@ -201,7 +201,7 @@ describe("useDrillDown · controlado", () => {
     expect(result.current.path).toEqual(["ES"]);
   });
 
-  it("un cambio externo (botón «atrás» del navegador) actualiza nivel y migas", () => {
+  it("an external change (the browser's back button) updates level and crumbs", () => {
     const { result, rerender } = renderHook(
       ({ path }: { path: readonly string[] }) => useDrillDown({ levels, path }),
       { initialProps: { path: ["ES", "MD"] as readonly string[] } },
@@ -221,8 +221,8 @@ describe("useDrillDown · controlado", () => {
   });
 });
 
-describe("ruta más profunda que los niveles (URL vieja)", () => {
-  it("se recorta y se avisa una vez en desarrollo", () => {
+describe("route deeper than the levels (old URL)", () => {
+  it("is trimmed and a warning is given once in development", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { result, rerender } = renderHook(() =>
       useDrillDown({ levels, path: ["ES", "MD", "X", "Y"] }),
@@ -237,7 +237,7 @@ describe("ruta más profunda que los niveles (URL vieja)", () => {
 });
 
 describe("migas", () => {
-  it("getLabel pone nombre a los pasos; la raíz usa la etiqueta del primer nivel", () => {
+  it("getLabel names the steps; the root uses the first level's label", () => {
     const { result } = renderHook(() =>
       useDrillDown({
         levels,
@@ -249,14 +249,14 @@ describe("migas", () => {
     expect(result.current.breadcrumbs.map((c) => c.label)).toEqual(["Countries", "es#1", "md#2"]);
   });
 
-  it("sin etiqueta en el primer nivel, la raíz usa su id", () => {
+  it("without a label on the first level, the root uses its id", () => {
     const bare = defineDrillLevels<Row>([{ id: "world", geography: {} as never }]);
     const { result } = renderHook(() => useDrillDown({ levels: bare }));
 
     expect(result.current.breadcrumbs[0]?.label).toBe("world");
   });
 
-  it("un `getLabel` en línea no recalcula las migas en cada render", () => {
+  it("an inline `getLabel` does not recompute the crumbs on every render", () => {
     const { result, rerender } = renderHook(() =>
       useDrillDown({ levels, defaultPath: ["ES"], getLabel: ({ id }) => id }),
     );
@@ -267,8 +267,8 @@ describe("migas", () => {
   });
 });
 
-describe("status (lo escribe el mapa)", () => {
-  it("el hook lo lee del canal; solo re-renderiza si cambia", () => {
+describe("status (written by the map)", () => {
+  it("the hook reads it from the channel; it only re-renders if it changes", () => {
     const { result } = renderHook(() => useDrillDown({ levels }));
     const bridge = result.current[DRILL_BRIDGE];
     act(() => bridge.setStatus("flying"));
@@ -282,7 +282,7 @@ describe("status (lo escribe el mapa)", () => {
     expect(result.current.status).toBe("idle");
   });
 
-  it("el canal sobrevive a los renders (es el mismo)", () => {
+  it("the channel survives renders (it is the same one)", () => {
     const { result, rerender } = renderHook(() => useDrillDown({ levels }));
     const bridge = result.current[DRILL_BRIDGE];
     rerender();
@@ -292,7 +292,7 @@ describe("status (lo escribe el mapa)", () => {
 });
 
 describe("isDrillController", () => {
-  it("distingue una lista de niveles de un controlador", () => {
+  it("tells a list of levels from a controller", () => {
     const { result } = renderHook(() => useDrillDown({ levels }));
 
     expect(isDrillController(levels)).toBe(false);
@@ -301,20 +301,20 @@ describe("isDrillController", () => {
 });
 
 describe("isDrillable", () => {
-  it("con un nivel por debajo y sin `canDrill`: sí", () => {
+  it("with a level below and no `canDrill`: yes", () => {
     expect(isDrillable(levels, 0, region("ES"))).toBe(true);
     expect(isDrillable(levels, 1, region("MD"))).toBe(true);
   });
 
-  it("en el último nivel: nunca", () => {
+  it("at the last level: never", () => {
     expect(isDrillable(levels, 2, region("x"))).toBe(false);
   });
 
-  it("fuera de rango: no", () => {
+  it("out of range: no", () => {
     expect(isDrillable(levels, 9, region("x"))).toBe(false);
   });
 
-  it("`canDrill` booleano o función decide (con el item)", () => {
+  it("`canDrill` boolean or function decides (with the item)", () => {
     const custom = defineDrillLevels<Row>([
       { id: "a", geography: {} as never, canDrill: (item) => item.id !== "AD" },
       { id: "b", geography: {} as never, canDrill: false },
@@ -328,7 +328,7 @@ describe("isDrillable", () => {
 });
 
 describe("buildDrillEvent", () => {
-  it("dirección, contextos de origen y destino, y el item si lo hubo", () => {
+  it("direction, origin and target contexts, and the item if there was one", () => {
     const item = region("ES");
     const event = buildDrillEvent<Row>({ from: [], to: ["ES"], item });
 
@@ -340,14 +340,14 @@ describe("buildDrillEvent", () => {
     });
   });
 
-  it("sin item (breadcrumb, teclado, URL) la clave no existe", () => {
+  it("without an item (breadcrumb, keyboard, URL) the key does not exist", () => {
     const event = buildDrillEvent<Row>({ from: ["ES"], to: [] });
 
     expect(event?.direction).toBe("up");
     expect(event).not.toHaveProperty("item");
   });
 
-  it("si la ruta no cambia no hay evento", () => {
+  it("if the route does not change there is no event", () => {
     expect(buildDrillEvent<Row>({ from: ["ES"], to: ["ES"] })).toBeNull();
   });
 });

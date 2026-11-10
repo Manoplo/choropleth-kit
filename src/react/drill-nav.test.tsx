@@ -7,8 +7,8 @@ import type { RootProps } from "./components/root";
 import { defineDrillLevels } from "./drill-levels";
 import { useDrillDown } from "./use-drill-down";
 
-// Paso 33: breadcrumb, teclado del drill (Escape / Retroceso) y pista del tooltip. «Reducir movimiento»
-// simulado: el vuelo es un salto y el revelado dura 0, así los tests no esperan vuelos de d3.
+// Step 33: breadcrumb, drill keyboard (Escape / Backspace) and tooltip hint. Simulated "reduce motion":
+// the flight is a jump and the reveal lasts 0, so the tests do not wait for d3 flights.
 
 const square = (id: string, west: number, south: number, size: number): Feature => ({
   type: "Feature",
@@ -55,7 +55,7 @@ const regionLevel = {
   geography: ({ parentId }: DrillContext) => Promise.resolve(children[parentId ?? ""] as never),
 };
 const levels = defineDrillLevels<Row>([{ id: "country", geography: world }, { ...regionLevel }]);
-// Tres niveles: el último hereda la geometría de las regiones (tiendas).
+// Three levels: the last one inherits the regions' geometry (stores).
 const threeLevels = defineDrillLevels<Row>([
   { id: "country", label: "World", geography: world },
   { ...regionLevel },
@@ -104,23 +104,23 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Breadcrumb", () => {
-  it("en la raíz: un <nav> con la raíz como página actual y sin botón «←»", () => {
+  it("at the root: a <nav> with the root as the current page and no ← button", () => {
     const { container, crumbs } = mount();
     const nav = container.querySelector("nav.cm-breadcrumb");
 
     expect(nav?.getAttribute("aria-label")).toBe("Breadcrumb");
-    expect(crumbs()).toEqual(["All"]); // sin `label` en el primer nivel: `labels.breadcrumbRoot`
+    expect(crumbs()).toEqual(["All"]); // without a `label` on the first level: `labels.breadcrumbRoot`
     expect(container.querySelector("[aria-current='page']")?.textContent).toBe("All");
     expect(container.querySelector(".cm-breadcrumb__back")).toBeNull();
   });
 
-  it("la raíz usa la `label` del primer nivel si la hay", () => {
+  it("the root uses the first level's `label` if there is one", () => {
     const { crumbs } = mount({ drill: threeLevels });
 
     expect(crumbs()).toEqual(["World"]);
   });
 
-  it("al bajar, la miga nueva lleva el NOMBRE de la región (properties.name) y es la actual", async () => {
+  it("when going down, the new crumb carries the region's NAME (properties.name) and is the current one", async () => {
     const { path, ids, crumbs, container } = mount();
     fireEvent.click(path("A"));
     await waitFor(() => expect(ids()).toEqual(["A1", "A2"]));
@@ -130,14 +130,14 @@ describe("Breadcrumb", () => {
     expect(container.querySelector(".cm-breadcrumb__back")).not.toBeNull();
   });
 
-  it("la miga aparece en cuanto se hace clic (ruta optimista), no al terminar el vuelo", () => {
+  it("the crumb appears as soon as the click happens (optimistic route), not when the flight ends", () => {
     const { path, crumbs } = mount();
     fireEvent.click(path("B"));
 
     expect(crumbs()).toEqual(["All", "Name B"]);
   });
 
-  it("una miga anterior sube hasta ese nivel", async () => {
+  it("an earlier crumb goes up to that level", async () => {
     const { path, ids, crumbs, container } = mount({ drill: threeLevels });
     fireEvent.click(path("A"));
     await waitFor(() => expect(ids()).toEqual(["A1", "A2"]));
@@ -151,7 +151,7 @@ describe("Breadcrumb", () => {
     expect(crumbs()).toEqual(["World"]);
   });
 
-  it("«←» sube un nivel", async () => {
+  it("the ← button goes up one level", async () => {
     const { path, ids, container } = mount();
     fireEvent.click(path("A"));
     await waitFor(() => expect(ids()).toEqual(["A1", "A2"]));
@@ -160,7 +160,7 @@ describe("Breadcrumb", () => {
     await waitFor(() => expect(ids()).toEqual(["A", "B", "C"]));
   });
 
-  it("el `getLabel` del consumidor manda sobre el nombre de la región", async () => {
+  it("the consumer's `getLabel` wins over the region's name", async () => {
     const Harness = () => {
       const drill = useDrillDown<Row>({ levels, getLabel: ({ id }) => `#${id}` });
       return (
@@ -178,14 +178,14 @@ describe("Breadcrumb", () => {
     );
   });
 
-  it("los textos salen de `labels` (i18n)", () => {
+  it("the texts come from `labels` (i18n)", () => {
     const { container } = mount({ labels: es });
 
     expect(container.querySelector("nav")?.getAttribute("aria-label")).toBe("Ruta de navegación");
     expect(container.querySelector(".cm-breadcrumb__item")?.textContent).toBe("Todo");
   });
 
-  it("render prop: el aspecto es tuyo y recibe items, drillTo y drillUp", async () => {
+  it("render prop: the look is yours and it receives items, drillTo and drillUp", async () => {
     const { path, container, ids } = (() => {
       const utils = render(
         <Choropleth.Root {...({ ...baseProps, drill: levels } as RootProps<Row>)}>
@@ -221,7 +221,7 @@ describe("Breadcrumb", () => {
     await waitFor(() => expect(ids()).toEqual(["A", "B", "C"]));
   });
 
-  it("sin `drill` no pinta nada", () => {
+  it("without `drill` it draws nothing", () => {
     const { container } = render(
       <Choropleth.Root
         {...({ ...baseProps, geography: world, data: rows.slice(0, 3) } as RootProps<Row>)}
@@ -234,7 +234,7 @@ describe("Breadcrumb", () => {
     expect(container.querySelector("nav")).toBeNull();
   });
 
-  it("`position` lo coloca sobre el mapa; sin ella no se posiciona", () => {
+  it("`position` places it over the map; without it, it is not positioned", () => {
     const { container } = render(
       <Choropleth.Root {...({ ...baseProps, drill: levels } as RootProps<Row>)}>
         <Choropleth.Svg />
@@ -249,7 +249,7 @@ describe("Breadcrumb", () => {
   });
 });
 
-describe("el preset", () => {
+describe("the preset", () => {
   const preset = (props: Record<string, unknown> = {}) =>
     render(
       <ChoroplethMap<Row>
@@ -264,7 +264,7 @@ describe("el preset", () => {
       />,
     );
 
-  it("con `drill` incluye las migas arriba a la izquierda", () => {
+  it("with `drill` it includes the breadcrumbs at top left", () => {
     const { container } = preset();
     const nav = container.querySelector("nav.cm-breadcrumb") as HTMLElement;
 
@@ -273,14 +273,14 @@ describe("el preset", () => {
     expect(nav.style.left).toBe("12px");
   });
 
-  it("`breadcrumb={false}` las oculta; `{ position }` las mueve", () => {
+  it("`breadcrumb={false}` hides them; `{ position }` moves them", () => {
     expect(preset({ breadcrumb: false }).container.querySelector("nav")).toBeNull();
     const moved = preset({ breadcrumb: { position: "bottom-right" } }).container;
 
     expect((moved.querySelector("nav") as HTMLElement).style.bottom).toBe("12px");
   });
 
-  it("sin `drill` no hay migas", () => {
+  it("without `drill` there are no breadcrumbs", () => {
     const { container } = render(
       <ChoroplethMap<Row>
         getId={baseProps.getId}
@@ -297,13 +297,13 @@ describe("el preset", () => {
   });
 });
 
-describe("teclado del drill", () => {
+describe("drill keyboard", () => {
   const down = async (utils: ReturnType<typeof mount>) => {
     fireEvent.click(utils.path("A"));
     await waitFor(() => expect(utils.ids()).toEqual(["A1", "A2"]));
   };
 
-  it("Escape sube un nivel", async () => {
+  it("Escape goes up one level", async () => {
     const utils = mount();
     await down(utils);
     fireEvent.keyDown(utils.svg(), { key: "Escape" });
@@ -311,7 +311,7 @@ describe("teclado del drill", () => {
     await waitFor(() => expect(utils.ids()).toEqual(["A", "B", "C"]));
   });
 
-  it("Retroceso también sube (y no deja que el navegador vuelva atrás)", async () => {
+  it("Backspace also goes up (and does not let the browser go back)", async () => {
     const utils = mount();
     await down(utils);
     const notPrevented = fireEvent.keyDown(utils.svg(), { key: "Backspace" });
@@ -320,7 +320,7 @@ describe("teclado del drill", () => {
     await waitFor(() => expect(utils.ids()).toEqual(["A", "B", "C"]));
   });
 
-  it("en la raíz no hace nada y NO cancela la tecla (Escape sigue siendo de la página)", () => {
+  it("at the root it does nothing and does NOT cancel the key (Escape still belongs to the page)", () => {
     const utils = mount();
     const notPrevented = fireEvent.keyDown(utils.svg(), { key: "Escape" });
 
@@ -328,7 +328,7 @@ describe("teclado del drill", () => {
     expect(utils.ids()).toEqual(["A", "B", "C"]);
   });
 
-  it("con Ctrl, ⌘ o Alt no se interpreta", async () => {
+  it("with Ctrl, ⌘ or Alt it is not interpreted", async () => {
     const utils = mount();
     await down(utils);
     fireEvent.keyDown(utils.svg(), { key: "Escape", ctrlKey: true });
@@ -339,10 +339,10 @@ describe("teclado del drill", () => {
     expect(utils.ids()).toEqual(["A1", "A2"]);
   });
 
-  it("funciona aunque el teclado de zoom esté desactivado, y con `zoom={false}`", async () => {
+  it("works even if the zoom keyboard is disabled, and with `zoom={false}`", async () => {
     for (const zoom of [{ keyboard: false }, false] as const) {
       const utils = mount({ zoom });
-      expect(utils.svg().getAttribute("tabindex")).toBe("0"); // enfocable para recibir la tecla
+      expect(utils.svg().getAttribute("tabindex")).toBe("0"); // focusable to receive the key
       await down(utils);
       fireEvent.keyDown(utils.svg(), { key: "Escape" });
       await waitFor(() => expect(utils.ids()).toEqual(["A", "B", "C"]));
@@ -350,7 +350,7 @@ describe("teclado del drill", () => {
     }
   });
 
-  it("no rompe el teclado de zoom: `+` sigue acercando con `drill`", () => {
+  it("does not break the zoom keyboard: `+` still zooms in with `drill`", () => {
     const utils = mount({ zoom: { max: 6 } });
     const viewport = utils.container.querySelector(".cm-viewport") as SVGGElement;
     const before = viewport.getAttribute("transform");
@@ -360,7 +360,7 @@ describe("teclado del drill", () => {
     expect(viewport.getAttribute("transform")).not.toBe(before);
   });
 
-  it("sin `drill` y con el teclado de zoom desactivado, el <svg> no es enfocable (no añade un tab stop vacío)", () => {
+  it("without `drill` and with the zoom keyboard disabled, the <svg> is not focusable (no empty tab stop is added)", () => {
     const { container } = render(
       <Choropleth.Root
         {...({
@@ -378,20 +378,20 @@ describe("teclado del drill", () => {
   });
 });
 
-describe("pista del tooltip", () => {
+describe("tooltip hint", () => {
   const hover = (utils: ReturnType<typeof mount>, id: string) => {
     fireEvent.pointerOver(utils.path(id));
     fireEvent.pointerMove(utils.path(id), { clientX: 5, clientY: 5 });
   };
 
-  it("una región navegable promete «Click to see regions»", () => {
+  it("a drillable region promises Click to see regions", () => {
     const utils = mount();
     hover(utils, "A");
 
     expect(screen.getByRole("tooltip").textContent).toContain("Click to see regions");
   });
 
-  it("una que no se puede perforar (último nivel, o `canDrill: false`) no lo promete", async () => {
+  it("one that cannot be drilled (last level, or `canDrill: false`) does not promise it", async () => {
     const closed = defineDrillLevels<Row>([
       { id: "country", geography: world, canDrill: (item) => item.id !== "B" },
       { ...regionLevel },
@@ -409,14 +409,14 @@ describe("pista del tooltip", () => {
     expect(screen.getByRole("tooltip").textContent).not.toContain("Click to see regions");
   });
 
-  it("el texto sale de `labels.drillHint`", () => {
+  it("the text comes from `labels.drillHint`", () => {
     const utils = mount({ labels: es });
     hover(utils, "A");
 
     expect(screen.getByRole("tooltip").textContent).toContain("Clic para ver regiones");
   });
 
-  it("con tu propio contenido (render prop) no se añade nada: recibes `drillable` y decides", () => {
+  it("with your own content (render prop) nothing is added: you receive `drillable` and decide", () => {
     const utils = render(
       <Choropleth.Root {...({ ...baseProps, drill: levels } as RootProps<Row>)}>
         <Choropleth.Svg />

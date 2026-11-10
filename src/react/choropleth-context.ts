@@ -7,23 +7,23 @@ import type { UseChoroplethResult } from "./use-choropleth";
 export type ChoroplethContextValue = {
   choropleth: UseChoroplethResult<unknown>;
   store: MapStore;
-  /** La cámara: `<Choropleth.Viewport>` la rellena y `useZoom` (en `Svg`) la lee. */
+  /** The camera: `<Choropleth.Viewport>` fills it in and `useZoom` (in `Svg`) reads it. */
   viewportRef: RefObject<SVGGElement | null>;
-  /** El handle imperativo (el mismo que se obtiene con `ref`). */
+  /** The imperative handle (the same one obtained with `ref`). */
   api: ChoroplethMapHandle;
-  /** Clases del consumidor por pieza (`classNames` de `Root`). Vacío si no las hay. */
+  /** The consumer's classes per piece (`classNames` of `Root`). Empty if there are none. */
   classNames: ChoroplethClassNames;
-  /** Id (único por instancia del mapa) de una definición SVG: `defId("hatch")`. */
+  /** Id (unique per map instance) of an SVG definition: `defId("hatch")`. */
   defId: (name: string) => string;
-  /** Trama de las regiones sin dato (`emptyPattern` o la del tema). */
+  /** Pattern of the regions without data (`emptyPattern` or the theme's). */
   emptyPattern: "hatch" | "dots" | null;
 };
 
 export const ChoroplethContext = createContext<ChoroplethContextValue | null>(null);
 
 /**
- * Lee el estado del mapa. `TDatum` es solo una aserción de tipo para el consumidor (el contexto
- * no puede ser genérico): quien llama sabe qué `data` pasó a `Root`.
+ * Reads the map's state. `TDatum` is only a type assertion for the consumer (the context cannot be
+ * generic): the caller knows which `data` was passed to `Root`.
  */
 export const useChoroplethContext = <TDatum = unknown>(): {
   choropleth: UseChoroplethResult<TDatum>;
@@ -52,15 +52,15 @@ export const useChoroplethContext = <TDatum = unknown>(): {
 };
 
 /**
- * El handle imperativo desde DENTRO del compound (dd.md §9.5): un botón hijo de `<Choropleth.Root>`
- * puede llamar a `zoomTo` sin necesitar un `ref`.
+ * The imperative handle from INSIDE the compound: a button that is a child of
+ * `<Choropleth.Root>` can call `zoomTo` without needing a `ref`.
  */
 export const useChoroplethApi = (): ChoroplethMapHandle => useChoroplethContext().api;
 
 /**
- * El id de una definición SVG (`<pattern>`, `<linearGradient>`, `<filter>`) de ESTE mapa. Con dos mapas en la
- * página, `url(#hatch)` apuntaría siempre al primero: los ids llevan un prefijo por instancia (`useId`).
- * Úsalo para definir las tuyas dentro de `<Choropleth.Defs>` (`<pattern id={useDefId("stripes")}>`) y para
- * referenciarlas: `fill="url(#…)"`. Las incluidas son `"hatch"` y `"dots"`.
+ * The id of an SVG definition (`<pattern>`, `<linearGradient>`, `<filter>`) of THIS map. With two maps
+ * on the page, `url(#hatch)` would always point to the first one: ids carry a per-instance prefix
+ * (`useId`). Use it to define your own inside `<Choropleth.Defs>` (`<pattern id={useDefId("stripes")}>`)
+ * and to reference them: `fill="url(#…)"`. The built-in ones are `"hatch"` and `"dots"`.
  */
 export const useDefId = (name: string): string => useChoroplethContext().defId(name);

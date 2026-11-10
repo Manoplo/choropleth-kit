@@ -44,6 +44,7 @@ export { createMapStore, useMapStore } from "./map-store";
 export type { MapState, MapStore, PointerPosition, ZoomApi } from "./map-store";
 export { clearGeographyCache, useGeography } from "./use-geography";
 export type { GeographyStatus, UseGeographyResult } from "./use-geography";
+export { useCamera } from "./use-camera";
 export { useZoom } from "./use-zoom";
 export type { UseZoomParams } from "./use-zoom";
 export { useContainerSize } from "./use-container-size";

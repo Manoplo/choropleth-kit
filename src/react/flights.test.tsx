@@ -9,16 +9,16 @@ import { useChoroplethApi } from "./choropleth-context";
 import type { RootProps } from "./components/root";
 import type { ChoroplethMapHandle } from "./handle";
 
-// Paso 26: vuelos de cámara (`zoomTo`, `focusId`, `initialView`) y handle imperativo.
+// Step 26: camera flights (`zoomTo`, `focusId`, `initialView`) and imperative handle.
 
 type Row = { code: string; v: number | null };
 const rows: Row[] = [
   { code: "A", v: 1 },
   { code: "B", v: 9 },
 ];
-// Dos bloques CLAROS (anillos en sentido horario, lo que espera d3) a la misma latitud: A en lon 0…10
-// y B en lon 20…30. El fixture compartido `twoSquares` tiene el anillo al revés (d3 lo lee como «el
-// globo menos el cuadrado»), así que su mapa es el mundo entero y no sirve para comprobar encuadres.
+// Two CLEAR blocks (rings clockwise, what d3 expects) at the same latitude: A at lon 0…10
+// and B at lon 20…30. The shared `twoSquares` fixture has the ring backwards (d3 reads it as "the
+// globe minus the square"), so its map is the whole world and it is no use for checking framings.
 const block = (id: string, west: number): FeatureCollection["features"][number] => ({
   type: "Feature",
   id,
@@ -40,7 +40,7 @@ const blocks: FeatureCollection = {
   type: "FeatureCollection",
   features: [block("A", 0), block("B", 20)],
 };
-/** Centro geográfico de cada bloque. */
+/** Geographic center of each block. */
 const CENTER_A = 5;
 const CENTER_B = 25;
 const CENTER_LAT = 45;
@@ -55,7 +55,7 @@ const baseProps = {
   height: 100,
 } as const;
 
-/** `constrain: "free"` para comprobar el encuadre exacto sin que el límite lo desplace. */
+/** `constrain: "free"` to check the exact framing without the limit shifting it. */
 const free: ZoomOptions = { constrain: "free", padding: 0 };
 
 const setup = (props: Partial<RootProps<Row>> = {}, children?: React.ReactNode) => {
@@ -67,7 +67,7 @@ const setup = (props: Partial<RootProps<Row>> = {}, children?: React.ReactNode) 
     </Choropleth.Root>,
   );
   const handle = () => ref.current as ChoroplethMapHandle;
-  // Volver a renderizar CON el mismo `ref`: sin él, React desengancha el handle.
+  // Re-render WITH the same `ref`: without it, React unhooks the handle.
   const rerenderWith = (next: Partial<RootProps<Row>>) =>
     utils.rerender(
       <Choropleth.Root ref={ref} {...({ ...baseProps, ...next } as RootProps<Row>)}>
@@ -90,7 +90,7 @@ const cameraOf = (container: Element) => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("handle imperativo (ref)", () => {
-  it("expone zoomTo, zoomBy, resetView, getView y drillDown / drillUp / drillTo", () => {
+  it("exposes zoomTo, zoomBy, resetView, getView and drillDown / drillUp / drillTo", () => {
     const { handle } = setup();
 
     expect(Object.keys(handle()).sort()).toEqual([
@@ -104,15 +104,15 @@ describe("handle imperativo (ref)", () => {
     ]);
   });
 
-  it("en el encaje, getView da k = 1 y el centro geográfico", () => {
+  it("at the fit, getView gives k = 1 and the geographic center", () => {
     const { handle } = setup();
     const view = handle().getView();
 
     expect(view).toMatchObject({ k: 1, zoom: 1, level: { id: "root", depth: 0 } });
-    expect(Math.abs(view.center[0] - 15)).toBeLessThan(1.5); // el centro de los dos bloques (lon 0…30)
+    expect(Math.abs(view.center[0] - 15)).toBeLessThan(1.5); // the center of the two blocks (lon 0…30)
   });
 
-  it("también en el preset <ChoroplethMap ref>", () => {
+  it("also on the preset <ChoroplethMap ref>", () => {
     const ref = createRef<ChoroplethMapHandle>();
     render(
       <ChoroplethMap<Row>
@@ -126,7 +126,7 @@ describe("handle imperativo (ref)", () => {
 });
 
 describe("zoomTo", () => {
-  it("una región: la encuadra y la deja centrada (centro geográfico de A)", async () => {
+  it("a region: frames it and leaves it centered (A's geographic center)", async () => {
     const { handle } = setup({ zoom: free });
     const result = await handle().zoomTo("A", { duration: 50 });
 
@@ -137,7 +137,7 @@ describe("zoomTo", () => {
     expect(view.center[1]).toBeCloseTo(CENTER_LAT, 0);
   });
 
-  it("otra región: vuela de A a B", async () => {
+  it("another region: flies from A to B", async () => {
     const { handle } = setup({ zoom: free });
     await handle().zoomTo("A", { duration: 30 });
     await handle().zoomTo("B", { duration: 30 });
@@ -145,7 +145,7 @@ describe("zoomTo", () => {
     expect(handle().getView().center[0]).toBeCloseTo(CENTER_B, 0);
   });
 
-  it("{ center, zoom }: ese punto en el centro con esa escala relativa al encaje", async () => {
+  it("{ center, zoom }: that point at the center with that scale relative to the fit", async () => {
     const { handle } = setup({ zoom: free });
     await handle().zoomTo({ center: [CENTER_B, CENTER_LAT], zoom: 3 }, { duration: 30 });
 
@@ -154,7 +154,7 @@ describe("zoomTo", () => {
     expect(view.center[0]).toBeCloseTo(CENTER_B, 0);
   });
 
-  it("{ bounds }: encuadra unos límites geográficos", async () => {
+  it("{ bounds }: frames some geographic bounds", async () => {
     const { handle } = setup({ zoom: free });
     await handle().zoomTo(
       {
@@ -169,15 +169,15 @@ describe("zoomTo", () => {
     expect(handle().getView().center[0]).toBeCloseTo(CENTER_B, 0);
   });
 
-  it("duration: 0 coloca la cámara al instante (sin transición)", () => {
+  it("duration: 0 places the camera instantly (no transition)", () => {
     const { handle, container } = setup({ zoom: free });
     const promise = handle().zoomTo("A", { duration: 0 });
 
-    expect(cameraOf(container).k).toBeGreaterThan(1); // ya está, sin esperar
+    expect(cameraOf(container).k).toBeGreaterThan(1); // already there, without waiting
     return expect(promise).resolves.toEqual({ completed: true });
   });
 
-  it("una región que no existe: completed false y aviso en inglés (no lanza)", async () => {
+  it("a region that does not exist: completed false and a warning in English (it does not throw)", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { handle } = setup();
 
@@ -188,8 +188,8 @@ describe("zoomTo", () => {
     warn.mockRestore();
   });
 
-  it("con `constrain: contain` el destino respeta los límites (no se sale del mapa)", async () => {
-    const { handle, container } = setup(); // contain por defecto
+  it("with `constrain: contain` the target respects the limits (it does not leave the map)", async () => {
+    const { handle, container } = setup(); // contain by default
     await handle().zoomTo("A", { duration: 30 });
 
     const { x, y, k } = cameraOf(container);
@@ -199,19 +199,19 @@ describe("zoomTo", () => {
     expect(y + 100 * k).toBeGreaterThanOrEqual(100 - 1e-9);
   });
 
-  it("padding: más margen = menos zoom", async () => {
+  it("padding: more margin = less zoom", async () => {
     const small = setup({ zoom: { constrain: "free", padding: 0 } });
     await small.handle().zoomTo("A", { duration: 0 });
     const large = setup({ zoom: { constrain: "free", padding: 40 } });
     await large.handle().zoomTo("A", { duration: 0 });
 
     expect(large.handle().getView().k).toBeLessThan(small.handle().getView().k);
-    // y por llamada: `padding` sustituye al de las opciones
+    // and per call: `padding` replaces the options'
     await small.handle().zoomTo("A", { duration: 0, padding: 40 });
     expect(small.handle().getView().k).toBeCloseTo(large.handle().getView().k, 6);
   });
 
-  it("un gesto del usuario interrumpe el vuelo: completed false", async () => {
+  it("a user gesture interrupts the flight: completed false", async () => {
     const { handle, container } = setup({ zoom: free });
     const flight = handle().zoomTo("B", { duration: 800 });
     fireEvent.wheel(container.querySelector("svg") as Element, {
@@ -223,7 +223,7 @@ describe("zoomTo", () => {
     expect(await flight).toEqual({ completed: false });
   });
 
-  it("onViewChange se llama al terminar cada vuelo, una vez", async () => {
+  it("onViewChange is called when each flight ends, once", async () => {
     const onViewChange = vi.fn<(view: ViewState) => void>();
     const { handle } = setup({ zoom: { ...free, onViewChange } });
     await handle().zoomTo("A", { duration: 30 });
@@ -231,7 +231,7 @@ describe("zoomTo", () => {
     await waitFor(() => expect(onViewChange).toHaveBeenCalledOnce());
   });
 
-  it("con zoom={false} los movimientos resuelven completed: false, y getView sigue dando el encaje", async () => {
+  it("with zoom={false} moves resolve completed: false, and getView still gives the fit", async () => {
     const { handle } = setup({ zoom: false });
 
     expect(await handle().zoomTo("A")).toEqual({ completed: false });
@@ -241,8 +241,8 @@ describe("zoomTo", () => {
   });
 });
 
-describe("zoomBy y resetView por el handle", () => {
-  it("zoomBy multiplica y resetView vuelve al encaje", async () => {
+describe("zoomBy and resetView through the handle", () => {
+  it("zoomBy multiplies and resetView returns to the fit", async () => {
     const { handle } = setup({ zoom: free });
     await handle().zoomBy(3, { duration: 30 });
     expect(handle().getView().k).toBeCloseTo(3, 6);
@@ -251,7 +251,7 @@ describe("zoomBy y resetView por el handle", () => {
     expect(handle().getView().k).toBeCloseTo(1, 6);
   });
 
-  it("encadenar con await: cada vuelo espera al anterior", async () => {
+  it("chaining with await: each flight waits for the previous one", async () => {
     const { handle } = setup({ zoom: free });
     const log: string[] = [];
     await handle().zoomTo("A", { duration: 30 });
@@ -266,8 +266,8 @@ describe("zoomBy y resetView por el handle", () => {
   });
 });
 
-describe("useChoroplethApi (dentro del compound, sin ref)", () => {
-  it("un botón hijo vuela con zoomTo", async () => {
+describe("useChoroplethApi (inside the compound, without ref)", () => {
+  it("a child button flies with zoomTo", async () => {
     const Button = () => {
       const api = useChoroplethApi();
       return (
@@ -282,7 +282,7 @@ describe("useChoroplethApi (dentro del compound, sin ref)", () => {
     await waitFor(() => expect(handle().getView().center[0]).toBeCloseTo(CENTER_B, 0));
   });
 
-  it("fuera de Root lanza el error claro", () => {
+  it("outside Root it throws the clear error", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     const Orphan = () => {
       useChoroplethApi();
@@ -294,16 +294,16 @@ describe("useChoroplethApi (dentro del compound, sin ref)", () => {
 });
 
 describe("focusId (declarativo)", () => {
-  it("en el primer render coloca la cámara SIN volar y SIN avisar a onViewChange", () => {
+  it("on first render it places the camera WITHOUT flying and WITHOUT notifying onViewChange", () => {
     const onViewChange = vi.fn<(view: ViewState) => void>();
     const { container, handle } = setup({ focusId: "A", zoom: { ...free, onViewChange } });
 
-    expect(cameraOf(container).k).toBeGreaterThan(1); // ya está en A, sin esperar
+    expect(cameraOf(container).k).toBeGreaterThan(1); // already at A, without waiting
     expect(handle().getView().center[0]).toBeCloseTo(CENTER_A, 0);
     expect(onViewChange).not.toHaveBeenCalled();
   });
 
-  it("al cambiar vuela a la nueva región; con null, vuelve al encaje", async () => {
+  it("on change it flies to the new region; with null, it returns to the fit", async () => {
     const onViewChange = vi.fn<(view: ViewState) => void>();
     const zoom = { ...free, onViewChange };
     const { handle, rerenderWith } = setup({ focusId: "A", zoom });
@@ -318,7 +318,7 @@ describe("focusId (declarativo)", () => {
     await waitFor(() => expect(handle().getView().k).toBeCloseTo(1, 3), { timeout: 3000 });
   });
 
-  it("volver a renderizar con el MISMO focusId no vuela otra vez", async () => {
+  it("re-rendering with the SAME focusId does not fly again", async () => {
     const onViewChange = vi.fn<(view: ViewState) => void>();
     const zoom = { ...free, onViewChange };
     const { rerenderWith } = setup({ focusId: "A", zoom });
@@ -328,7 +328,7 @@ describe("focusId (declarativo)", () => {
     expect(onViewChange).not.toHaveBeenCalled();
   });
 
-  it("un focusId inexistente no rompe: avisa y se queda como está", () => {
+  it("a nonexistent focusId does not break: it warns and stays as it is", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { handle } = setup({ focusId: "ZZ" });
 
@@ -337,7 +337,7 @@ describe("focusId (declarativo)", () => {
     warn.mockRestore();
   });
 
-  it("si el mapa carga de forma asíncrona, se coloca cuando aparece el <svg>", async () => {
+  it("if the map loads asynchronously, it is placed when the <svg> appears", async () => {
     const { container, handle } = setup({
       geography: Promise.resolve(blocks),
       focusId: "A",
@@ -350,7 +350,7 @@ describe("focusId (declarativo)", () => {
 });
 
 describe("initialView", () => {
-  it("coloca la cámara al montar, sin animar ni avisar", () => {
+  it("places the camera on mount, without animating or notifying", () => {
     const onViewChange = vi.fn<(view: ViewState) => void>();
     const { handle } = setup({
       zoom: { ...free, initialView: { center: [CENTER_B, CENTER_LAT], zoom: 2 }, onViewChange },
@@ -361,7 +361,7 @@ describe("initialView", () => {
     expect(onViewChange).not.toHaveBeenCalled();
   });
 
-  it("acepta una región", () => {
+  it("accepts a region", () => {
     const { handle } = setup({ zoom: { ...free, initialView: "B" } });
 
     expect(handle().getView().center[0]).toBeCloseTo(CENTER_B, 0);
@@ -373,7 +373,7 @@ describe("initialView", () => {
     expect(handle().getView().center[0]).toBeCloseTo(CENTER_A, 0);
   });
 
-  it("solo cuenta al montar: cambiarlo después no mueve la cámara", () => {
+  it("only counts on mount: changing it afterwards does not move the camera", () => {
     const { handle, rerenderWith } = setup({ zoom: { ...free, initialView: "A" } });
     rerenderWith({ zoom: { ...free, initialView: "B" } });
 
@@ -381,7 +381,7 @@ describe("initialView", () => {
   });
 });
 
-describe("«reducir movimiento»: fundido en vez de vuelo", () => {
+describe("reduce motion: a fade instead of a flight", () => {
   type FakeAnimation = { keyframes: Keyframe[]; finish: () => void; cancel: () => void };
   const animations: FakeAnimation[] = [];
 
@@ -409,23 +409,23 @@ describe("«reducir movimiento»: fundido en vez de vuelo", () => {
     delete (Element.prototype as { animate?: unknown }).animate;
   });
 
-  it("zoomTo se hace con un fundido: la cámara salta a mitad, sin interpolar", async () => {
+  it("zoomTo is done with a fade: the camera jumps midway, without interpolating", async () => {
     const { handle, container } = setup({ zoom: free });
     const flight = handle().zoomTo("A");
 
     expect(animations).toHaveLength(1);
     expect(animations[0]?.keyframes).toEqual([{ opacity: 1 }, { opacity: 0 }]);
-    expect(cameraOf(container).k).toBe(1); // aún no se ha movido
+    expect(cameraOf(container).k).toBe(1); // has not moved yet
 
     animations[0]?.finish();
-    await waitFor(() => expect(cameraOf(container).k).toBeGreaterThan(1)); // saltó
+    await waitFor(() => expect(cameraOf(container).k).toBeGreaterThan(1)); // it jumped
     expect(animations[1]?.keyframes).toEqual([{ opacity: 0 }, { opacity: 1 }]);
 
     animations[1]?.finish();
     expect(await flight).toEqual({ completed: true });
   });
 
-  it("no hay ninguna transición de cámara (solo el fundido)", async () => {
+  it("there is no camera transition at all (only the fade)", async () => {
     const { handle, container } = setup({ zoom: free });
     const flight = handle().zoomTo("A");
     animations[0]?.finish();
@@ -434,11 +434,11 @@ describe("«reducir movimiento»: fundido en vez de vuelo", () => {
     animations[1]?.finish();
     await flight;
 
-    // la cámara no cambia después del salto: no hubo interpolación
+    // the camera does not change after the jump: there was no interpolation
     expect(cameraOf(container)).toEqual(jumped);
   });
 
-  it("un movimiento nuevo cancela el fundido anterior (completed: false)", async () => {
+  it("a new move cancels the previous fade (completed: false)", async () => {
     const { handle } = setup({ zoom: free });
     const first = handle().zoomTo("A");
     const second = handle().zoomTo("B");
@@ -450,21 +450,21 @@ describe("«reducir movimiento»: fundido en vez de vuelo", () => {
     expect(await second).toEqual({ completed: true });
   });
 
-  it("duration: 0 sigue siendo instantáneo (ni fundido): focusId e initialView no parpadean", () => {
+  it("duration: 0 is still instantaneous (not even a fade): focusId and initialView do not flicker", () => {
     const { handle } = setup({ focusId: "A", zoom: free });
 
     expect(animations).toHaveLength(0);
     expect(handle().getView().k).toBeGreaterThan(1);
   });
 
-  it("zoomBy y los botones también usan el fundido", async () => {
+  it("zoomBy and the buttons also use the fade", async () => {
     const { handle } = setup({ zoom: free });
     void handle().zoomBy(2);
 
     expect(animations).toHaveLength(1);
   });
 
-  it("al desmontar a mitad de un fundido, se cancela y resuelve completed: false", async () => {
+  it("when unmounting midway through a fade, it is cancelled and resolves completed: false", async () => {
     const { handle, unmount } = setup({ zoom: free });
     const flight = handle().zoomTo("A");
     unmount();
@@ -473,7 +473,7 @@ describe("«reducir movimiento»: fundido en vez de vuelo", () => {
   });
 });
 
-describe("encuadres con geodatos reales (world110m)", () => {
+describe("framings with real geodata (world110m)", () => {
   const world = (props: Record<string, unknown> = {}) => {
     const ref = createRef<ChoroplethMapHandle>() as RefObject<ChoroplethMapHandle>;
     render(
@@ -502,17 +502,17 @@ describe("encuadres con geodatos reales (world110m)", () => {
     return { view };
   };
 
-  it("Francia: encuadra la metrópoli, NO la Guayana ni las islas de ultramar", async () => {
+  it("France: frames the mainland, NOT Guiana or the overseas islands", async () => {
     const { view } = world();
     const v = await view("FR");
 
-    expect(v.bounds[0][0]).toBeGreaterThan(-12); // la Guayana está en −54
+    expect(v.bounds[0][0]).toBeGreaterThan(-12); // Guiana is at −54
     expect(v.bounds[1][0]).toBeLessThan(20);
     expect(v.center[0]).toBeGreaterThan(-3);
     expect(v.center[0]).toBeLessThan(6);
   });
 
-  it("EE. UU.: el territorio continental, no Alaska ni Hawái", async () => {
+  it("US: the contiguous territory, not Alaska or Hawaii", async () => {
     const { view } = world();
     const v = await view("US");
 
@@ -521,24 +521,24 @@ describe("encuadres con geodatos reales (world110m)", () => {
     expect(v.center[0]).toBeGreaterThan(-110);
   });
 
-  it("España incluye CANARIAS por defecto (decisión de negocio)", async () => {
+  it("Spain includes the CANARY ISLANDS by default (a business decision)", async () => {
     const { view } = world();
     const v = await view("ES");
 
-    // El encuadre abarca de las Canarias (−18°) a Menorca (4°): su centro cae al OESTE de la península.
+    // The framing spans from the Canary Islands (−18°) to Menorca (4°): its center falls WEST of the peninsula.
     expect(v.center[0]).toBeLessThan(-5.5);
-    expect(v.bounds[0][1]).toBeLessThan(29); // llega hasta ~28° N
+    expect(v.bounds[0][1]).toBeLessThan(29); // reaches ~28° N
   });
 
-  it("focusBounds={{ ES: null }} vuelve a la península (sin Canarias)", async () => {
+  it("focusBounds={{ ES: null }} returns to the peninsula (without the Canary Islands)", async () => {
     const { view } = world({ focusBounds: { ES: null } });
     const v = await view("ES");
 
-    expect(v.center[0]).toBeGreaterThan(-5); // la península está centrada en ~−3,7°
-    expect(v.bounds[0][1]).toBeGreaterThan(29); // y no llega a las Canarias (28° N)
+    expect(v.center[0]).toBeGreaterThan(-5); // the peninsula is centered at ~−3.7°
+    expect(v.bounds[0][1]).toBeGreaterThan(29); // and it does not reach the Canary Islands (28° N)
   });
 
-  it("focusBounds propio sustituye al de la librería", async () => {
+  it("a custom focusBounds replaces the library's", async () => {
     const { view } = world({
       focusBounds: {
         ES: [
@@ -553,7 +553,7 @@ describe("encuadres con geodatos reales (world110m)", () => {
     expect(v.center[0]).toBeLessThan(-1);
   });
 
-  it("Fiyi (cruza el antimeridiano): un encuadre pequeño, no medio mundo", async () => {
+  it("Fiji (crosses the antimeridian): a small framing, not half the world", async () => {
     const { view } = world();
     const v = await view("FJ");
 
@@ -561,7 +561,7 @@ describe("encuadres con geodatos reales (world110m)", () => {
     expect(Math.abs(v.center[0])).toBeGreaterThan(170);
   });
 
-  it("Rusia: el cuerpo principal (Chukotka, al otro lado del mapa, queda fuera)", async () => {
+  it("Russia: the main body (Chukotka, on the other side of the map, is left out)", async () => {
     const { view } = world();
     const v = await view("RU");
 

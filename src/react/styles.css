@@ -1,27 +1,27 @@
 /*
- * Estilos base de choropleth-kit. Se importan una vez: `import "choropleth-kit/styles.css"`.
+ * choropleth-kit base styles. Import them once: `import "choropleth-kit/styles.css"`.
  *
- * Mecanismos de personalización (dd.md §9.7 y §12.5), de menos a más esfuerzo:
- *  1. `theme="dark"` / `theme={{ … }}`: la librería escribe las variables `--cm-*` en línea en `.cm-root`.
- *  2. Variables CSS `--cm-*` en CUALQUIER ancestro de `.cm-root` (o en el propio `.cm-root`).
- *  3. `classNames` por pieza (Tailwind, CSS Modules) y los atributos `data-*` como contrato.
- *  4. `unstyled`: no se aplica NINGUNA regla de este archivo (las variables que pongas siguen valiendo).
+ * Customization mechanisms, from least to most effort:
+ *  1. `theme="dark"` / `theme={{ … }}`: the library writes the `--cm-*` variables inline on `.cm-root`.
+ *  2. `--cm-*` CSS variables on ANY ancestor of `.cm-root` (or on `.cm-root` itself).
+ *  3. `classNames` per piece (Tailwind, CSS Modules) and the `data-*` attributes as a contract.
+ *  4. `unstyled`: NO rule from this file is applied (the variables you set still work).
  *
- * POR QUÉ LOS VALORES POR DEFECTO ESTÁN EN CADA USO (`var(--cm-x, valor)`) Y NO EN UN BLOQUE `.cm-root { --cm-x: … }`:
- * una variable declarada en `.cm-root` gana a la que viene heredada de un ancestro, así que el consumidor que
- * escribe `.mi-tema { --cm-border-color: … }` más arriba no vería ningún efecto (fallo del paso 12, corregido
- * en el 35). Sin declararlas aquí, cualquier ancestro puede fijarlas.
+ * WHY THE DEFAULTS LIVE AT EACH USE (`var(--cm-x, value)`) AND NOT IN A `.cm-root { --cm-x: … }` BLOCK:
+ * a variable declared on `.cm-root` beats one inherited from an ancestor, so a consumer who writes
+ * `.my-theme { --cm-border-color: … }` higher up would see no effect (a step 12 bug, fixed in step
+ * 35). Without declaring them here, any ancestor can set them.
  *
- * POR QUÉ TODOS LOS SELECTORES EMPIEZAN POR `:where(.cm-root:not([data-unstyled]))`: `:where()` no suma especificidad.
- * Sin él, el prefijo valdría (0,2,0) y ninguna clase suelta del consumidor (`classNames`, Tailwind: 0,1,0) podría
- * ganarle sin `!important`. Con él, una regla `.cm-region` de la librería vale (0,1,0): igual que la tuya, y a
- * igualdad gana la que va después (la tuya, normalmente). Es el mismo mecanismo que `unstyled`, pero pieza a pieza.
+ * WHY EVERY SELECTOR STARTS WITH `:where(.cm-root:not([data-unstyled]))`: `:where()` adds no specificity.
+ * Without it, the prefix would be worth (0,2,0) and no loose consumer class (`classNames`, Tailwind: 0,1,0)
+ * could beat it without `!important`. With it, a library `.cm-region` rule is worth (0,1,0): equal to
+ * yours, and on a tie the later one wins (yours, normally). It is the same mechanism as `unstyled`, but piece by piece.
  *
- * Los estilos "visuales" viven aquí; los "funcionales" (posición del tooltip, cursor, el
- * `fill` calculado de cada región) van en línea porque dependen de datos o del cursor.
+ * "Visual" styles live here; "functional" ones (tooltip position, cursor, each region's computed
+ * `fill`) go inline because they depend on data or on the cursor.
  */
 
-/* Quien tiene «reducir movimiento» no ve el fundido de color al cambiar de indicador. */
+/* Anyone with "reduce motion" does not see the color fade when changing indicator. */
 @media (prefers-reduced-motion: reduce) {
   .cm-root {
     --cm-transition-duration: 0ms;
@@ -35,20 +35,20 @@
   font-size: var(--cm-font-size, 12px);
 }
 
-/* ── mapa ─────────────────────────────────────────────────────────────────────────────────── */
+/* ── map ─────────────────────────────────────────────────────────────────────────────────── */
 
-/* OJO: aquí NO se define `fill`: una regla CSS ganaría al `fill` de cada región (el color del dato). */
+/* NOTE: `fill` is NOT defined here: a CSS rule would beat each region's `fill` (the datum's color). */
 :where(.cm-root:not([data-unstyled])) .cm-region {
   transition:
     fill var(--cm-transition-duration, 250ms),
     opacity var(--cm-transition-duration, 250ms);
 }
 
-/* Con GeoJSON no hay capa de fronteras (mesh): cada región dibuja su propio contorno. */
+/* With GeoJSON there is no borders layer (mesh): each region draws its own outline. */
 :where(.cm-root:not([data-unstyled])) .cm-regions[data-outlined] .cm-region {
   stroke: var(--cm-border-color, #ffffff);
   stroke-width: var(--cm-border-width, 0.5px);
-  /* El trazo no engorda al hacer zoom (dd.md §11.1.6). */
+  /* The stroke does not thicken when zooming. */
   vector-effect: non-scaling-stroke;
 }
 
@@ -61,7 +61,7 @@
 
 :where(.cm-root:not([data-unstyled])) .cm-selection :is(path, circle) {
   fill: none;
-  /* El trazo no engorda al hacer zoom. */
+  /* The stroke does not thicken when zooming. */
   vector-effect: non-scaling-stroke;
 }
 :where(.cm-root:not([data-unstyled])) .cm-selection [data-selection="hover"] {
@@ -73,12 +73,12 @@
   stroke-width: var(--cm-selected-stroke-width, 2px);
 }
 
-/* Como el `fill` de las regiones, el de cada burbuja va en línea (es el color del dato). */
+/* Like the regions' `fill`, each bubble's goes inline (it is the datum's color). */
 :where(.cm-root:not([data-unstyled])) .cm-bubble {
   stroke: var(--cm-bubble-stroke, #ffffff);
   stroke-width: 0.5px;
   fill-opacity: var(--cm-bubble-opacity, 0.75);
-  /* Contraescalado (dd.md §11.1.6): `use-zoom` escribe UNA variable por frame (1/√k, 1/k o 1). */
+  /* Counter-scaling: `use-zoom` writes ONE variable per frame (1/√k, 1/k or 1). */
   transform: scale(var(--cm-bubble-scale, 1));
   transform-box: fill-box;
   transform-origin: center;
@@ -88,26 +88,26 @@
     fill var(--cm-transition-duration, 250ms);
 }
 
-/* Se puede bajar de nivel desde esta región (dd.md §11.2.5): el cursor lo promete, y solo si es verdad. */
+/* You can drill down from this region: the cursor promises it, and only if it is true. */
 :where(.cm-root:not([data-unstyled])) .cm-region[data-drillable] {
   cursor: zoom-in;
 }
 
-/* Puntos de respaldo (microestados): un punto con el color de su dato. */
+/* Fallback points (microstates): a dot with its datum's color. */
 :where(.cm-root:not([data-unstyled])) .cm-fallback-point {
   stroke: var(--cm-bubble-stroke, #ffffff);
   stroke-width: 1px;
   vector-effect: non-scaling-stroke;
 }
 
-/* ── zoom y pan ───────────────────────────────────────────────────────────────────────────── */
+/* ── zoom and pan ───────────────────────────────────────────────────────────────────────────── */
 
 /*
- * La cámara la mueve `d3-zoom` (atributo `transform` de `.cm-viewport`, `--cm-k` y estos `data-*`):
- * React no participa durante el gesto, así que todo lo que cambia con el zoom se hace aquí.
+ * The camera is moved by `d3-zoom` (the `transform` attribute of `.cm-viewport`, `--cm-k` and these `data-*`):
+ * React takes no part during the gesture, so everything that changes with zoom is done here.
  */
 
-/* Solo hay algo que arrastrar si el mapa está ampliado: en el encaje el cursor no cambia. */
+/* There is only something to drag if the map is zoomed in: at the fit the cursor does not change. */
 :where(.cm-root:not([data-unstyled]))[data-zoomed] .cm-svg {
   cursor: grab;
 }
@@ -116,8 +116,8 @@
 }
 
 /*
- * Durante un gesto no hay hover (dd.md §11.1.2): arrastrar sobre 200 países dispararía 200 hovers y
- * el tooltip parpadearía detrás del cursor. Tampoco transiciones de color.
+ * There is no hover during a gesture: dragging across 200 countries would fire 200 hovers
+ * and the tooltip would flicker behind the cursor. No color transitions either.
  */
 :where(.cm-root:not([data-unstyled]))[data-interacting]
   :is(.cm-regions, .cm-bubbles, .cm-fallback-points) {
@@ -130,13 +130,13 @@
   display: none;
 }
 
-/* Foco de teclado: siempre visible con teclado, nunca solo un cambio de relleno (dd.md §13). */
+/* Keyboard focus: always visible with a keyboard, never just a fill change. */
 :where(.cm-root:not([data-unstyled])) .cm-svg:focus-visible {
   outline: var(--cm-focus-ring-width, 2px) solid var(--cm-focus-ring, #0b5fff);
   outline-offset: -2px;
 }
 
-/* ── controles y aviso de gesto ───────────────────────────────────────────────────────────── */
+/* ── controls and gesture hint ───────────────────────────────────────────────────────────── */
 
 :where(.cm-root:not([data-unstyled])) .cm-zoom-controls {
   display: flex;
@@ -177,7 +177,7 @@
   cursor: default;
 }
 
-/* Centrado sobre el mapa; no captura el ratón. Aparece y se va con un fundido. */
+/* Centered over the map; it does not capture the mouse. It fades in and out. */
 :where(.cm-root:not([data-unstyled])) .cm-gesture-hint {
   position: absolute;
   top: 50%;
@@ -201,11 +201,11 @@
   }
 }
 
-/* ── atenuar el resto (dimOthers) ─────────────────────────────────────────────────────────── */
+/* ── dim the rest (dimOthers) ──────────────────────────────────────────────────────────────────── */
 
 /*
- * Todo con atributos en contenedores: seleccionar o pasar el cursor NO cambia las props de las
- * regiones. `Selection` pinta encima una copia a color completo de la resaltada.
+ * All done with attributes on containers: selecting or hovering does NOT change the regions' props.
+ * `Selection` paints a full-color copy of the highlighted one on top.
  */
 :where(.cm-root:not([data-unstyled]))[data-dim="selection"][data-has-selection] .cm-regions,
 :where(.cm-root:not([data-unstyled]))[data-dim="hover-and-selection"][data-has-selection]
@@ -219,9 +219,9 @@
   transition: opacity var(--cm-transition-duration, 250ms);
 }
 
-/* ── carga ────────────────────────────────────────────────────────────────────────────────── */
+/* ── loading ────────────────────────────────────────────────────────────────────────────────── */
 
-/* Esqueleto mientras llega la geometría: ocupa el mismo espacio que tendrá el mapa. */
+/* Skeleton while the geometry arrives: it takes up the same space the map will have. */
 :where(.cm-root:not([data-unstyled])) .cm-skeleton {
   width: 100%;
   border-radius: 6px;
@@ -242,7 +242,7 @@
   border-radius: 6px;
 }
 
-/* Datos en camino: el mapa «respira» sin vaciarse (se mantiene el último dato). */
+/* Data on its way: the map "breathes" without emptying (the last data is kept). */
 :where(.cm-root:not([data-unstyled]))[data-loading] .cm-regions {
   animation: cm-pulse 1.5s ease-in-out infinite;
 }
@@ -264,7 +264,7 @@
   }
 }
 
-/* ── leyenda ──────────────────────────────────────────────────────────────────────────────── */
+/* ── legend ──────────────────────────────────────────────────────────────────────────────── */
 
 :where(.cm-root:not([data-unstyled])) .cm-legend__title {
   font-weight: 600;
@@ -315,7 +315,7 @@
 
 /* ── tooltip ──────────────────────────────────────────────────────────────────────────────── */
 
-/* Solo el tooltip por defecto lleva caja: si pasas tu propio contenido, la caja es tuya. */
+/* Only the default tooltip has a box: if you pass your own content, the box is yours. */
 :where(.cm-root:not([data-unstyled])) .cm-tooltip--default {
   background: var(--cm-tooltip-bg, #ffffff);
   color: var(--cm-tooltip-color, #111111);
@@ -329,8 +329,8 @@
 /* ── drill-down ───────────────────────────────────────────────────────────────────────────── */
 
 /*
- * Contexto: los niveles de arriba, en gris y SIN el color de dato. Razón cartográfica: la escala del padre
- * y la del hijo son distintas; ver ambas en color invita a comparar lo que no es comparable.
+ * Context: the levels above, in gray and WITHOUT the datum color. Cartographic reason: the parent's scale
+ * and the child's differ; seeing both in color invites comparing what is not comparable.
  */
 :where(.cm-root:not([data-unstyled])) .cm-layer[data-role="context"] .cm-context-region {
   fill: var(--cm-context-fill, #e5e5e5);
@@ -339,7 +339,7 @@
   vector-effect: non-scaling-stroke;
   transition: fill var(--cm-transition-duration, 250ms);
 }
-/* La región en la que se entró está cubierta por sus hijas: su contorno no debe verse doble. */
+/* The region that was entered is covered by its children: its outline must not look doubled. */
 :where(.cm-root:not([data-unstyled]))
   .cm-layer[data-role="context"]
   .cm-context-region[data-focus] {
@@ -358,12 +358,12 @@
     color-mix(in srgb, var(--cm-context-fill, #e5e5e5), var(--cm-hover-stroke, #000000) 12%)
   );
 }
-/* Durante un gesto no hay hover en el contexto (como en las regiones). */
+/* During a gesture there is no hover on the context (as on the regions). */
 :where(.cm-root:not([data-unstyled]))[data-interacting] .cm-layer[data-role="context"] {
   pointer-events: none;
 }
 
-/* La capa que sale (al subir o ir a un hermano) se desvanece. */
+/* The layer that leaves (when going up or to a sibling) fades out. */
 :where(.cm-root:not([data-unstyled])) .cm-layer[data-role="exiting"] .cm-context-region {
   fill: var(--cm-context-fill, #e5e5e5);
   stroke: var(--cm-context-border-color, #ffffff);
@@ -374,7 +374,7 @@
   animation: cm-fade-out var(--cm-reveal-duration, 200ms) ease-out both;
 }
 
-/* Al empezar a bajar, el resto del mapa se atenúa y la región elegida se queda con su color. */
+/* When starting to go down, the rest of the map dims and the chosen region keeps its color. */
 :where(.cm-root:not([data-unstyled]))[data-drill-phase="flying"]
   .cm-region:not([data-drill-target]),
 :where(.cm-root:not([data-unstyled]))[data-drill-phase="loading"]
@@ -382,12 +382,12 @@
   opacity: var(--cm-drill-dim-opacity, 0.35);
   transition: opacity var(--cm-reveal-duration, 200ms);
 }
-/* Si la carga tarda más que el vuelo, la región «respira». Nunca un spinner a pantalla completa. */
+/* If the load takes longer than the flight, the region "breathes". Never a full-screen spinner. */
 :where(.cm-root:not([data-unstyled]))[data-drill-phase="loading"] .cm-region[data-drill-target] {
   animation: cm-breathe 1.2s ease-in-out infinite alternate;
 }
 
-/* Revelado: las regiones nuevas entran con un fundido, escalonado por la distancia al centro («explosión»). */
+/* Reveal: the new regions come in with a fade, staggered by distance from the center ("explosion"). */
 :where(.cm-root:not([data-unstyled]))[data-drill-phase="revealing"] .cm-regions .cm-region {
   animation: cm-fade-in var(--cm-reveal-duration, 200ms) ease-out both;
   animation-delay: calc(var(--cm-wave, 0) * var(--cm-reveal-stagger, 250ms));
@@ -418,7 +418,7 @@
   }
 }
 
-/* «Reducir movimiento»: el nivel aparece sin animar (el vuelo ya es un fundido, en `use-zoom`). */
+/* "Reduce motion": the level appears without animating (the flight is already a fade, in `use-zoom`). */
 @media (prefers-reduced-motion: reduce) {
   :where(.cm-root:not([data-unstyled]))[data-drill-phase="revealing"] .cm-regions .cm-region,
   :where(.cm-root:not([data-unstyled]))[data-drill-phase="loading"] .cm-region[data-drill-target],
@@ -453,7 +453,7 @@
   padding: 0;
   list-style: none;
 }
-/* El separador es decoración: va por CSS para que un lector de pantalla no lo lea. */
+/* The separator is decoration: it is done in CSS so a screen reader does not read it. */
 :where(.cm-root:not([data-unstyled])) .cm-breadcrumb__item + .cm-breadcrumb__item::before {
   content: "›";
   padding: 0 4px;
@@ -487,12 +487,12 @@
   font-size: 0.9em;
 }
 
-/* ── leyenda interactiva y barra ──────────────────────────────────────────────────────────── */
+/* ── interactive legend and bar ──────────────────────────────────────────────────────────── */
 
 /*
- * Pasar el ratón por una clase de la leyenda la resalta: la leyenda escribe `data-highlight-class` en el root y
- * cada región ya lleva su `data-class` (depende solo del dato), así que NO se re-renderiza ninguna región.
- * Reglas estáticas para las clases 0-11 y «empty» (más de 12 clases no se resaltan).
+ * Hovering a legend class highlights it: the legend writes `data-highlight-class` on the root and each
+ * region already carries its `data-class` (which depends only on the datum), so NO region is re-rendered.
+ * Static rules for classes 0-11 and "empty" (more than 12 classes are not highlighted).
  */
 :where(.cm-root:not([data-unstyled]))[data-highlight-class="0"] .cm-region:not([data-class="0"]),
 :where(.cm-root:not([data-unstyled]))[data-highlight-class="1"] .cm-region:not([data-class="1"]),
@@ -546,7 +546,7 @@
   transform: translateX(-100%);
 }
 
-/* La trama de «sin dato» también en el swatch de la leyenda. */
+/* The "no data" pattern on the legend swatch too. */
 :where(.cm-root:not([data-unstyled])) .cm-legend__swatch[data-pattern="hatch"] {
   background-image: repeating-linear-gradient(
     45deg,

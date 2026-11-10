@@ -1,4 +1,4 @@
-// Fase B (v0.3), paso 27: contraescalado de burbujas e inercia. Datos SINTÉTICOS deterministas.
+// Phase B (v0.3), step 27: bubble counter-scaling and inertia. Deterministic SYNTHETIC data.
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { toFeatureCollection } from "../src/core";
 import { world110m } from "../src/geo";
@@ -48,14 +48,14 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** `sqrt`: al acercar, las burbujas crecen despacio (√k). Arrastra rápido y suelta: el mapa desliza y frena. */
+/** `sqrt`: when zooming in, bubbles grow slowly (√k). Drag fast and release: the map slides and slows down. */
 export const Sqrt: Story = {};
 
-/** `screen`: tamaño constante en pantalla (acercar no las agranda). */
+/** `screen`: constant size on screen (zooming in does not enlarge them). */
 export const Screen: Story = { args: { bubbleScaling: "screen" } };
 
-/** `geo`: crecen con el mapa (a k alto tapan el país). */
+/** `geo`: they grow with the map (at high k they cover the country). */
 export const Geo: Story = { args: { bubbleScaling: "geo" } };
 
-/** Sin inercia: al soltar, el mapa se para en seco. */
+/** Without inertia: on release, the map stops dead. */
 export const NoInertia: Story = { args: { inertia: true } };

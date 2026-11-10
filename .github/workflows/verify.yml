@@ -1,0 +1,45 @@
+name: Verify
+
+# Runs `pnpm verify` (typecheck + lint + format + tests + build + size-limit + publint/attw)
+# on every push to a pull request that targets develop or master.
+on:
+  pull_request:
+    branches: [develop, master]
+
+# A new push to the same PR cancels the run that is still going.
+concurrency:
+  group: verify-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: pnpm verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # The pnpm version comes from `packageManager` in package.json.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm verify
+
+      # The hard limits are enforced by `pnpm verify`; this only shows the numbers in the run summary.
+      - name: Bundle size summary
+        run: |
+          {
+            echo '### Bundle size (gzip)'
+            echo '```'
+            pnpm exec size-limit
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

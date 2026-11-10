@@ -1,27 +1,27 @@
 /**
- * Textos de UI de la librería (i18n). Inglés por defecto; `es` para español. Cada fase añade los
- * suyos (`drillHint`, `breadcrumbRoot`…). Los mensajes de consola NO pasan por aquí: son para el
- * desarrollador y van siempre en inglés.
+ * The library's UI texts (i18n). English by default; `es` for Spanish. Each phase adds its own
+ * (`drillHint`, `breadcrumbRoot`…). Console messages do NOT go through here: they are for the
+ * developer and are always in English.
  */
 export type ChoroplethLabels = {
-  /** Región sin dato: tooltip y leyenda. */
+  /** Region without data: tooltip and legend. */
   noData: string;
-  /** La geometría asíncrona no se pudo cargar. */
+  /** The asynchronous geometry could not be loaded. */
   geographyError: string;
-  /** Botones de zoom (`aria-label`). */
+  /** Zoom buttons (`aria-label`). */
   zoomIn: string;
   zoomOut: string;
   resetView: string;
-  /** Aviso de `wheel: "cooperative"`. La variante `Mac` se usa en macOS e iOS (⌘ en vez de Ctrl). */
+  /** Hint for `wheel: "cooperative"`. The `Mac` variant is used on macOS and iOS (⌘ instead of Ctrl). */
   gestureHintWheel: string;
   gestureHintWheelMac: string;
   gestureHintTouch: string;
-  /** Drill-down: `aria-label` del `<nav>` de las migas, su raíz (si el primer nivel no tiene `label`), el botón «←» y la pista del tooltip. */
+  /** Drill-down: `aria-label` of the breadcrumbs' `<nav>`, its root (if the first level has no `label`), the "←" button and the tooltip hint. */
   breadcrumb: string;
   breadcrumbRoot: string;
   drillUp: string;
   drillHint: string;
-  /** Táctil: la pista del tooltip tras el primer toque (el segundo baja). */
+  /** Touch: the tooltip hint after the first tap (the second one drills down). */
   tapAgainHint: string;
 };
 
@@ -57,7 +57,7 @@ export const es: ChoroplethLabels = {
   tapAgainHint: "Toca de nuevo para entrar",
 };
 
-/** Completa los textos que falte con los de inglés. */
+/** Fills in any missing texts with the English ones. */
 export const resolveLabels = (labels?: Partial<ChoroplethLabels>): ChoroplethLabels => ({
   ...en,
   ...labels,

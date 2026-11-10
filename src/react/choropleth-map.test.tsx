@@ -19,7 +19,7 @@ const common = {
 } as const;
 
 describe("ChoroplethMap (preset)", () => {
-  it("con las props mínimas pinta mapa, leyenda con «No data» (inglés por defecto) y tooltip", () => {
+  it("with minimal props it draws the map, a legend with No data (English by default) and a tooltip", () => {
     const { container } = render(
       <ChoroplethMap {...common} data={[{ code: "A", v: 1 }]} variant="sequential" />,
     );
@@ -32,19 +32,19 @@ describe("ChoroplethMap (preset)", () => {
     expect(screen.getByRole("tooltip").textContent).toContain("Alpha");
   });
 
-  it("variant diverging con midpoint", () => {
+  it("diverging variant with midpoint", () => {
     render(<ChoroplethMap {...common} variant="diverging" midpoint={5} palette="rdbu" />);
 
     expect(screen.getAllByRole("listitem").length).toBeGreaterThan(0);
   });
 
-  it("legend={false} la oculta", () => {
+  it("legend={false} hides it", () => {
     const { container } = render(<ChoroplethMap {...common} variant="sequential" legend={false} />);
 
     expect(container.querySelector(".cm-legend")).toBeNull();
   });
 
-  it("legend: título, conteos y esquina", () => {
+  it("legend: title, counts and corner", () => {
     const { container } = render(
       <ChoroplethMap
         {...common}
@@ -60,7 +60,7 @@ describe("ChoroplethMap (preset)", () => {
     expect(screen.getAllByText(/^\(\d+\)$/).length).toBeGreaterThan(0);
   });
 
-  it("la esquina por defecto es abajo a la izquierda", () => {
+  it("the default corner is bottom left", () => {
     const { container } = render(<ChoroplethMap {...common} variant="sequential" />);
     const box = container.querySelector(".cm-legend")?.parentElement as HTMLElement;
 
@@ -68,14 +68,14 @@ describe("ChoroplethMap (preset)", () => {
     expect(box.style.left).toBe("12px");
   });
 
-  it("un emptyLabel propio sustituye a «No data»", () => {
+  it("a custom emptyLabel replaces No data", () => {
     render(<ChoroplethMap {...common} data={[]} variant="sequential" emptyLabel="Sin cobertura" />);
 
     expect(screen.getByText("Sin cobertura")).toBeTruthy();
     expect(screen.queryByText("No data")).toBeNull();
   });
 
-  it("renderTooltip recibe el datum tipado; onItemClick y selectedId funcionan", () => {
+  it("renderTooltip receives the typed datum; onItemClick and selectedId work", () => {
     const onItemClick = vi.fn<(e: { id: string }) => void>();
     const { container } = render(
       <ChoroplethMap
@@ -97,28 +97,28 @@ describe("ChoroplethMap (preset)", () => {
     expect(screen.getByText("code:B")).toBeTruthy();
   });
 
-  it("unstyled llega al Root", () => {
+  it("unstyled reaches Root", () => {
     const { container } = render(<ChoroplethMap {...common} variant="sequential" unstyled />);
 
     expect(container.querySelector(".cm-root")?.hasAttribute("data-unstyled")).toBe(true);
   });
 
-  it("className, style y ariaLabel llegan al DOM", () => {
+  it("className, style and ariaLabel reach the DOM", () => {
     const { container } = render(
       <ChoroplethMap
         {...common}
         variant="sequential"
         className="mi-mapa"
         style={{ height: 40 }}
-        ariaLabel="Ventas por país"
+        ariaLabel="Sales by country"
       />,
     );
 
     expect(container.querySelector(".cm-root.mi-mapa")).not.toBeNull();
-    expect(screen.getByRole("img", { name: "Ventas por país" })).toBeTruthy();
+    expect(screen.getByRole("img", { name: "Sales by country" })).toBeTruthy();
   });
 
-  it("categorical y bubble desde el preset", () => {
+  it("categorical and bubble from the preset", () => {
     const { container } = render(
       <>
         <ChoroplethMap {...common} variant="categorical" getCategory={(r) => (r.v ? "a" : null)} />
@@ -130,8 +130,8 @@ describe("ChoroplethMap (preset)", () => {
     expect(screen.getAllByText("a").length).toBeGreaterThan(0);
   });
 
-  // Estas líneas solo se COMPRUEBAN en `pnpm typecheck`: el @ts-expect-error falla si compilan.
-  it("los errores de uso son errores de compilación", () => {
+  // These lines are only CHECKED by `pnpm typecheck`: the @ts-expect-error fails if they compile.
+  it("usage errors are compile errors", () => {
     const { getValue: _omit, ...withoutGetValue } = common;
     const render_ = () => (
       <>

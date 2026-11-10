@@ -1,9 +1,10 @@
 import { useChoroplethContext } from "../choropleth-context";
 
 /**
- * Las tramas, dibujadas ENCIMA del color de cada región (el dato sigue viéndose debajo): las de
- * `getRegionStyle().pattern` y la de las regiones sin dato (`emptyPattern` o la del tema). Va entre las regiones
- * y las fronteras. Sin eventos: no roba el ratón a lo que tiene debajo. Necesita `<Choropleth.Defs>`.
+ * Patterns, drawn ON TOP of each region's color (the datum still shows through underneath): those of
+ * `getRegionStyle().pattern` and that of regions without data (`emptyPattern` or the theme's). It goes
+ * between the regions and the borders. No events: it does not steal the mouse from what is underneath.
+ * It needs `<Choropleth.Defs>`.
  */
 export const Patterns = () => {
   const { choropleth, defId, emptyPattern } = useChoroplethContext();
@@ -20,7 +21,7 @@ export const Patterns = () => {
         <path
           key={id}
           d={d}
-          // Una trama tuya se define dentro de `<Choropleth.Defs>` con `useDefId(name)`: mismo prefijo.
+          // Your own pattern is defined inside `<Choropleth.Defs>` with `useDefId(name)`: same prefix.
           fill={`url(#${defId(name)})`}
         />
       ))}

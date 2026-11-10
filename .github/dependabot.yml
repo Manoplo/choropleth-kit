@@ -1,0 +1,25 @@
+version: 2
+updates:
+  # Dependencies (pnpm is read through the "npm" ecosystem and the lockfile).
+  - package-ecosystem: npm
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # One PR for all minor/patch updates; majors come one by one so they can be reviewed.
+      minor-and-patch:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: chore
+      include: scope
+
+  # The actions used by the workflows above.
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci

@@ -5,21 +5,21 @@ import { useMapStore } from "../map-store";
 import { useIsApplePlatform } from "../platform";
 
 /**
- * El aviso «Usa Ctrl + rueda para hacer zoom» (⌘ en macOS) o «Usa dos dedos para mover el mapa»
- * (dd.md §11.1.2). Solo aparece con `wheel: "cooperative"`, cuando un gesto NO hace zoom pero se le
- * puede enseñar cómo: con `"always"` no hay nada que enseñar. Dura 1,5 s.
+ * The "Use Ctrl + scroll to zoom" hint (⌘ on macOS) or "Use two fingers to move the map"
+ *. It only appears with `wheel: "cooperative"`, when a gesture does NOT zoom but can
+ * be taught how: with `"always"` there is nothing to teach. It lasts 1.5 s.
  *
- * Es `aria-hidden`: una ayuda visual, no un mensaje para lectores de pantalla (el zoom por teclado
- * y los botones ya son accesibles). Siempre está en el DOM y se muestra con un atributo + CSS: así
- * aparece y se va con un fundido, y el texto no desaparece antes de que termine de apagarse.
+ * It is `aria-hidden`: a visual aid, not a message for screen readers (keyboard zoom and the buttons
+ * are already accessible). It is always in the DOM and shown with an attribute + CSS: that way it
+ * fades in and out, and the text does not disappear before it finishes fading.
  */
 export const GestureHint = ({ className }: { className?: string }) => {
   const { choropleth, store, classNames } = useChoroplethContext();
   const hint = useMapStore(store, (s) => s.gestureHint);
   const apple = useIsApplePlatform();
 
-  // Durante el fundido de salida `hint` ya es `null`: se conserva el último para no cambiar el texto.
-  // «Ajustar estado al cambiar un valor»: `hint` es un primitivo del store, así que es estable.
+  // During the fade-out `hint` is already `null`: the last one is kept so the text does not change.
+  // "Adjust state when a value changes": `hint` is a store primitive, so it is stable.
   const [last, setLast] = useState<"wheel" | "touch">("wheel");
   if (hint !== null && hint !== last) setLast(hint);
 

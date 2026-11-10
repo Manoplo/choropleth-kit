@@ -5,33 +5,32 @@ import type { Point } from "./variants";
 export type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 
 export type ZoomControlsOptions = {
-  /** Esquina del mapa. Por defecto `"bottom-right"` (la leyenda va por defecto abajo a la izquierda). */
+  /** Corner of the map. Defaults to `"bottom-right"` (the legend goes bottom-left by default). */
   position?: Corner;
-  /** Mostrar el botón «restablecer vista». Por defecto `true`. */
+  /** Show the "reset view" button. Defaults to `true`. */
   reset?: boolean;
 };
 
 /**
- * Adónde mover la cámara (dd.md §9.5): una región, unos límites o un centro con zoom.
- *  - `string`: id de una región del mapa. Se encuadra su **cuerpo principal** (Francia sin la Guayana).
- *  - `{ bounds }`: [[lonO, latS], [lonE, latN]].
- *  - `{ center, zoom }`: `zoom` relativo al encaje (1 = encaje).
+ * Where to move the camera: a region, some bounds or a center with zoom.
+ *  - `string`: id of a region on the map. Its **main body** is framed (France without Guiana).
+ *  - `{ bounds }`: [[lonW, latS], [lonE, latN]].
+ *  - `{ center, zoom }`: `zoom` relative to the fit (1 = fit).
  */
 export type ZoomTarget =
   string | { bounds: LonLatBounds } | { center: readonly [number, number]; zoom: number };
 
 export type CameraOptions = {
-  /** ms. Sin esto, la duración natural del vuelo (350–1200 ms). `0` = sin animación. */
+  /** ms. Without this, the flight's natural duration (350–1200 ms). `0` = no animation. */
   duration?: number;
-  /** Margen al encuadrar (px). Por defecto el de `zoom.padding` (24). */
+  /** Margin when framing (px). Defaults to that of `zoom.padding` (24). */
   padding?: number | Padding;
 };
 
 /**
- * Encuadres explícitos por región, en lon/lat (dd.md §11.1.5, punto 4). Para Inditex, **Canarias es un
- * caso de negocio, no un detalle geométrico**: el encuadre por defecto de España las incluye, aunque
- * el cuerpo principal de la geometría no. Se fusiona con el `focusBounds` del consumidor; con
- * `{ ES: null }` se vuelve al encuadre geométrico.
+ * Explicit framings per region, in lon/lat. **Spain is framed with the Canary Islands by default**,
+ * even though the geometry's main body does not include them. It is merged with the consumer's
+ * `focusBounds`; with `{ ES: null }` it returns to the geometric framing (peninsula only).
  */
 export const DEFAULT_FOCUS_BOUNDS: Readonly<Record<string, LonLatBounds>> = {
   ES: [
@@ -40,62 +39,62 @@ export const DEFAULT_FOCUS_BOUNDS: Readonly<Record<string, LonLatBounds>> = {
   ],
 };
 
-/** Resultado de un movimiento de cámara animado: `completed` es `false` si algo lo interrumpió. */
+/** Result of an animated camera move: `completed` is `false` if something interrupted it. */
 export type TransitionResult = { completed: boolean };
 
 /**
- * Opciones de zoom y pan (dd.md §11.1.1). Aquí solo van las que ya hacen algo; `inertia`, `padding`
- * e `initialView` se añaden en los pasos 26-27 con su comportamiento (declararlas antes sería
- * prometer lo que no existe).
+ * Zoom and pan options. Only the ones that already do something are here; `inertia`,
+ * `padding` and `initialView` are added in steps 26-27 with their behavior (declaring them earlier
+ * would promise what does not exist).
  */
 export type ZoomOptions = {
-  /** Escala mínima relativa al encaje del nivel (1 = no se puede alejar más que el encaje). Default 1. */
+  /** Minimum scale relative to the level's fit (1 = cannot zoom out further than the fit). Default 1. */
   min?: number;
-  /** Escala máxima. Default 12. */
+  /** Maximum scale. Default 12. */
   max?: number;
   /**
-   * Qué hace la rueda sobre el mapa. Default `"always"`: con el ratón encima, la rueda hace zoom.
-   *  - `"cooperative"`: solo con Ctrl/⌘ + rueda (y táctil con dos dedos); la página sigue
-   *    haciendo scroll. Recomendado para mapas dentro de una página larga o un dashboard.
-   *  - `"never"`: la rueda no hace zoom (se puede seguir arrastrando y pellizcando).
+   * What the wheel does over the map. Default `"always"`: with the mouse over it, the wheel zooms.
+   *  - `"cooperative"`: only with Ctrl/⌘ + wheel (and touch with two fingers); the page keeps
+   *    scrolling. Recommended for maps inside a long page or a dashboard.
+   *  - `"never"`: the wheel does not zoom (dragging and pinching still work).
    *
-   * ⚠️ Con `"always"`, un mapa en una página con scroll se «come» la rueda al pasar por encima
-   * (_scroll-jacking_). dd.md §11.1.1 propone `"cooperative"` como default; aquí se eligió `"always"`.
+   * ⚠️ With `"always"`, a map on a scrolling page "eats" the wheel when passed over
+   * (_scroll-jacking_). `"cooperative"` is the alternative; the default is `"always"`.
    */
   wheel?: "cooperative" | "always" | "never";
-  /** Pellizco con dos dedos. Default `true`. (El pellizco de trackpad llega como Ctrl + rueda.) */
+  /** Two-finger pinch. Default `true`. (A trackpad pinch arrives as Ctrl + wheel.) */
   pinch?: boolean;
-  /** Arrastrar para desplazar. Default `true`. */
+  /** Drag to pan. Default `true`. */
   pan?: boolean;
   /**
-   * Doble clic / doble toque = zoom ×2. `"auto"` (default): activo salvo que el clic tenga otro
-   * significado (`onItemClick` o selección), para no hacer las dos cosas a la vez.
+   * Double click / double tap = zoom ×2. `"auto"` (default): active unless the click has another
+   * meaning (`onItemClick` or selection), so as not to do both at once.
    */
   doubleClick?: boolean | "auto";
-  /** Margen al encuadrar una región o unos límites, en px (dd.md §11.1.1). Default 24. */
+  /** Margin when framing a region or some bounds, in px. Default 24. */
   padding?: number | Padding;
   /**
-   * Vista inicial: la cámara se coloca ahí **sin animar** en el primer render. `focusId` manda sobre
-   * esto. Útil para URLs compartibles: `initialView: { center: [-3.7, 40.4], zoom: 4 }`.
+   * Initial view: the camera is placed there **without animating** on first render. `focusId` takes
+   * precedence over this. Useful for shareable URLs: `initialView: { center: [-3.7, 40.4], zoom: 4 }`.
    */
   initialView?: ZoomTarget;
   /**
-   * Burbujas al hacer zoom (dd.md §11.1.6): `"sqrt"` (default, crecen con √k), `"screen"` (tamaño
-   * constante en pantalla) o `"geo"` (crecen con el mapa).
+   * Bubbles when zooming: `"sqrt"` (default, they grow with √k), `"screen"` (constant
+   * size on screen) or `"geo"` (they grow with the map).
    */
   bubbleScaling?: BubbleScaling;
-  /** Al soltar un arrastre rápido, el mapa sigue deslizándose y frena (dd.md §11.1.4). Default `true`. */
+  /** When a fast drag is released, the map keeps sliding and slows down. Default `true`. */
   inertia?: boolean;
-  /** `"contain"` (default): el contenido no se pierde y se centra si cabe. `"free"`: sin límites. */
+  /** `"contain"` (default): the content is not lost and is centered if it fits. `"free"`: no limits. */
   constrain?: "contain" | "free";
-  /** Atajos de teclado con el mapa enfocado: `+`, `−` y `0`. Default `true`. */
+  /** Keyboard shortcuts with the map focused: `+`, `−` and `0`. Default `true`. */
   keyboard?: boolean;
   /**
-   * Botones `+` / `−` / `⟲`. **Opt-in** (default `false`): `true` o `{ position, reset }`. Los dibuja el
-   * preset; con el compound, pon `<Choropleth.ZoomControls>` donde quieras.
+   * `+` / `−` / `⟲` buttons. **Opt-in** (default `false`): `true` or `{ position, reset }`. The preset
+   * draws them; with the compound, put `<Choropleth.ZoomControls>` wherever you like.
    */
   controls?: boolean | ZoomControlsOptions;
-  /** Al TERMINAR cada gesto (nunca por frame). Con vuelos programáticos, al terminar el vuelo. */
+  /** At the END of each gesture (never per frame). With programmatic flights, at the end of the flight. */
   onViewChange?: (view: ViewState) => void;
 };
 
@@ -105,7 +104,7 @@ export type ResolvedZoom = {
   wheel: "cooperative" | "always" | "never";
   pinch: boolean;
   pan: boolean;
-  /** Ya resuelto: `"auto"` pasa a `true`/`false` según si el clic tiene otro significado. */
+  /** Already resolved: `"auto"` becomes `true`/`false` depending on whether the click has another meaning. */
   doubleClick: boolean;
   constrain: "contain" | "free";
   bubbleScaling: BubbleScaling;
@@ -119,8 +118,8 @@ export const DEFAULT_ZOOM_MIN = 1;
 export const DEFAULT_ZOOM_MAX = 12;
 
 /**
- * `zoom` (la prop) → opciones completas, o `null` si el zoom está desactivado (`zoom={false}`).
- * `clickIsBusy`: el clic ya hace algo (`onItemClick`, selección), para resolver `doubleClick: "auto"`.
+ * `zoom` (the prop) → full options, or `null` if zoom is disabled (`zoom={false}`).
+ * `clickIsBusy`: the click already does something (`onItemClick`, selection), to resolve `doubleClick: "auto"`.
  */
 export const resolveZoomOptions = (
   zoom: boolean | ZoomOptions | undefined,
@@ -151,7 +150,7 @@ export const resolveZoomOptions = (
   };
 };
 
-/** `zoom.controls` → qué dibujar, o `null` si no hay controles (el default). */
+/** `zoom.controls` → what to draw, or `null` if there are no controls (the default). */
 export const resolveControls = (
   zoom: boolean | ZoomOptions | undefined,
 ): Required<ZoomControlsOptions> | null => {
@@ -165,10 +164,10 @@ export const resolveControls = (
 export type ZoomKeyAction = "in" | "out" | "reset";
 
 /**
- * Qué hace una tecla sobre el mapa enfocado: `+` acerca, `−` aleja, `0` vuelve al encaje.
+ * What a key does on the focused map: `+` zooms in, `−` zooms out, `0` returns to the fit.
  *
- * Con Ctrl, ⌘ o Alt NO se interpreta: Ctrl/⌘ + `+`, `−`, `0` es el zoom de la página del navegador, y
- * quitárselo al usuario sería un fallo de accesibilidad.
+ * With Ctrl, ⌘ or Alt it is NOT interpreted: Ctrl/⌘ + `+`, `−`, `0` is the browser's page zoom, and
+ * taking it from the user would be an accessibility failure.
  */
 export const zoomKeyAction = (event: {
   key: string;
@@ -179,7 +178,7 @@ export const zoomKeyAction = (event: {
   if (event.ctrlKey === true || event.metaKey === true || event.altKey === true) return null;
   switch (event.key) {
     case "+":
-    case "=": // la misma tecla que `+` en un teclado US, sin Shift
+    case "=": // the same key as `+` on a US keyboard, without Shift
       return "in";
     case "-":
     case "_":
@@ -191,7 +190,7 @@ export const zoomKeyAction = (event: {
   }
 };
 
-/** Lo mínimo que el filtro necesita de un evento del DOM (así se prueba sin DOM). */
+/** The minimum the filter needs from a DOM event (so it can be tested without a DOM). */
 export type ZoomEventLike = {
   type: string;
   ctrlKey?: boolean;
@@ -201,16 +200,16 @@ export type ZoomEventLike = {
 };
 
 export type ZoomFilterParams = Pick<ResolvedZoom, "wheel" | "pinch" | "pan" | "doubleClick"> & {
-  /** Se llama cuando un gesto NO hace zoom pero se le puede enseñar cómo (aviso de Ctrl/⌘ + rueda). */
+  /** Called when a gesture does NOT zoom but could be taught how (the Ctrl/⌘ + wheel hint). */
   onGestureHint?: (kind: "wheel" | "touch") => void;
 };
 
 /**
- * Qué eventos activan el zoom (dd.md §11.1.2). Sustituye al filtro por defecto de d3-zoom, que es
+ * Which events trigger zoom. Replaces d3-zoom's default filter, which is
  * `(!ctrlKey || type === "wheel") && !button`.
  *
- * Devolver `false` NO llama a `preventDefault`: en `cooperative` la rueda sin modificador y el
- * toque con un dedo siguen haciendo scroll de la página.
+ * Returning `false` does NOT call `preventDefault`: in `cooperative` the wheel without a modifier and
+ * one-finger touch keep scrolling the page.
  */
 export const createZoomFilter =
   ({ wheel, pinch, pan, doubleClick, onGestureHint }: ZoomFilterParams) =>
@@ -219,22 +218,22 @@ export const createZoomFilter =
       case "wheel": {
         if (wheel === "never") return false;
         if (wheel === "always" || event.ctrlKey === true || event.metaKey === true) return true;
-        onGestureHint?.("wheel"); // no hace zoom, pero enseña cómo
+        onGestureHint?.("wheel"); // does not zoom, but teaches how
         return false;
       }
       case "touchstart": {
         const multi = (event.touches?.length ?? 0) >= 2;
-        if (multi) return pinch || pan; // dos dedos: pellizco y desplazamiento a la vez
+        if (multi) return pinch || pan; // two fingers: pinch and pan at once
         if (wheel === "cooperative") {
           onGestureHint?.("touch");
-          return false; // un dedo = scroll de la página
+          return false; // one finger = page scroll
         }
         return pan;
       }
       case "dblclick":
         return doubleClick;
       case "mousedown":
-        return pan && !event.button; // solo el botón principal
+        return pan && !event.button; // primary button only
       default:
         return !event.button;
     }
@@ -244,13 +243,13 @@ export type ResolveZoomTargetParams = {
   target: ZoomTarget;
   size: Size;
   padding?: number | Padding;
-  /** [mínimo, máximo] de `k`. */
+  /** [minimum, maximum] of `k`. */
   scaleExtent: readonly [number, number];
-  /** [lon, lat] → píxeles del lienzo; `null` si no proyecta. */
+  /** [lon, lat] → canvas pixels; `null` if it does not project. */
   project: (coordinates: Point) => Point | null;
-  /** Límites en píxeles del cuerpo principal de una región, o `null` si no existe. */
+  /** Pixel bounds of a region's main body, or `null` if it does not exist. */
   getRegionExtent: (id: string) => Extent | null;
-  /** Encuadres por región (ya fusionados con `DEFAULT_FOCUS_BOUNDS`). `null` = usar la geometría. */
+  /** Framings per region (already merged with `DEFAULT_FOCUS_BOUNDS`). `null` = use the geometry. */
   focusBounds?: Readonly<Record<string, LonLatBounds | null | undefined>>;
 };
 
@@ -258,11 +257,11 @@ const clamp = (value: number, [min, max]: readonly [number, number]): number =>
   Math.min(max, Math.max(min, value));
 
 /**
- * `ZoomTarget` → cámara (dd.md §9.5 y §11.1.5). Pura: la proyección y la geometría llegan como
- * funciones. Devuelve `null` si no se puede resolver (región inexistente, punto fuera del globo).
+ * `ZoomTarget` → camera. Pure: the projection and geometry arrive as
+ * functions. Returns `null` if it cannot be resolved (nonexistent region, point outside the globe).
  *
- * No aplica `constrain`: de eso se encarga quien mueve la cámara, porque d3-zoom solo lo aplica a los
- * gestos, no a las transiciones programáticas.
+ * It does not apply `constrain`: whoever moves the camera takes care of that, because d3-zoom only
+ * applies it to gestures, not to programmatic transitions.
  */
 export const resolveZoomTarget = ({
   target,

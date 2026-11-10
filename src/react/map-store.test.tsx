@@ -3,7 +3,7 @@ import type { ItemRef } from "./map-item";
 import { createMapStore, GESTURE_HINT_MS, useMapStore } from "./map-store";
 
 describe("map-store", () => {
-  it("estado inicial vacío y setState fusiona parches", () => {
+  it("empty initial state and setState merges patches", () => {
     const store = createMapStore();
     expect(store.getState()).toEqual({
       hovered: null,
@@ -21,7 +21,7 @@ describe("map-store", () => {
     });
   });
 
-  it("registra y suelta la API del drill, y guarda el tipo de puntero", () => {
+  it("registers and releases the drill API, and saves the pointer type", () => {
     const store = createMapStore();
     expect(store.getDrill()).toBeNull();
     const api = {
@@ -38,14 +38,14 @@ describe("map-store", () => {
     expect(store.getState().pointerType).toBe("touch");
   });
 
-  it("el aviso de gesto se apaga solo y repetirlo prolonga el aviso", () => {
+  it("the gesture hint turns itself off and repeating it extends the hint", () => {
     vi.useFakeTimers();
     const store = createMapStore();
 
     store.showGestureHint("wheel");
     expect(store.getState().gestureHint).toBe("wheel");
     vi.advanceTimersByTime(GESTURE_HINT_MS - 100);
-    store.showGestureHint("wheel"); // reinicia el temporizador
+    store.showGestureHint("wheel"); // restarts the timer
     vi.advanceTimersByTime(GESTURE_HINT_MS - 100);
     expect(store.getState().gestureHint).toBe("wheel");
     vi.advanceTimersByTime(200);
@@ -53,7 +53,7 @@ describe("map-store", () => {
     vi.useRealTimers();
   });
 
-  it("dispose cancela el temporizador pendiente", () => {
+  it("dispose cancels the pending timer", () => {
     vi.useFakeTimers();
     const store = createMapStore();
     store.showGestureHint("touch");
@@ -64,7 +64,7 @@ describe("map-store", () => {
     vi.useRealTimers();
   });
 
-  it("no notifica si no cambia nada y deja de notificar al desuscribirse", () => {
+  it("does not notify if nothing changes and stops notifying on unsubscribe", () => {
     const store = createMapStore();
     const listener = vi.fn<() => void>();
     const unsubscribe = store.subscribe(listener);
@@ -77,7 +77,7 @@ describe("map-store", () => {
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
-  it("useMapStore solo re-renderiza cuando cambia lo seleccionado", () => {
+  it("useMapStore only re-renders when what is selected changes", () => {
     const store = createMapStore();
     let renders = 0;
     const { result } = renderHook(() => {

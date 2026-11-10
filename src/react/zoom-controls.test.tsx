@@ -8,7 +8,7 @@ import { useChoroplethContext } from "./choropleth-context";
 import type { RootProps } from "./components/root";
 import type { MapStore } from "./map-store";
 
-// Paso 25: botones de zoom, aviso de gesto y teclado.
+// Step 25: zoom buttons, gesture hint and keyboard.
 
 type Row = { code: string; v: number | null };
 const rows: Row[] = [
@@ -25,11 +25,11 @@ const baseProps = {
   height: 100,
 } as const;
 
-/** Captura el store del mapa para llamar a la API de zoom desde el test. */
+/** Captures the map's store to call the zoom API from the test. */
 let store: MapStore;
 const Grab = () => {
   const context = useChoroplethContext();
-  // En un efecto (no durante el render): `render()` de RTL ya lo ha ejecutado cuando devuelve.
+  // In an effect (not during render): RTL's `render()` has already run it when it returns.
   useEffect(() => {
     store = context.store;
   }, [context.store]);
@@ -65,14 +65,14 @@ const wheel = (svg: Element, init: WheelEventInit = {}) =>
 afterEach(() => vi.unstubAllGlobals());
 
 describe("ZoomControls · opt-in", () => {
-  it("el preset NO los dibuja por defecto", () => {
+  it("the preset does NOT draw them by default", () => {
     preset();
     expect(screen.queryAllByRole("button")).toHaveLength(0);
     preset({ zoom: true });
     expect(screen.queryAllByRole("button")).toHaveLength(0);
   });
 
-  it("`zoom={{ controls: true }}` dibuja +, − y ⟲ con aria-label (inglés por defecto)", () => {
+  it("`zoom={{ controls: true }}` draws +, − and ⟲ with aria-label (English by default)", () => {
     preset({ zoom: { controls: true } });
 
     expect(screen.getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual([
@@ -82,7 +82,7 @@ describe("ZoomControls · opt-in", () => {
     ]);
   });
 
-  it("los textos vienen de `labels` (español)", () => {
+  it("the texts come from `labels` (Spanish)", () => {
     preset({ zoom: { controls: true }, labels: es });
 
     expect(button(/acercar/i)).toBeTruthy();
@@ -90,14 +90,14 @@ describe("ZoomControls · opt-in", () => {
     expect(button(/restablecer/i)).toBeTruthy();
   });
 
-  it("`reset: false` quita el botón ⟲", () => {
+  it("`reset: false` removes the ⟲ button", () => {
     preset({ zoom: { controls: { reset: false } } });
 
     expect(screen.getAllByRole("button")).toHaveLength(2);
     expect(screen.queryByRole("button", { name: /reset/i })).toBeNull();
   });
 
-  it("la esquina es configurable (abajo a la derecha por defecto)", () => {
+  it("the corner is configurable (bottom right by default)", () => {
     const { container } = preset({ zoom: { controls: { position: "top-left" } } });
     const controls = container.querySelector<HTMLElement>(".cm-zoom-controls");
 
@@ -109,17 +109,17 @@ describe("ZoomControls · opt-in", () => {
     );
   });
 
-  it("en el compound se coloca a mano; con zoom={false} no dibuja nada", () => {
+  it("in the compound it is placed by hand; with zoom={false} it draws nothing", () => {
     compound({}, <Choropleth.ZoomControls position="top-right" />);
     expect(screen.getAllByRole("button")).toHaveLength(3);
   });
 
-  it("con zoom={false} los controles no se dibujan", () => {
+  it("with zoom={false} the controls are not drawn", () => {
     compound({ zoom: false }, <Choropleth.ZoomControls />);
     expect(screen.queryAllByRole("button")).toHaveLength(0);
   });
 
-  it("son <button type=button> reales (no envían formularios)", () => {
+  it("they are real <button type=button> (they do not submit forms)", () => {
     preset({ zoom: { controls: true } });
     for (const b of screen.getAllByRole("button")) expect(b.getAttribute("type")).toBe("button");
   });
@@ -128,7 +128,7 @@ describe("ZoomControls · opt-in", () => {
 describe("ZoomControls · comportamiento", () => {
   const controls: ZoomOptions = { controls: true };
 
-  it("en el encaje, `−` y `⟲` están deshabilitados y `+` no", () => {
+  it("at the fit, `−` and `⟲` are disabled and `+` is not", () => {
     preset({ zoom: controls });
 
     expect(button(/zoom in/i).disabled).toBe(false);
@@ -136,12 +136,12 @@ describe("ZoomControls · comportamiento", () => {
     expect(button(/reset/i).disabled).toBe(true);
   });
 
-  it("`+` acerca ×2 centrado, y habilita `−` y `⟲` al terminar", async () => {
+  it("`+` zooms in ×2 centered, and enables `−` and `⟲` when done", async () => {
     const { container } = preset({ zoom: controls });
     fireEvent.click(button(/zoom in/i));
 
     await waitFor(() => expect(cameraOf(container).k).toBeCloseTo(2, 3), { timeout: 2000 });
-    // centrado en la vista: el centro del lienzo (100, 50) sigue en el centro
+    // centered on the view: the canvas center (100, 50) stays at the center
     const { k, x, y } = cameraOf(container);
     expect(100 * k + x).toBeCloseTo(100, 3);
     expect(50 * k + y).toBeCloseTo(50, 3);
@@ -149,7 +149,7 @@ describe("ZoomControls · comportamiento", () => {
     expect(button(/reset/i).disabled).toBe(false);
   });
 
-  it("`+` se deshabilita en el máximo", async () => {
+  it("`+` is disabled at the maximum", async () => {
     const { container } = preset({ zoom: { ...controls, max: 2 } });
     fireEvent.click(button(/zoom in/i));
 
@@ -157,7 +157,7 @@ describe("ZoomControls · comportamiento", () => {
     expect(cameraOf(container).k).toBeCloseTo(2, 3);
   });
 
-  it("`−` aleja y `⟲` vuelve al encaje, y se vuelve a deshabilitar", async () => {
+  it("`−` zooms out and `⟲` returns to the fit, and is disabled again", async () => {
     const { container } = preset({ zoom: controls });
     fireEvent.click(button(/zoom in/i));
     await waitFor(() => expect(button(/reset/i).disabled).toBe(false), { timeout: 2000 });
@@ -177,14 +177,14 @@ describe("ZoomControls · comportamiento", () => {
     await waitFor(() => expect(cameraOf(container).k).toBeCloseTo(1, 3), { timeout: 2000 });
   });
 
-  it("un zoom con la rueda también actualiza los botones (cámara confirmada al terminar)", async () => {
+  it("a wheel zoom also updates the buttons (camera confirmed when done)", async () => {
     const { container } = preset({ zoom: controls });
     wheel(svgOf(container));
 
     await waitFor(() => expect(button(/reset/i).disabled).toBe(false), { timeout: 1500 });
   });
 
-  it("onViewChange se llama al terminar cada zoom de los botones", async () => {
+  it("onViewChange is called when each button zoom ends", async () => {
     const onViewChange = vi.fn<(view: unknown) => void>();
     preset({ zoom: { controls: true, onViewChange } });
     fireEvent.click(button(/zoom in/i));
@@ -195,7 +195,7 @@ describe("ZoomControls · comportamiento", () => {
     );
   });
 
-  it("con «reducir movimiento» el salto es inmediato (sin transición)", () => {
+  it("with reduce motion the jump is immediate (no transition)", () => {
     vi.stubGlobal("matchMedia", (query: string) => ({
       matches: query.includes("reduce"),
       media: query,
@@ -205,10 +205,10 @@ describe("ZoomControls · comportamiento", () => {
     const { container } = preset({ zoom: controls });
     fireEvent.click(button(/zoom in/i));
 
-    expect(cameraOf(container).k).toBeCloseTo(2, 6); // sin esperar
+    expect(cameraOf(container).k).toBeCloseTo(2, 6); // without waiting
   });
 
-  it("pulsar los botones no re-renderiza Root", () => {
+  it("pressing the buttons does not re-render Root", () => {
     const getId = vi.fn<(r: Row) => string>((r) => r.code);
     preset({ zoom: controls, getId });
     const before = getId.mock.calls.length;
@@ -219,8 +219,8 @@ describe("ZoomControls · comportamiento", () => {
   });
 });
 
-describe("API de zoom (store.getZoom)", () => {
-  it("zoomBy devuelve una Promise que resuelve `completed: true` al terminar", async () => {
+describe("zoom API (store.getZoom)", () => {
+  it("zoomBy returns a Promise that resolves `completed: true` when done", async () => {
     const { container } = compound();
     const result = await store.getZoom()?.zoomBy(2, { duration: 50 });
 
@@ -228,7 +228,7 @@ describe("API de zoom (store.getZoom)", () => {
     expect(cameraOf(container).k).toBeCloseTo(2, 3);
   });
 
-  it("si otro movimiento la interrumpe, resuelve `completed: false` (no rechaza)", async () => {
+  it("if another move interrupts it, it resolves `completed: false` (it does not reject)", async () => {
     compound();
     const api = store.getZoom();
     const first = api?.zoomBy(2, { duration: 400 });
@@ -238,16 +238,16 @@ describe("API de zoom (store.getZoom)", () => {
     expect(await second).toEqual({ completed: true });
   });
 
-  it("un gesto del usuario (rueda) interrumpe el vuelo en curso", async () => {
+  it("a user gesture (wheel) interrupts the flight in progress", async () => {
     const { container } = compound();
-    await store.getZoom()?.zoomBy(2, { duration: 30 }); // algo que resetear
+    await store.getZoom()?.zoomBy(2, { duration: 30 }); // something to reset
     const flight = store.getZoom()?.resetView({ duration: 600 });
     wheel(svgOf(container));
 
     expect(await flight).toEqual({ completed: false });
   });
 
-  it("resetView con duración propia vuela al encaje", async () => {
+  it("resetView with its own duration flies to the fit", async () => {
     const { container } = compound();
     await store.getZoom()?.zoomBy(2, { duration: 30 });
     const result = await store.getZoom()?.resetView({ duration: 50 });
@@ -256,7 +256,7 @@ describe("API de zoom (store.getZoom)", () => {
     expect(cameraOf(container).k).toBeCloseTo(1, 3);
   });
 
-  it("resetView sin duración usa la del vuelo (acotada) y también termina", async () => {
+  it("resetView without a duration uses the flight's (clamped) and also finishes", async () => {
     const { container } = compound();
     await store.getZoom()?.zoomBy(4, { duration: 30 });
 
@@ -264,7 +264,7 @@ describe("API de zoom (store.getZoom)", () => {
     expect(cameraOf(container).k).toBeCloseTo(1, 3);
   });
 
-  it("al desmontar se des-registra y se interrumpe cualquier vuelo", async () => {
+  it("on unmount it unregisters and any flight is interrupted", async () => {
     const { unmount } = compound();
     const pending = store.getZoom()?.zoomBy(2, { duration: 500 });
     unmount();
@@ -273,7 +273,7 @@ describe("API de zoom (store.getZoom)", () => {
     expect(await pending).toEqual({ completed: false });
   });
 
-  it("con zoom={false} no hay API", () => {
+  it("with zoom={false} there is no API", () => {
     compound({ zoom: false });
     expect(store.getZoom()).toBeNull();
   });
@@ -286,16 +286,16 @@ describe("teclado", () => {
     vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("reduce") }));
   });
 
-  it("el <svg> es un tab stop (tabIndex 0) cuando hay atajos", () => {
+  it("the <svg> is a tab stop (tabIndex 0) when there are shortcuts", () => {
     const { container } = compound();
     expect(svgOf(container).getAttribute("tabindex")).toBe("0");
   });
 
-  it("+ acerca, − aleja y 0 vuelve al encaje, y se cancela el comportamiento del navegador", () => {
+  it("+ zooms in, − zooms out and 0 returns to the fit, and the browser's behavior is cancelled", () => {
     const { container } = compound();
     const svg = svgOf(container);
 
-    expect(key(svg, { key: "+" })).toBe(false); // `preventDefault` llamado
+    expect(key(svg, { key: "+" })).toBe(false); // `preventDefault` called
     expect(cameraOf(container).k).toBeCloseTo(2, 6);
     key(svg, { key: "=" });
     expect(cameraOf(container).k).toBeCloseTo(4, 6);
@@ -305,7 +305,7 @@ describe("teclado", () => {
     expect(cameraOf(container).k).toBeCloseTo(1, 6);
   });
 
-  it("Ctrl/⌘ + tecla NO se intercepta (es el zoom de la página)", () => {
+  it("Ctrl/⌘ + key is NOT intercepted (it is the page zoom)", () => {
     const { container } = compound();
     const svg = svgOf(container);
 
@@ -314,14 +314,14 @@ describe("teclado", () => {
     expect(cameraOf(container).k).toBe(1);
   });
 
-  it("otras teclas no se tocan (Tab sigue funcionando)", () => {
+  it("other keys are left alone (Tab keeps working)", () => {
     const { container } = compound();
 
     expect(key(svgOf(container), { key: "Tab" })).toBe(true);
     expect(key(svgOf(container), { key: "a" })).toBe(true);
   });
 
-  it("zoom={{ keyboard: false }} y zoom={false}: sin tab stop ni atajos", () => {
+  it("zoom={{ keyboard: false }} and zoom={false}: no tab stop or shortcuts", () => {
     const off = compound({ zoom: { keyboard: false } });
     expect(svgOf(off.container).hasAttribute("tabindex")).toBe(false);
     expect(key(svgOf(off.container), { key: "+" })).toBe(true);
@@ -331,7 +331,7 @@ describe("teclado", () => {
     expect(svgOf(none.container).hasAttribute("tabindex")).toBe(false);
   });
 
-  it("el teclado no re-renderiza Root", () => {
+  it("the keyboard does not re-render Root", () => {
     const getId = vi.fn<(r: Row) => string>((r) => r.code);
     const { container } = compound({ getId });
     const before = getId.mock.calls.length;
@@ -345,7 +345,7 @@ describe("GestureHint", () => {
   const cooperative: ZoomOptions = { wheel: "cooperative" };
   const hint = (container: Element) => container.querySelector(".cm-gesture-hint") as HTMLElement;
 
-  it("el preset lo incluye, oculto y aria-hidden", () => {
+  it("the preset includes it, hidden and aria-hidden", () => {
     const { container } = preset({ zoom: cooperative });
 
     expect(hint(container)).not.toBeNull();
@@ -353,7 +353,7 @@ describe("GestureHint", () => {
     expect(hint(container).hasAttribute("data-visible")).toBe(false);
   });
 
-  it("rueda sin modificador en cooperative: aparece «Ctrl + rueda» y se apaga solo", () => {
+  it("wheel without a modifier in cooperative: Ctrl + scroll appears and turns itself off", () => {
     vi.useFakeTimers();
     const { container } = preset({ zoom: cooperative });
     wheel(svgOf(container));
@@ -363,12 +363,12 @@ describe("GestureHint", () => {
 
     act(() => void vi.advanceTimersByTime(1600));
     expect(hint(container).hasAttribute("data-visible")).toBe(false);
-    // el texto se conserva durante el fundido de salida
+    // the text is kept during the fade-out
     expect(hint(container).textContent).toBe("Use Ctrl + scroll to zoom");
     vi.useRealTimers();
   });
 
-  it("en macOS pone ⌘", () => {
+  it("on macOS it shows ⌘", () => {
     vi.spyOn(navigator, "platform", "get").mockReturnValue("MacIntel");
     const { container } = preset({ zoom: cooperative });
     wheel(svgOf(container));
@@ -377,7 +377,7 @@ describe("GestureHint", () => {
     vi.restoreAllMocks();
   });
 
-  it("un dedo en cooperative: «dos dedos»", () => {
+  it("one finger in cooperative: two fingers", () => {
     const { container } = preset({ zoom: cooperative });
     fireEvent.touchStart(svgOf(container), { touches: [{ clientX: 10, clientY: 10 }] });
 
@@ -385,21 +385,21 @@ describe("GestureHint", () => {
     expect(hint(container).textContent).toBe("Use two fingers to move the map");
   });
 
-  it("los textos vienen de `labels`", () => {
+  it("the texts come from `labels`", () => {
     const { container } = preset({ zoom: cooperative, labels: es });
     wheel(svgOf(container));
 
     expect(hint(container).textContent).toBe("Usa Ctrl + rueda para hacer zoom");
   });
 
-  it("con `always` (por defecto) la rueda hace zoom y NO hay aviso", () => {
+  it("with `always` (default) the wheel zooms and there is NO hint", () => {
     const { container } = preset();
     wheel(svgOf(container));
 
     expect(hint(container).hasAttribute("data-visible")).toBe(false);
   });
 
-  it("con Ctrl + rueda en cooperative hace zoom y tampoco avisa", () => {
+  it("with Ctrl + wheel in cooperative it zooms and does not warn either", () => {
     const { container } = preset({ zoom: cooperative });
     wheel(svgOf(container), { ctrlKey: true });
 
@@ -407,7 +407,7 @@ describe("GestureHint", () => {
     expect(cameraOf(container).k).toBeGreaterThan(1);
   });
 
-  it("el compound lo ofrece como pieza (`<Choropleth.GestureHint>`)", () => {
+  it("the compound offers it as a piece (`<Choropleth.GestureHint>`)", () => {
     const { container } = compound({ zoom: cooperative }, <Choropleth.GestureHint />);
     wheel(svgOf(container));
 

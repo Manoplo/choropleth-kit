@@ -5,9 +5,9 @@ import { useChoroplethContext } from "../choropleth-context";
 import { useMapStore } from "../map-store";
 
 export type ZoomControlsProps = {
-  /** Esquina del mapa. Por defecto `"bottom-right"`. */
+  /** Corner of the map. Defaults to `"bottom-right"`. */
   position?: Corner;
-  /** Mostrar «restablecer vista». Por defecto `true`. */
+  /** Show "reset view". Defaults to `true`. */
   reset?: boolean;
   className?: string;
 };
@@ -19,18 +19,18 @@ const CORNERS: Record<Corner, CSSProperties> = {
   "bottom-right": { bottom: 12, right: 12 },
 };
 
-/** Zoom con el mismo factor que el teclado y el doble clic. */
+/** Zoom with the same factor as the keyboard and the double click. */
 const STEP = 2;
 
 /**
- * Botones `+` / `−` / `⟲` (dd.md §11.1.2). Son `<button>` reales (foco, teclado y lector de
- * pantalla gratis), con `aria-label` desde `labels`.
+ * `+` / `−` / `⟲` buttons. They are real `<button>`s (focus, keyboard and screen
+ * reader for free), with `aria-label` from `labels`.
  *
- * Se deshabilitan según la cámara confirmada: `−` en el zoom mínimo, `+` en el máximo y `⟲` si ya
- * estás en el encaje (no promete lo que no puede hacer). Se suscriben a la cámara por el store: un
- * gesto no re-renderiza el mapa, solo estos botones y solo cuando el gesto termina.
+ * They are disabled according to the confirmed camera: `−` at minimum zoom, `+` at maximum and `⟲` if
+ * you are already at the fit (it does not promise what it cannot do). They subscribe to the camera
+ * through the store: a gesture does not re-render the map, only these buttons and only when the gesture ends.
  *
- * Opt-in: en el preset, `zoom={{ controls: true }}`; en el compound, ponlo donde quieras.
+ * Opt-in: in the preset, `zoom={{ controls: true }}`; in the compound, put it wherever you like.
  */
 export const ZoomControls = ({
   position = "bottom-right",

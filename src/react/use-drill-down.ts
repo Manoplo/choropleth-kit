@@ -11,13 +11,13 @@ import type { Feature } from "geojson";
 import type { DrillLevel } from "./drill-levels";
 import { isProduction } from "./env";
 
-/** Fases de la coreografía que el mapa le cuenta al hook (las calcula `drillReducer`). */
+/** Choreography phases the map reports to the hook (computed by `drillReducer`). */
 export type DrillStatus = "idle" | "flying" | "loading" | "revealing";
 
 /**
- * Canal por el que el MAPA escribe `status` y el hook lo lee con `useSyncExternalStore`. Vive fuera de
- * React por la misma razón que el `map-store`: no hay que renderizar el árbol del consumidor en cada
- * cambio de fase.
+ * Channel through which the MAP writes `status` and the hook reads it with `useSyncExternalStore`. It
+ * lives outside React for the same reason as the `map-store`: the consumer's tree must not be
+ * rendered on every phase change.
  */
 export type DrillBridge = {
   getStatus: () => DrillStatus;
@@ -42,48 +42,49 @@ export const createDrillBridge = (): DrillBridge => {
   };
 };
 
-/** Clave (símbolo) del canal en el controlador: es de uso interno del mapa, no API pública. */
+/** Key (symbol) of the channel on the controller: for the map's internal use, not public API. */
 export const DRILL_BRIDGE = Symbol("choropleth.drillBridge");
 
 export type DrillBreadcrumb = DrillCrumb;
 
 export type DrillController<TDatum> = {
   levels: readonly DrillLevel<TDatum>[];
-  /** Ids desde la raíz. Ya recortada a los niveles que existen. */
+  /** Ids from the root. Already trimmed to the levels that exist. */
   path: readonly string[];
   context: DrillContext;
-  /** El nivel actual: `levels[path.length]`. */
+  /** The current level: `levels[path.length]`. */
   level: DrillLevel<TDatum>;
   breadcrumbs: readonly DrillBreadcrumb[];
-  /** Lo escribe el mapa; mientras no hay mapa montado, `"idle"`. */
+  /** Written by the map; while no map is mounted, `"idle"`. */
   status: DrillStatus;
   canDrillUp: boolean;
   /**
-   * Baja un nivel al hijo `id`. Sin nivel por debajo no hace nada (y avisa en desarrollo). Devuelve la
-   * ruta que ha quedado pedida (ya recortada): el mapa la usa para saber a dónde espera llegar.
+   * Goes down one level to child `id`. With no level below, it does nothing (and warns in development).
+   * Returns the route that ended up requested (already trimmed): the map uses it to know where it
+   * expects to arrive.
    */
   drillDown: (id: string) => readonly string[];
-  /** Sube `steps` niveles (por defecto 1); más que la profundidad = a la raíz. */
+  /** Goes up `steps` levels (1 by default); more than the depth = to the root. */
   drillUp: (steps?: number) => readonly string[];
-  /** Cualquier ruta: lateral, saltos, la URL. */
+  /** Any route: lateral, jumps, the URL. */
   drillTo: (path: readonly string[]) => readonly string[];
-  /** Vuelve a la raíz. */
+  /** Back to the root. */
   reset: () => readonly string[];
-  /** @internal El canal con el que el mapa publica `status`. */
+  /** @internal The channel through which the map publishes `status`. */
   readonly [DRILL_BRIDGE]: DrillBridge;
 };
 
 export type UseDrillDownOptions<TDatum> = {
   levels: readonly DrillLevel<TDatum>[];
-  /** Controlado: tú mandas (p. ej. desde la URL). El hook solo avisa con `onPathChange`. */
+  /** Controlled: you are in charge (e.g. from the URL). The hook only notifies via `onPathChange`. */
   path?: readonly string[];
   /** No controlado: ruta inicial. */
   defaultPath?: readonly string[];
-  /** Se llama en cada cambio de ruta pedido (clic, teclado, migas, `drillTo`), controlado o no. */
+  /** Called on every requested route change (click, keyboard, breadcrumbs, `drillTo`), controlled or not. */
   onPathChange?: (path: readonly string[]) => void;
   /**
-   * Nombre de cada paso de las migas. Por defecto, el id. (El hook no ve la geometría: el nombre de la
-   * región, `properties.name`, lo pone el mapa cuando exista; aquí `feature` y `datum` van vacíos.)
+   * Name of each breadcrumb step. The id by default. (The hook does not see the geometry: the region's
+   * name, `properties.name`, is set by the map when it exists; here `feature` and `datum` are empty.)
    */
   getLabel?: (args: { id: string; depth: number; feature?: Feature; datum?: TDatum }) => string;
 };
@@ -96,12 +97,12 @@ const warn = (message: string) => {
 };
 
 /**
- * Estado de navegación del drill-down (dd.md §11.2.2): la ruta, en modo controlado o no controlado, y
- * lo que se deduce de ella (nivel, contexto, migas). No carga geometría ni mueve la cámara: eso lo hace
- * el mapa, que además le cuenta su fase (`status`).
+ * Drill-down navigation state: the route, in controlled or uncontrolled mode, and
+ * what is deduced from it (level, context, breadcrumbs). It loads no geometry and moves no camera:
+ * the map does that, and it also reports its phase back (`status`).
  *
- * Controlado = `path` presente (el patrón de `<input value>`). La ruta se recorta a los niveles que
- * existen: con N niveles, N − 1 ids como máximo.
+ * Controlled = `path` present (the `<input value>` pattern). The route is trimmed to the levels that
+ * exist: with N levels, N − 1 ids at most.
  */
 export const useDrillDown = <TDatum>({
   levels,
@@ -110,7 +111,7 @@ export const useDrillDown = <TDatum>({
   onPathChange,
   getLabel,
 }: UseDrillDownOptions<TDatum>): DrillController<TDatum> => {
-  // La lista de niveles suele ser una constante; si cambia de contenido se vuelve a comprobar.
+  // The list of levels is usually a constant; if its content changes it is checked again.
   useMemo(() => validateLevels(levels), [levels]);
 
   const controlled = controlledPath !== undefined;
@@ -123,18 +124,18 @@ export const useDrillDown = <TDatum>({
   const { path, clamped } = clampPath(requested, levels.length);
   const pathKey = JSON.stringify(requested);
 
-  // Una ruta más profunda que los niveles (típico: una URL vieja) se recorta; se avisa una vez por ruta.
+  // A route deeper than the levels (typical: an old URL) is trimmed; a warning is given once per route.
   useEffect(() => {
     if (clamped) {
       warn(
         `path ${pathKey} is deeper than the ${levels.length} level(s) allow; it was truncated to ${JSON.stringify(path)}.`,
       );
     }
-    // `path` y `levels.length` se derivan de lo que ya está en las dependencias.
+    // `path` and `levels.length` are derived from what is already in the dependencies.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [clamped, pathKey]);
 
-  // Lo último, para que las funciones sean estables (se pasan a handlers y a efectos del mapa).
+  // Last, so the functions are stable (they are passed to handlers and to the map's effects).
   const latest = useRef({ path, levels: levels.length, controlled, onPathChange });
   useEffect(() => {
     latest.current = { path, levels: levels.length, controlled, onPathChange };
@@ -149,7 +150,7 @@ export const useDrillDown = <TDatum>({
       );
     }
     if (samePath(valid, current.path)) return valid;
-    // Dos llamadas en el mismo tick (`drillUp(); drillDown(x)`) ven la ruta ya cambiada.
+    // Two calls in the same tick (`drillUp(); drillDown(x)`) see the already-changed route.
     latest.current = { ...current, path: valid };
     if (!current.controlled) setInnerPath(valid);
     current.onPathChange?.(valid);
@@ -181,8 +182,8 @@ export const useDrillDown = <TDatum>({
         rootLabel,
         getLabel: getLabel === undefined ? undefined : ({ id, depth }) => getLabel({ id, depth }),
       }),
-    // `getLabel` suele ser una función en línea: su identidad no debe recalcular las migas en cada render.
-    // La ruta (`pathKey`) y la raíz sí.
+    // `getLabel` is usually an inline function: its identity must not recompute the breadcrumbs on every render.
+    // The route (`pathKey`) and the root do.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
     [pathKey, rootLabel],
   );
@@ -210,8 +211,8 @@ export const useDrillDown = <TDatum>({
 };
 
 /**
- * La prop `drill` admite una lista de niveles (no controlado) o un controlador de `useDrillDown`
- * (controlado). Esto distingue una cosa de la otra.
+ * The `drill` prop accepts a list of levels (uncontrolled) or a `useDrillDown` controller
+ * (controlled). This tells one from the other.
  */
 export const isDrillController = <TDatum>(
   drill: readonly DrillLevel<TDatum>[] | DrillController<TDatum>,

@@ -1,6 +1,6 @@
 import { fadeThrough, FADE_IN_MS, FADE_OUT_MS } from "./fade";
 
-// Un `Element.animate` falso donde el test decide cuándo termina cada animación.
+// A fake `Element.animate` where the test decides when each animation ends.
 type FakeAnimation = {
   keyframes: Keyframe[];
   options: KeyframeAnimationOptions;
@@ -40,8 +40,8 @@ const fakeElement = () => {
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-describe("fadeThrough (reduced-motion: fundido en vez de vuelo)", () => {
-  it("sin Web Animations API, salta directamente y resuelve", async () => {
+describe("fadeThrough (reduced motion: a fade instead of a flight)", () => {
+  it("without the Web Animations API, it jumps directly and resolves", async () => {
     const jump = vi.fn<() => void>();
     const fade = fadeThrough({} as Element, jump);
 
@@ -49,12 +49,12 @@ describe("fadeThrough (reduced-motion: fundido en vez de vuelo)", () => {
     expect(await fade.promise).toEqual({ completed: true });
   });
 
-  it("opacidad a 0 en 100 ms → SALTO → opacidad a 1 en 150 ms, en ese orden", async () => {
+  it("opacity to 0 in 100 ms → JUMP → opacity to 1 in 150 ms, in that order", async () => {
     const { element, animations } = fakeElement();
     const order: string[] = [];
     const fade = fadeThrough(element, () => order.push("jump"));
 
-    // nada ha saltado mientras se apaga
+    // nothing has jumped while it fades out
     expect(animations).toHaveLength(1);
     expect(animations[0]?.keyframes).toEqual([{ opacity: 1 }, { opacity: 0 }]);
     expect(animations[0]?.options.duration).toBe(FADE_OUT_MS);
@@ -67,18 +67,18 @@ describe("fadeThrough (reduced-motion: fundido en vez de vuelo)", () => {
     expect(animations).toHaveLength(2);
     expect(animations[1]?.keyframes).toEqual([{ opacity: 0 }, { opacity: 1 }]);
     expect(animations[1]?.options.duration).toBe(FADE_IN_MS);
-    expect(animations[0]?.cancelled).toBe(true); // se libera el `fill: forwards`
+    expect(animations[0]?.cancelled).toBe(true); // the `fill: forwards` is released
 
     animations[1]?.finish();
     expect(await fade.promise).toEqual({ completed: true });
   });
 
-  it("los fundidos son cortos (la cámara no se mueve: solo continuidad)", () => {
+  it("the fades are short (the camera does not move: continuity only)", () => {
     expect(FADE_OUT_MS).toBeLessThanOrEqual(100);
     expect(FADE_IN_MS).toBeLessThanOrEqual(150);
   });
 
-  it("cancelar durante el fundido de salida: la cámara NUNCA llega a saltar", async () => {
+  it("cancelling during the fade-out: the camera NEVER gets to jump", async () => {
     const { element, animations } = fakeElement();
     const jump = vi.fn<() => void>();
     const fade = fadeThrough(element, jump);
@@ -89,7 +89,7 @@ describe("fadeThrough (reduced-motion: fundido en vez de vuelo)", () => {
     expect(animations).toHaveLength(1);
   });
 
-  it("cancelar durante el fundido de entrada: ya saltó, resuelve completed: false", async () => {
+  it("cancelling during the fade-in: it already jumped, resolves completed: false", async () => {
     const { element, animations } = fakeElement();
     const jump = vi.fn<() => void>();
     const fade = fadeThrough(element, jump);

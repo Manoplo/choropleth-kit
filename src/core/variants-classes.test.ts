@@ -1,7 +1,7 @@
 import { classIndex } from "./legend";
 import { resolveVariant, type ResolveVariantOptions, type VariantEntry } from "./variants";
 
-// Índice de clase por región (`classes`): lo que permite resaltar una clase de la leyenda sin re-renderizar.
+// Class index per region (`classes`): what makes it possible to highlight a legend class without re-rendering.
 
 type Row = { id: string; v: number | null; cat?: string };
 
@@ -29,7 +29,7 @@ const run = (config: ResolveVariantOptions<Row>["config"], emptyLabel?: string) 
   });
 
 describe("resolveVariant · classes", () => {
-  it("clasificada: la clase de cada región es la de su color, y coincide con los conteos de la leyenda", () => {
+  it("classed: each region's class is that of its color, and matches the legend's counts", () => {
     const r = run(
       {
         variant: "sequential",
@@ -39,13 +39,13 @@ describe("resolveVariant · classes", () => {
       "No data",
     );
 
-    // D (nulo) y E (sin fila) no pertenecen a ninguna clase.
+    // D (null) and E (no row) belong to no class.
     expect(r.classes[3]).toBeNull();
     expect(r.classes[4]).toBeNull();
     const counts = r.legend.filter((i) => i.empty !== true).map(() => 0);
     for (const c of r.classes) if (c !== null) counts[c] = (counts[c] ?? 0) + 1;
     expect(counts).toEqual(r.legend.filter((i) => i.empty !== true).map((i) => i.count));
-    // Y el color del item de esa clase es el color con el que se pinta la región.
+    // And that class's item color is the color the region is painted with.
     const colorOfClass = r.classes.flatMap((c, i) =>
       c === null ? [] : [[r.legend[c]?.color, r.fills[i]]],
     );
@@ -53,13 +53,13 @@ describe("resolveVariant · classes", () => {
     for (const [legendColor, fill] of colorOfClass) expect(legendColor).toBe(fill);
   });
 
-  it("el item de «sin dato» está marcado y no es una clase", () => {
+  it("the no-data item is marked and is not a class", () => {
     const r = run({ variant: "sequential", getValue: (d) => d.v }, "No data");
     expect(r.legend.at(-1)?.empty).toBe(true);
     expect(r.legend.slice(0, -1).every((i) => i.empty === undefined)).toBe(true);
   });
 
-  it("diverging también", () => {
+  it("diverging too", () => {
     const r = run({
       variant: "diverging",
       getValue: (d) => (d.v === null ? null : d.v - 50),
@@ -68,7 +68,7 @@ describe("resolveVariant · classes", () => {
     expect(r.classes[0]).toBeLessThan(r.classes[2] as number);
   });
 
-  it("escala continua: ninguna región tiene clase (no hay clases que resaltar)", () => {
+  it("continuous scale: no region has a class (there are no classes to highlight)", () => {
     const r = run({
       variant: "sequential",
       getValue: (d) => d.v,
@@ -78,7 +78,7 @@ describe("resolveVariant · classes", () => {
     expect(r.classes).toEqual([null, null, null, null, null]);
   });
 
-  it("categórica: el índice es el de la categoría en la leyenda; las desconocidas y sin dato, null", () => {
+  it("categorical: the index is the category's in the legend; unknown and no data, null", () => {
     const r = run(
       {
         variant: "categorical",
@@ -87,18 +87,18 @@ describe("resolveVariant · classes", () => {
       },
       "No data",
     );
-    expect(r.classes).toEqual([1, 0, 1, null, null]); // `zzz` no está declarada
+    expect(r.classes).toEqual([1, 0, 1, null, null]); // `zzz` is not declared
     expect(r.legend[0]?.label).toBe("y");
   });
 
-  it("bubble: las regiones no llevan clase (el color va en las burbujas)", () => {
+  it("bubble: regions carry no class (the color is in the bubbles)", () => {
     const r = run({ variant: "bubble", getValue: (d) => d.v });
     expect(r.classes.every((c) => c === null)).toBe(true);
   });
 });
 
 describe("classIndex", () => {
-  it("un valor justo en un corte cae en la clase de ARRIBA", () => {
+  it("a value exactly on a break falls in the class ABOVE", () => {
     expect(classIndex([10, 20], 9.99)).toBe(0);
     expect(classIndex([10, 20], 10)).toBe(1);
     expect(classIndex([10, 20], 20)).toBe(2);

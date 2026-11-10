@@ -3,16 +3,16 @@ import { cx } from "../class-names";
 import { useChoroplethContext } from "../choropleth-context";
 
 /**
- * Las capas del drill que NO son la activa (dd.md §11.2.5), dentro de la cámara:
- *  - `context`: los niveles de arriba, en gris y sin color de dato. Razón cartográfica: la escala del padre y
- *    la del hijo son distintas; ver ambas en color invita a comparar lo que no es comparable. Sus regiones
- *    navegables se pueden pulsar (navegación lateral).
- *  - `exiting`: el nivel que se acaba de dejar, que se desvanece.
+ * The drill layers that are NOT the active one, inside the camera:
+ *  - `context`: the levels above, in gray and with no datum color. Cartographic reason: the parent's
+ *    scale and the child's differ; seeing both in color invites comparing what is not comparable. Their
+ *    drillable regions can be clicked (lateral navigation).
+ *  - `exiting`: the level that was just left, fading out.
  *
- * Las rutas son las CACHEADAS de cada nivel, en los píxeles de su proyección; el `transform` del `<g>` (la
- * afín `R`, que NO es el de la cámara) las lleva a los del nivel activo: cero recálculo.
+ * The paths are each level's CACHED ones, in the pixels of its projection; the `<g>`'s `transform` (the
+ * affine map `R`, which is NOT the camera's) carries them to those of the active level: zero recomputation.
  *
- * `role="context"` va DEBAJO de las regiones activas y `role="exiting"` ENCIMA (se desvanece sobre ellas).
+ * `role="context"` goes BELOW the active regions and `role="exiting"` ABOVE (it fades over them).
  */
 export const DrillLayers = ({ role }: { role: "context" | "exiting" }) => {
   const { choropleth, classNames } = useChoroplethContext();
@@ -52,7 +52,7 @@ export const DrillLayers = ({ role }: { role: "context" | "exiting" }) => {
                 data-context-id={path.id}
                 data-focus={path.focus ? "" : undefined}
                 data-drillable={path.drillable ? "" : undefined}
-                // Al salir conserva su color de dato (solo `exiting`); el contexto lo da el CSS, en gris.
+                // When leaving it keeps its datum color (`exiting` only); the context gets it from the CSS, in gray.
                 style={path.fill === undefined ? undefined : { fill: path.fill }}
               />
             ))}

@@ -1,7 +1,7 @@
 import { computeThresholds, finiteValues } from "./classify";
 
 describe("finiteValues", () => {
-  it("descarta null, undefined, NaN e Infinity pero conserva el 0", () => {
+  it("discards null, undefined, NaN and Infinity but keeps 0", () => {
     expect(finiteValues([1, null, undefined, NaN, Infinity, -Infinity, 0])).toEqual([1, 0]);
   });
 });
@@ -9,26 +9,26 @@ describe("finiteValues", () => {
 describe("computeThresholds", () => {
   const domain = [0, 100] as const;
 
-  it("linear no tiene cortes", () => {
+  it("linear has no breaks", () => {
     expect(
       computeThresholds({ values: [1, 2, 3], classification: { method: "linear" }, domain }),
     ).toEqual([]);
   });
 
-  it("quantize reparte el rango en tramos iguales", () => {
+  it("quantize splits the range into equal bands", () => {
     expect(
       computeThresholds({ values: [], classification: { method: "quantize", classes: 4 }, domain }),
     ).toEqual([25, 50, 75]);
   });
 
-  it("quantize usa 5 clases por defecto", () => {
+  it("quantize uses 5 classes by default", () => {
     expect(
       computeThresholds({ values: [], classification: { method: "quantize" }, domain }),
     ).toEqual([20, 40, 60, 80]);
   });
 
-  it("quantile reparte los datos, no el rango (datos sesgados)", () => {
-    // Un valor extremo (1000) no desplaza los cortes de los demás, a diferencia de quantize.
+  it("quantile splits the data, not the range (skewed data)", () => {
+    // An extreme value (1000) does not shift the others' breaks, unlike quantize.
     const values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 1000];
     const quantile = computeThresholds({
       values,
@@ -45,13 +45,13 @@ describe("computeThresholds", () => {
     expect(quantize).toEqual([500.5]);
   });
 
-  it("quantile sin valores devuelve sin cortes", () => {
+  it("quantile without values returns no breaks", () => {
     expect(
       computeThresholds({ values: [], classification: { method: "quantile" }, domain }),
     ).toEqual([]);
   });
 
-  it("quantile con una clase no tiene cortes", () => {
+  it("quantile with one class has no breaks", () => {
     expect(
       computeThresholds({
         values: [1, 2, 3],
@@ -61,7 +61,7 @@ describe("computeThresholds", () => {
     ).toEqual([]);
   });
 
-  it("threshold devuelve una copia de los cortes dados", () => {
+  it("threshold returns a copy of the given breaks", () => {
     const given = [0, 5, 10];
     const result = computeThresholds({
       values: [],

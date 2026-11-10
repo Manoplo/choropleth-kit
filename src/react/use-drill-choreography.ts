@@ -12,32 +12,33 @@ import type { MapStore } from "./map-store";
 import type { DrillEngine } from "./use-drill-engine";
 
 /**
- * Duración del revelado (dd.md §11.2.3): 200 ms de fundido + hasta 250 ms de escalonado por distancia al
- * punto del clic. Con «reducir movimiento» es 0: el nivel nuevo aparece sin animar.
+ * Duration of the reveal: 200 ms of fade + up to 250 ms of staggering by distance from
+ * the click point. With "reduce motion" it is 0: the new level appears without animating.
  */
 export const REVEAL_MS = 450;
 
 export type UseDrillChoreographyParams<TDatum> = {
   engine: DrillEngine<TDatum>;
   store: MapStore;
-  /** La cadena de proyecciones de lo que se muestra (o `null` si aún no hay). */
+  /** The projection chain of what is shown (or `null` if there is none yet). */
   shownChain: ProjectionChain | null;
-  /** Construye la cadena de una ruta con el tamaño, el padding y los encuadres vigentes. */
+  /** Builds a route's chain with the current size, padding and framings. */
   chainFor: (levels: ChainLevel[], path: readonly string[]) => ProjectionChain;
 };
 
 const lastOf = <T>(items: readonly T[]): T | undefined => items[items.length - 1];
 
 /**
- * La parte de la coreografía que necesita el tamaño y las proyecciones (dd.md §11.2.3): mueve la cámara y
- * da por terminado el revelado. Lee del reducer (`engine.machine`) QUÉ toca hacer y le devuelve QUÉ pasó
- * (`FLIGHT_END`, `REVEAL_END`).
+ * The part of the choreography that needs the size and the projections: it moves the
+ * camera and marks the reveal as done. It reads from the reducer (`engine.machine`) WHAT to do and
+ * reports back WHAT happened (`FLIGHT_END`, `REVEAL_END`).
  *
- *  - **Bajar / lateral:** vuela a `R`, la afín que separa la proyección del nivel actual de la del destino
- *    (`relativeTransform`). Así, al acabar el vuelo, cambiar de proyección con cámara identidad pinta los
- *    mismos píxeles y el rebase es invisible. NO pasa por `constrain`: tiene que acabar exactamente en `R`.
- *  - **Subir / vuelta atrás:** vuela a la cámara que había antes de bajar (o al encaje).
- *  - **Sin zoom** (`zoom={false}`) o sin encuadre posible: no hay vuelo, la fase pasa de golpe.
+ *  - **Down / lateral:** flies to `R`, the affine map separating the current level's projection from
+ *    the target's (`relativeTransform`). That way, when the flight ends, switching projection with an
+ *    identity camera paints the same pixels and the rebase is invisible. It does NOT go through
+ *    `constrain`: it has to end exactly at `R`.
+ *  - **Up / backing out:** flies to the camera that existed before going down (or to the fit).
+ *  - **No zoom** (`zoom={false}`) or no possible framing: there is no flight, the phase passes at once.
  */
 export const useDrillChoreography = <TDatum>({
   engine,
@@ -47,7 +48,7 @@ export const useDrillChoreography = <TDatum>({
 }: UseDrillChoreographyParams<TDatum>): void => {
   const { active, machine, dispatch } = engine;
 
-  // Lo que cambia en cada render pero no debe relanzar el vuelo se lee al usarlo.
+  // What changes on every render but must not relaunch the flight is read at the time of use.
   const latest = useRef({ engine, shownChain, chainFor });
   useEffect(() => {
     latest.current = { engine, shownChain, chainFor };
@@ -64,10 +65,10 @@ export const useDrillChoreography = <TDatum>({
 
     let destination: CameraTransform | null;
     if (state.direction === "up") {
-      // Subir (o deshacer una bajada): a la cámara que había antes de bajar.
+      // Going up (or undoing a descent): to the camera that existed before going down.
       destination = state.returnCamera ?? savedCameraFor(state, state.path) ?? FIT_TRANSFORM;
     } else {
-      // Bajar / lateral: a `R`, en el espacio del nivel que se está viendo.
+      // Down / lateral: to `R`, in the space of the level being viewed.
       const levels = current.chainLevelsFor(state.path);
       const next = levels === null ? null : build(levels, state.path);
       const from = lastOf(shown?.projections ?? []);
@@ -80,12 +81,12 @@ export const useDrillChoreography = <TDatum>({
 
     const api = store.getZoom();
     if (api === null || destination === null) {
-      finish(true); // sin zoom o sin encuadre posible: no hay vuelo
+      finish(true); // no zoom or no possible framing: there is no flight
       return;
     }
     const flight = { cancelled: false };
     void api.flyTo(destination).then(({ completed }) => {
-      // Si el vuelo se redirigió, este `FLIGHT_END` lleva un id viejo y el reducer lo ignora.
+      // If the flight was redirected, this `FLIGHT_END` carries an old id and the reducer ignores it.
       if (!flight.cancelled) finish(completed);
     });
     return () => {
@@ -93,7 +94,7 @@ export const useDrillChoreography = <TDatum>({
     };
   }, [active, flying, flightId, store, dispatch]);
 
-  // El revelado dura lo que dura la animación CSS; después los niveles que salían desaparecen.
+  // The reveal lasts as long as the CSS animation; afterwards the leaving levels disappear.
   const revealing = machine.phase === "revealing";
   useEffect(() => {
     if (!active || !revealing) return;

@@ -29,7 +29,7 @@ const setup = (overrides: Partial<UseChoroplethOptions<Row>> = {}) =>
   );
 
 describe("useChoropleth", () => {
-  it("devuelve una región por feature con id, path, fill, datum y valor", () => {
+  it("returns one region per feature with id, path, fill, datum and value", () => {
     const { result } = setup();
 
     expect(result.current.regions.map((r) => r.id)).toEqual(["A", "B"]);
@@ -39,7 +39,7 @@ describe("useChoropleth", () => {
     expect(result.current.regions[0]?.fill).not.toBe(result.current.regions[1]?.fill);
   });
 
-  it("región sin dato o con value null → emptyFill (y el 0 se colorea)", () => {
+  it("region without data or with value null → emptyFill (and 0 is colored)", () => {
     const { result } = setup({
       data: [
         { code: "A", v: null },
@@ -56,14 +56,14 @@ describe("useChoropleth", () => {
     expect(r2.current.regions[1]?.fill).toBe("#eee");
   });
 
-  it("fronteras: string con TopoJSON, null con GeoJSON", () => {
+  it("borders: a string with TopoJSON, null with GeoJSON", () => {
     expect(setup().result.current.borders).toMatch(/^M/);
 
     const geojson: FeatureCollection = { type: "FeatureCollection", features: [] };
     expect(setup({ geography: geojson }).result.current.borders).toBeNull();
   });
 
-  it("rutas y fronteras son estables al cambiar solo los datos, y el color cambia", () => {
+  it("paths and borders are stable when only the data changes, and the color changes", () => {
     const { result, rerender } = setup();
     const before = result.current;
 
@@ -79,7 +79,7 @@ describe("useChoropleth", () => {
     expect(result.current.regions[0]?.fill).not.toBe(before.regions[0]?.fill);
   });
 
-  it("cambiar el tamaño recalcula las rutas", () => {
+  it("changing the size recomputes the paths", () => {
     const { result, rerender } = setup();
     const before = result.current.regions[0]?.path;
 
@@ -88,13 +88,13 @@ describe("useChoropleth", () => {
     expect(result.current.regions[0]?.path).not.toBe(before);
   });
 
-  it("diverging usa dominio simétrico con el midpoint", () => {
+  it("diverging uses a symmetric domain with the midpoint", () => {
     const { result } = setup({ variant: "diverging", midpoint: 5 } as never);
 
     expect(result.current.scale?.domain).toEqual([1, 9]);
   });
 
-  it("joinReport informa de datos huérfanos y regiones sin dato", () => {
+  it("joinReport reports orphan data and regions without data", () => {
     const { result } = setup({
       data: [
         { code: "ES", v: 1 },
@@ -106,7 +106,7 @@ describe("useChoropleth", () => {
     expect(result.current.joinReport.featuresWithoutData).toEqual(["B"]);
   });
 
-  it("los datos huérfanos no influyen en la escala", () => {
+  it("orphan data does not influence the scale", () => {
     const { result } = setup({
       data: [
         { code: "A", v: 1 },
@@ -117,7 +117,7 @@ describe("useChoropleth", () => {
     expect(result.current.scale?.domain[1]).toBe(1);
   });
 
-  it("getFeatureId permite cruzar por una propiedad", () => {
+  it("getFeatureId lets you join by a property", () => {
     const { result } = setup({
       getFeatureId: (f) => (f.properties as { name: string }).name,
       data: [{ code: "Alpha", v: 3 }],
@@ -127,7 +127,7 @@ describe("useChoropleth", () => {
     expect(result.current.regions[0]?.datum).toEqual({ code: "Alpha", v: 3 });
   });
 
-  it("la leyenda cuenta regiones, con item de sin dato opcional", () => {
+  it("the legend counts regions, with an optional no-data item", () => {
     const { result } = setup({ data: [{ code: "A", v: 1 }], emptyLabel: "Sin dato" });
     const total = result.current.legend.reduce((n, i) => n + i.count, 0);
 
@@ -135,7 +135,7 @@ describe("useChoropleth", () => {
     expect(result.current.legend.at(-1)).toMatchObject({ label: "Sin dato", count: 1 });
   });
 
-  it("getRegionProps: click, hover y selección", () => {
+  it("getRegionProps: click, hover and selection", () => {
     const onItemClick = vi.fn<(event: unknown) => void>();
     const onItemHover = vi.fn<(event: unknown) => void>();
     const { result } = setup({ onItemClick, onItemHover, selectedId: "B" });
@@ -168,10 +168,10 @@ describe("useChoropleth", () => {
     expect(onItemHover).toHaveBeenLastCalledWith(null);
   });
 
-  it("sin handlers, click y hover no fallan", () => {
+  it("without handlers, click and hover do not fail", () => {
     const { result } = setup();
     const a = result.current.regions[0];
-    if (a === undefined) throw new Error("falta región");
+    if (a === undefined) throw new Error("missing region");
 
     act(() => {
       result.current.getRegionProps(a).onClick({} as never);
@@ -180,7 +180,7 @@ describe("useChoropleth", () => {
     expect(result.current.store.getState().hovered).toEqual({ kind: "region", id: "A" });
   });
 
-  it("omite regiones sin id", () => {
+  it("omits regions without an id", () => {
     const geo: FeatureCollection = {
       type: "FeatureCollection",
       features: [
@@ -192,34 +192,34 @@ describe("useChoropleth", () => {
   });
 });
 
-describe("useChoropleth · diagnóstico", () => {
+describe("useChoropleth · diagnostics", () => {
   const warn = () => vi.mocked(console.warn);
 
-  it("avisa una vez por consola con las pistas cuando hay ids sin cruzar", () => {
+  it("warns once on the console with the hints when there are ids that did not join", () => {
     setup({ data: [{ code: "ES", v: 1 }] });
 
     expect(warn()).toHaveBeenCalledTimes(1);
     expect(String(warn().mock.calls[0]?.[0])).toContain("1 datum(s) have no matching geometry");
   });
 
-  it("no vuelve a avisar en renders que no cambian el resultado (hover incluido)", () => {
+  it("does not warn again on renders that do not change the result (hover included)", () => {
     const { result, rerender } = setup({ data: [{ code: "ES", v: 1 }] });
-    rerender({ data: [{ code: "ES", v: 2 }] }); // otro valor, mismo cruce
+    rerender({ data: [{ code: "ES", v: 2 }] }); // another value, same join
     const a = result.current.regions[0];
-    if (a === undefined) throw new Error("falta región");
+    if (a === undefined) throw new Error("missing region");
     act(() => result.current.getRegionProps(a).onPointerEnter({} as never));
 
     expect(warn()).toHaveBeenCalledTimes(1);
   });
 
-  it("vuelve a avisar cuando cambia el resultado del cruce", () => {
+  it("warns again when the join result changes", () => {
     const { rerender } = setup({ data: [{ code: "ES", v: 1 }] });
     rerender({ data: [{ code: "FR", v: 1 }] });
 
     expect(warn()).toHaveBeenCalledTimes(2);
   });
 
-  it("no avisa si todo cruza, si no hay datos aún, ni con diagnostics={false}", () => {
+  it("does not warn if everything joins, if there is no data yet, or with diagnostics={false}", () => {
     setup({
       data: [
         { code: "A", v: 1 },
@@ -232,7 +232,7 @@ describe("useChoropleth · diagnóstico", () => {
     expect(warn()).not.toHaveBeenCalled();
   });
 
-  it("no escribe en consola en producción, pero onJoinReport sí se llama", () => {
+  it("does not write to the console in production, but onJoinReport is still called", () => {
     vi.stubEnv("NODE_ENV", "production");
     const onJoinReport = vi.fn<(report: unknown) => void>();
     setup({ data: [{ code: "ES", v: 1 }], onJoinReport });
@@ -244,7 +244,7 @@ describe("useChoropleth · diagnóstico", () => {
     );
   });
 
-  it("onJoinReport se llama al montar y al cambiar el cruce, no en cada render", () => {
+  it("onJoinReport is called on mount and when the join changes, not on every render", () => {
     const onJoinReport = vi.fn<(report: unknown) => void>();
     const { rerender } = setup({ data: [{ code: "A", v: 1 }], onJoinReport });
     rerender({ data: [{ code: "A", v: 5 }], onJoinReport: () => onJoinReport(1) });
@@ -255,7 +255,7 @@ describe("useChoropleth · diagnóstico", () => {
   });
 });
 
-describe("useChoropleth · variants categorical y bubble", () => {
+describe("useChoropleth · categorical and bubble variants", () => {
   type Shop = {
     code: string;
     kind: string;
@@ -279,7 +279,7 @@ describe("useChoropleth · variants categorical y bubble", () => {
       } as unknown as UseChoroplethOptions<Shop>),
     ).result.current;
 
-  it("categorical: color por categoría, valor = categoría, etiqueta = label, sin escala numérica", () => {
+  it("categorical: color per category, value = category, label = label, no numeric scale", () => {
     const r = run({
       variant: "categorical",
       getCategory: (s: Shop) => s.kind,
@@ -293,7 +293,7 @@ describe("useChoropleth · variants categorical y bubble", () => {
     expect(r.legend.map((i) => i.label)).toEqual(["Insignia", "outlet"]);
   });
 
-  it("bubble sobre regiones: una burbuja por región con dato, en su centroide, regiones neutras", () => {
+  it("bubble over regions: one bubble per region with data, at its centroid, neutral regions", () => {
     const r = run({
       variant: "bubble",
       getValue: (s: Shop) => s.sales,
@@ -309,7 +309,7 @@ describe("useChoropleth · variants categorical y bubble", () => {
     expect(r.sizeLegend).toHaveLength(3);
   });
 
-  it("bubble bivariante: color por getColorValue y leyenda de color", () => {
+  it("bivariate bubble: color by getColorValue and a color legend", () => {
     const r = run({
       variant: "bubble",
       getValue: (s: Shop) => s.sales,
@@ -321,7 +321,7 @@ describe("useChoropleth · variants categorical y bubble", () => {
     expect(r.legend.length).toBeGreaterThan(0);
   });
 
-  it("bubble con getCoordinates: se posiciona con la proyección y no avisa de ids sin región", () => {
+  it("bubble with getCoordinates: positioned with the projection and does not warn about ids without a region", () => {
     const stores: Shop[] = [
       { code: "tienda-1", kind: "x", sales: 10, at: [0.5, 0.5] },
       { code: "tienda-2", kind: "x", sales: 20, at: [1.5, 0.5] },

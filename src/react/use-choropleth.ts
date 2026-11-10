@@ -78,56 +78,56 @@ import { useDrillEngine } from "./use-drill-engine";
 import type { DrillController } from "./use-drill-down";
 import { useGeography, type GeographyStatus } from "./use-geography";
 
-/** Una región lista para pintar. */
+/** A region ready to paint. */
 export type Region<TDatum> = {
   id: string;
   feature: Feature;
-  /** `undefined` = región sin dato. */
+  /** `undefined` = region without data. */
   datum: TDatum | undefined;
-  /** Atributo `d` del `<path>`. */
+  /** The `<path>`'s `d` attribute. */
   path: string;
   fill: string;
-  /** Valor del dato: número, categoría (`categorical`) o `null` si no hay dato. */
+  /** The datum's value: number, category (`categorical`) or `null` if there is no datum. */
   value: number | string | null;
-  /** `value` listo para mostrar («1,5 %», «Europa»); cadena vacía si no hay valor. */
+  /** `value` ready to display ("1.5 %", "Europe"); empty string if there is no value. */
   formattedValue: string;
-  /** Hay un nivel por debajo y `canDrill` lo permite (siempre `false` sin `drill`). */
+  /** There is a level below and `canDrill` allows it (always `false` without `drill`). */
   drillable: boolean;
-  /** 0…1: cuánto se retrasa su entrada en el revelado (distancia al centro). Solo mientras se revela. */
+  /** 0…1: how much its entrance is delayed in the reveal (distance from the center). Only while revealing. */
   wave: number | undefined;
-  /** De `getRegionStyle`; `undefined` = la del CSS (1). */
+  /** From `getRegionStyle`; `undefined` = the CSS one (1). */
   opacity: number | undefined;
-  /** De `getRegionStyle`: clase propia para esta región. */
+  /** From `getRegionStyle`: a class of its own for this region. */
   className: string | undefined;
-  /** De `getRegionStyle`: trama dibujada ENCIMA del color (`"hatch"`, `"dots"` o el nombre de una tuya en `<Choropleth.Defs>`). */
+  /** From `getRegionStyle`: a pattern drawn ON TOP of the color (`"hatch"`, `"dots"` or the name of your own in `<Choropleth.Defs>`). */
   pattern: string | undefined;
-  /** Clase de la leyenda a la que pertenece (`data-class`), o `null` (sin dato, escala continua, `bubble`). */
+  /** Legend class it belongs to (`data-class`), or `null` (no data, continuous scale, `bubble`). */
   classIndex: number | null;
 };
 
 /**
- * Estilo por región (dd.md §12.5.6): excepciones basadas en datos que la escala no sabe expresar. Se evalúa en
- * render y sus campos pasan al `<path>` como primitivas, así que no rompe el `memo` de las regiones.
+ * Per-region style: data-based exceptions the scale cannot express. It is evaluated in
+ * render and its fields reach the `<path>` as primitives, so it does not break the regions' `memo`.
  */
 export type RegionStyle = {
-  /** Sustituye al color de la escala (y a `emptyFill`). */
+  /** Replaces the scale's color (and `emptyFill`). */
   fill?: string;
   opacity?: number;
-  /** Clase propia; se suma a `classNames.region`. */
+  /** A class of its own; it is added to `classNames.region`. */
   className?: string;
   /**
-   * Trama dibujada encima del color (el dato sigue viéndose): `"hatch"` o `"dots"`, o el nombre de un `<pattern>`
-   * tuyo definido en `<Choropleth.Defs>` con `useDefId(nombre)`. Necesita `<Choropleth.Defs>` y `<Choropleth.Patterns>`
-   * (el preset y `Choropleth.Svg` ya los incluyen).
+   * Pattern drawn over the color (the datum still shows through): `"hatch"` or `"dots"`, or the name of
+   * your own `<pattern>` defined in `<Choropleth.Defs>` with `useDefId(name)`. It needs `<Choropleth.Defs>`
+   * and `<Choropleth.Patterns>` (the preset and `Choropleth.Svg` already include them).
    */
   pattern?: "hatch" | "dots" | (string & {});
 };
 
 /**
- * Una capa del drill que NO es la activa (dd.md §11.2.5). `context`: los niveles de arriba, en gris y sin
- * dato (la escala del padre y la del hijo no son comparables). `exiting`: el nivel que se acaba de dejar,
- * que se desvanece. Las rutas están en los píxeles de SU proyección; `transform` las lleva a los del
- * nivel activo (es la afín `R` entre las dos proyecciones), así que se reutilizan las rutas cacheadas.
+ * A drill layer that is NOT the active one. `context`: the levels above, in gray and
+ * with no data (the parent's scale and the child's are not comparable). `exiting`: the level that was
+ * just left, fading out. The paths are in the pixels of THEIR projection; `transform` carries them to
+ * those of the active level (it is the affine map `R` between the two projections), so the cached paths are reused.
  */
 export type DrillLayerView = {
   key: string;
@@ -139,140 +139,140 @@ export type DrillLayerView = {
     d: string;
     focus: boolean;
     drillable: boolean;
-    /** Solo en `exiting`: el color que tenía la región (se desvanece con él). */
+    /** `exiting` only: the color the region had (it fades with it). */
     fill: string | undefined;
   }[];
 };
 
-/** Una miga de la ruta del drill (dd.md §11.2.5). */
+/** A crumb of the drill route. */
 export type DrillNavItem = {
   depth: number;
-  /** `null` en la raíz. */
+  /** `null` at the root. */
   id: string | null;
   label: string;
-  /** La última: el nivel al que se va (o en el que se está). */
+  /** The last one: the level being gone to (or being at). */
   current: boolean;
 };
 
-/** Lo que necesita un breadcrumb (el del preset o el tuyo). `null` sin `drill`. */
+/** What a breadcrumb needs (the preset's or yours). `null` without `drill`. */
 export type DrillNav = {
   items: DrillNavItem[];
   canDrillUp: boolean;
-  /** Va a la miga de esa profundidad (0 = raíz). */
+  /** Goes to the crumb at that depth (0 = root). */
   drillTo: (depth: number) => void;
   drillUp: (steps?: number) => void;
 };
 
 export type JoinReport = Omit<JoinResult<unknown>, "joined">;
 
-/** Qué se atenúa cuando hay selección o hover (dd.md §12.1). */
+/** What is dimmed when there is a selection or hover. */
 export type DimOthers = "never" | "selection" | "hover-and-selection";
 
 type BaseOptions<TDatum> = {
   /**
-   * TopoJSON o GeoJSON, una promesa, o `() => import("…")`. Un dato ya cargado debe tener una
-   * referencia estable (constante de módulo o `useMemo`).
+   * TopoJSON or GeoJSON, a promise, or `() => import("…")`. Already-loaded data must have a stable
+   * reference (a module constant or `useMemo`).
    */
   geography?: GeographyInput;
-  /** Clave de caché para una geometría asíncrona (si no, se usa la identidad de la función). */
+  /** Cache key for an async geometry (otherwise the function's identity is used). */
   geographyKey?: string;
   objectName?: string;
-  /** Descarta regiones antes de todo (p. ej. la Antártida: `(f) => f.id !== "010"`). */
+  /** Discards regions before anything else (e.g. Antarctica: `(f) => f.id !== "010"`). */
   filterFeatures?: (feature: Feature) => boolean;
   /**
-   * `undefined` = cargando (se mantiene lo anterior, sin avisos); `[]` = cargado y vacío. Con `drill`
-   * puede ser un selector del nivel actual: `({ depth, parentId }) => rows.filter(…)`.
+   * `undefined` = loading (the previous data is kept, no warnings); `[]` = loaded and empty. With `drill`
+   * it can be a selector for the current level: `({ depth, parentId }) => rows.filter(…)`.
    */
   data: readonly TDatum[] | undefined | ((ctx: DrillContext) => readonly TDatum[] | undefined);
   /**
-   * Drill-down (dd.md §11.2): la lista de niveles (no controlado) o un `useDrillDown` (controlado).
-   * Con `drill`, la geometría sale de los niveles y `geography` se ignora.
+   * Drill-down: the list of levels (uncontrolled) or a `useDrillDown` (controlled).
+   * With `drill`, the geometry comes from the levels and `geography` is ignored.
    */
   drill?: readonly DrillLevel<TDatum>[] | DrillController<TDatum>;
-  /** Al EMPEZAR un cambio de nivel (la ruta ya está actualizada). */
+  /** When a level change STARTS (the route is already updated). */
   onDrill?: (event: DrillEvent<TDatum>) => void;
-  /** Al terminar de mostrar el nivel nuevo. */
+  /** When the new level has finished being shown. */
   onDrillEnd?: (event: DrillEvent<TDatum>) => void;
-  /** Si falla la geometría de un nivel (o tiene 0 regiones): se vuelve al nivel anterior. */
+  /** If a level's geometry fails (or has 0 regions): it goes back to the previous level. */
   onDrillError?: (event: { error: unknown; ctx: DrillContext }) => void;
   /**
-   * El puntero lleva 150 ms sobre una región a la que se puede bajar (o, en táctil, se tocó una vez): `ctx` es
-   * el del nivel al que bajaría. Úsalo para precargar los datos (`queryClient.prefetchQuery`); la geometría
-   * de ese nivel ya la precarga el mapa. Se llama una vez por permanencia.
+   * The pointer has stayed 150 ms over a region you can drill into (or, on touch, it was tapped once):
+   * `ctx` is that of the level it would go down to. Use it to preload data (`queryClient.prefetchQuery`);
+   * that level's geometry is already preloaded by the map. Called once per dwell.
    */
   onDrillIntent?: (ctx: DrillContext) => void;
-  /** Fuerza el estado de carga de los datos (pulso) aunque `data` esté definido. */
+  /** Forces the data loading state (pulse) even if `data` is defined. */
   loading?: boolean;
   getId: (datum: TDatum) => string;
-  /** Id de la región si no es `feature.id` (p. ej. `(f) => f.properties?.iso_a2`). */
+  /** The region's id if it is not `feature.id` (e.g. `(f) => f.properties?.iso_a2`). */
   getFeatureId?: (feature: Feature) => string | undefined;
   projection?: ProjectionName;
   /**
-   * ancho / alto del mapa. `"auto"` lo deriva de los límites de la geometría (Chile sale alto,
-   * Noruega ancho). Por defecto 960 / 500, la proporción del mundo.
+   * Width / height of the map. `"auto"` derives it from the geometry's bounds (Chile comes out tall,
+   * Norway wide). 960 / 500 by default, the world's proportion.
    */
   aspectRatio?: number | "auto";
   emptyFill?: string;
   formatValue?: (value: number) => string;
-  /** Si se pasa, la leyenda incluye un item "sin dato" con este texto. */
+  /** If given, the legend includes a "no data" item with this text. */
   emptyLabel?: string;
-  /** Textos de UI (i18n). Inglés por defecto; `es` está exportado. */
+  /** UI texts (i18n). English by default; `es` is exported. */
   labels?: Partial<ChoroplethLabels>;
   /**
-   * Microestados que no existen en la geometría (Andorra, Mónaco…): `{ AD: [1.52, 42.51] }`. Un
-   * dato cuyo id no cruza con ninguna región pero sí está aquí se pinta como un punto, con el
-   * color del dato. En `bubble`, como una burbuja.
+   * Microstates that do not exist in the geometry (Andorra, Monaco…): `{ AD: [1.52, 42.51] }`. A datum
+   * whose id joins no region but is listed here is painted as a dot, with the datum's color. In
+   * `bubble`, as a bubble.
    */
   fallbackPoints?: Readonly<Record<string, Point>>;
-  /** Tamaño fijo. Si faltan, se mide el contenedor (`containerRef`). */
+  /** Fixed size. If missing, the container (`containerRef`) is measured. */
   width?: number;
   height?: number;
-  // ── selección (solo regiones) ───────────────────────────────────────────────────────────────
-  /** Controlada: tú mandas. `null` = nada seleccionado. Sin esto, el estado lo lleva la librería. */
+  // ── selection (regions only) ────────────────────────────────────────────────────────────────
+  /** Controlled: you are in charge. `null` = nothing selected. Without this, the library holds the state. */
   selectedId?: string | null;
-  /** No controlada: selección inicial. */
+  /** Uncontrolled: the initial selection. */
   defaultSelectedId?: string | null;
-  /** Se llama al cambiar la selección (clic en una región; clic en la seleccionada = `null`). */
+  /** Called when the selection changes (click on a region; click on the selected one = `null`). */
   onSelectedIdChange?: (id: string | null) => void;
-  /** Atenúa el resto del mapa. Por defecto `"selection"`. */
+  /** Dims the rest of the map. Defaults to `"selection"`. */
   dimOthers?: DimOthers;
-  /** Clic en una región o en un punto (`item.kind`). */
+  /** Click on a region or a point (`item.kind`). */
   onItemClick?: (item: MapItem<TDatum>) => void;
-  /** Hover (o primer toque, en táctil). `null` al salir. Solo se llama cuando cambia el item. */
+  /** Hover (or first tap, on touch). `null` on leaving. Only called when the item changes. */
   onItemHover?: (item: MapItem<TDatum> | null) => void;
   /**
-   * Estilo por región basado en sus datos: `(r) => r.datum?.estimated ? { opacity: 0.6 } : undefined`. Prioridad:
-   * `getRegionStyle` > color de la escala > `emptyFill`. No definas `fill` en `.cm-region` por CSS: ganaría al dato.
+   * Per-region style based on its data: `(r) => r.datum?.estimated ? { opacity: 0.6 } : undefined`. Priority:
+   * `getRegionStyle` > scale color > `emptyFill`. Do not define `fill` on `.cm-region` in CSS: it would beat the datum.
    */
   getRegionStyle?: (region: Region<TDatum>) => RegionStyle | undefined;
-  /** Se llama cada vez que cambia el resultado del cruce datos↔regiones (también en producción). */
+  /** Called every time the data↔regions join result changes (also in production). */
   onJoinReport?: (report: JoinReport) => void;
   /**
-   * Vuela a esta región (id) cuando cambia; con `null` vuelve al encaje. En el **primer render** no
-   * vuela: coloca la cámara directamente. Es la forma declarativa de `zoomTo` (dd.md §11.1.5).
+   * Flies to this region (id) when it changes; with `null` it returns to the fit. On the **first render**
+   * it does not fly: it places the camera directly. It is the declarative form of `zoomTo`.
    */
   focusId?: string | null;
   /**
-   * Encuadres explícitos por región, en [[lonO, latS], [lonE, latN]]. Se fusionan con los de la
-   * librería (`DEFAULT_FOCUS_BOUNDS`: España **con Canarias**). `{ ES: null }` vuelve al encuadre
-   * geométrico (cuerpo principal) para esa región.
+   * Explicit framings per region, in [[lonW, latS], [lonE, latN]]. They are merged with the library's
+   * (`DEFAULT_FOCUS_BOUNDS`: Spain **with the Canary Islands**). `{ ES: null }` returns to the geometric
+   * framing (main body) for that region.
    */
   focusBounds?: Readonly<Record<string, LonLatBounds | null>>;
   /**
-   * Zoom y pan (dd.md §11.1). Activo por defecto; `false` = mapa estático. La rueda hace zoom con el
-   * ratón encima (`wheel: "always"`); para mapas dentro de una página larga usa `wheel: "cooperative"`.
+   * Zoom and pan. On by default; `false` = static map. The wheel zooms with the mouse over
+   * the map (`wheel: "always"`); for maps inside a long page use `wheel: "cooperative"`.
    */
   zoom?: boolean | ZoomOptions;
-  /** Se llama si falla la carga asíncrona de la geometría. Sin esto, se avisa por consola. */
+  /** Called if the async geometry load fails. Without this, a console warning is issued. */
   onGeographyError?: (error: Error) => void;
-  /** Aviso en consola de ids sin cruzar. Solo fuera de producción. Por defecto `true`. */
+  /** Console warning about ids that did not join. Outside production only. Defaults to `true`. */
   diagnostics?: boolean;
 };
 
-/** Opciones comunes + las de cada `variant` (unión discriminada, ver `core/variants.ts`). */
+/** Common options + those of each `variant` (a discriminated union, see `core/variants.ts`). */
 export type UseChoroplethOptions<TDatum> = BaseOptions<TDatum> & VariantConfig<TDatum>;
 
-/** Props listas para esparcir en el `<path>` de una región (`<path {...getRegionProps(r)} />`). */
+/** Props ready to spread onto a region's `<path>` (`<path {...getRegionProps(r)} />`). */
 export type RegionProps = {
   "data-region-id": string;
   "data-selected": true | undefined;
@@ -281,7 +281,7 @@ export type RegionProps = {
   onPointerLeave: PointerEventHandler;
 };
 
-/** Props para el `<circle>` de una burbuja con coordenadas propias (un punto). */
+/** Props for the `<circle>` of a bubble with its own coordinates (a point). */
 export type PointProps = {
   "data-point-id": string;
   onClick: MouseEventHandler;
@@ -289,7 +289,7 @@ export type PointProps = {
   onPointerLeave: PointerEventHandler;
 };
 
-/** Un microestado pintado como punto (`fallbackPoints`) fuera de `bubble`. */
+/** A microstate painted as a dot (`fallbackPoints`) outside `bubble`. */
 export type FallbackPoint<TDatum> = {
   id: string;
   x: number;
@@ -302,106 +302,106 @@ export type FallbackPoint<TDatum> = {
   coordinates: Point;
 };
 
-/** Radio en píxeles de un punto de respaldo. */
+/** Radius in pixels of a fallback point. */
 export const FALLBACK_POINT_RADIUS = 4;
 
 export type UseChoroplethResult<TDatum> = {
-  /** Pon esta ref en el contenedor para que el mapa se adapte a su ancho. */
+  /** Put this ref on the container so the map adapts to its width. */
   containerRef: React.RefObject<HTMLDivElement | null>;
   width: number;
   height: number;
-  /** Fase de la coreografía del drill (`null` sin `drill`). Se publica como `data-drill-phase`. */
+  /** Phase of the drill choreography (`null` without `drill`). Published as `data-drill-phase`. */
   drillPhase: "idle" | "flying" | "loading" | "revealing" | null;
-  /** Región hacia la que se baja mientras dura el vuelo / la carga (se atenúa el resto). */
+  /** Region being drilled into while the flight / load lasts (the rest is dimmed). */
   drillFocusId: string | null;
-  /** Capas de contexto (niveles de arriba, en gris) y la que sale. Vacío sin `drill`. */
+  /** Context layers (levels above, in gray) and the one that leaves. Empty without `drill`. */
   drillLayers: DrillLayerView[];
-  /** Clic en una región de una capa de contexto (navegación lateral o salto). */
+  /** Click on a region of a context layer (lateral navigation or jump). */
   selectContextItem: (depth: number, id: string) => void;
-  /** Migas y navegación del drill (`null` sin `drill`). */
+  /** Drill breadcrumbs and navigation (`null` without `drill`). */
   drillNav: DrillNav | null;
-  /** `loading` mientras llega la geometría asíncrona; `error` si falló. */
+  /** `loading` while the async geometry arrives; `error` if it failed. */
   status: GeographyStatus;
-  /** `true` mientras `data` es `undefined` (o `loading`): se mantiene el último dato. */
+  /** `true` while `data` is `undefined` (or `loading`): the last data is kept. */
   dataLoading: boolean;
   regions: Region<TDatum>[];
-  /** `d` de las regiones SIN id: se pintan en `emptyFill`, sin interacción (Kosovo en world-atlas). */
+  /** `d` of the regions WITHOUT an id: they are painted with `emptyFill`, with no interaction (Kosovo in world-atlas). */
   anonymousPaths: string[];
-  /** Color de «sin dato» ya resuelto (`emptyFill` o la variable CSS). */
+  /** Already-resolved "no data" color (`emptyFill` or the CSS variable). */
   emptyFill: string;
-  /** Microestados pintados como punto (vacío en `bubble`: ahí son burbujas). */
+  /** Microstates painted as a dot (empty in `bubble`: there they are bubbles). */
   fallbackPoints: FallbackPoint<TDatum>[];
   labels: ChoroplethLabels;
-  /** Opciones de zoom ya resueltas; `null` si `zoom={false}`. */
+  /** Already-resolved zoom options; `null` if `zoom={false}`. */
   zoom: ResolvedZoom | null;
-  /** `onViewChange` del usuario (no forma parte de `zoom`: no debe reinstalar el comportamiento). */
+  /** The user's `onViewChange` (not part of `zoom`: it must not reinstall the behavior). */
   onViewChange: ZoomOptions["onViewChange"];
-  /** Píxeles del lienzo → [lon, lat] (`projection.invert`); `null` si cae fuera del globo. */
+  /** Canvas pixels → [lon, lat] (`projection.invert`); `null` if it falls outside the globe. */
   invert: (point: Point) => Point | null;
-  /** [lon, lat] → píxeles del lienzo; `null` si no proyecta. */
+  /** [lon, lat] → canvas pixels; `null` if it does not project. */
   project: (coordinates: Point) => Point | null;
-  /** `focusId` tal cual, para que `useZoom` lo aplique (volar o colocar la cámara). */
+  /** `focusId` as is, so `useZoom` applies it (fly or place the camera). */
   focusId: string | null | undefined;
   /**
-   * `ZoomTarget` → cámara (ya limitada por `constrain`), o `null` si no se puede resolver (región
-   * inexistente). Es lo que usan `zoomTo`, `focusId` e `initialView`.
+   * `ZoomTarget` → camera (already limited by `constrain`), or `null` if it cannot be resolved
+   * (nonexistent region). It is what `zoomTo`, `focusId` and `initialView` use.
    */
   resolveCamera: (
     target: ZoomTarget,
     options?: { padding?: number | Padding },
   ) => CameraTransform | null;
-  /** Fronteras interiores (`d` de un `<path>`). `null` con GeoJSON: usa `stroke` en cada región. */
+  /** Interior borders (a `<path>`'s `d`). `null` with GeoJSON: use `stroke` on each region. */
   borders: string | null;
-  /** Leyenda de color (swatches con conteos). Vacía en `bubble` sin `getColorValue`. */
+  /** Color legend (swatches with counts). Empty in `bubble` without `getColorValue`. */
   legend: LegendItem[];
-  /** Círculos de referencia del tamaño (solo `bubble`). */
+  /** Size reference circles (`bubble` only). */
   sizeLegend: SizeLegendItem[];
-  /** Burbujas ya posicionadas, de mayor a menor (solo `bubble`). */
+  /** Already-positioned bubbles, from largest to smallest (`bubble` only). */
   bubbles: Bubble<TDatum>[];
-  /** Escala numérica de color. `null` en `categorical` y en `bubble` sin `getColorValue`. */
+  /** Numeric color scale. `null` in `categorical` and in `bubble` without `getColorValue`. */
   scale: ColorScale | null;
   joinReport: JoinReport;
-  /** Formateador efectivo (el del usuario o el de por defecto), para tooltip y leyenda. */
+  /** Effective formatter (the user's or the default), for tooltip and legend. */
   formatValue: (value: number) => string;
-  /** `true` si hay `onItemClick`: los componentes ponen cursor `pointer`. */
+  /** `true` if there is `onItemClick`: components set a `pointer` cursor. */
   clickable: boolean;
   /**
-   * Estado de interacción (hover, puntero) fuera de React. Léelo con `useMapStore(store, s => s.hoveredId)`:
-   * así cambiar de región no re-renderiza el componente que llama a `useChoropleth`.
+   * Interaction state (hover, pointer) outside React. Read it with `useMapStore(store, s => s.hoveredId)`:
+   * that way changing region does not re-render the component that calls `useChoropleth`.
    */
   store: MapStore;
   selectedId: string | null;
-  /** Selecciona una región (`null` la quita). Respeta el modo controlado: solo avisa. */
+  /** Selects a region (`null` clears it). It respects controlled mode: it only notifies. */
   setSelectedId: (id: string | null) => void;
-  /** Hover de un item (o `null`). Actualiza el store y llama a `onItemHover` solo si cambia. */
+  /** Hover of an item (or `null`). Updates the store and calls `onItemHover` only if it changes. */
   hoverItem: (ref: ItemRef | null) => void;
   /** Clic en un item: llama a `onItemClick`. */
   clickItem: (ref: ItemRef) => void;
-  /** El item completo (con valor, color y nombre) para el tooltip; `undefined` si ya no existe. */
+  /** The complete item (with value, color and name) for the tooltip; `undefined` if it no longer exists. */
   getItemContext: (ref: ItemRef) => ItemContext<TDatum> | undefined;
   getRegionProps: (region: Region<TDatum>) => RegionProps;
   getPointProps: (point: { id: string }) => PointProps;
 };
 
 /**
- * Nivel 3 (headless) y motor de los otros dos: `<Choropleth.Root>` y `<ChoroplethMap>` lo llaman
- * y reparten su resultado. Devuelve datos, no elementos: tú decides cómo pintarlos.
+ * Level 3 (headless) and the engine of the other two: `<Choropleth.Root>` and `<ChoroplethMap>` call it
+ * and distribute its result. It returns data, not elements: you decide how to paint them.
  *
- * Qué se memoiza y por qué: solo lo caro y lo que debe tener identidad estable.
- *  - Geometría (`features`, `borders`): depende solo de `geography` (y del filtro, por su RESULTADO).
- *  - Rutas SVG: dependen de geometría, proyección y tamaño. NO de los datos, así que cambiar de
- *    indicador o de `variant` no recalcula ni una ruta (criterio de aceptación de dd.md §20).
- * El join y la escala son O(regiones) y se recalculan en cada render: memoizarlos exigiría que el
- * consumidor estabilizara `getId`/`getValue`/`classification`, y casi nadie lo hace.
+ * What is memoized and why: only what is expensive and what must have a stable identity.
+ *  - Geometry (`features`, `borders`): depends only on `geography` (and on the filter, by its RESULT).
+ *  - SVG paths: depend on geometry, projection and size. NOT on the data, so changing indicator or
+ *    `variant` recomputes not a single path (an acceptance criterion).
+ * The join and the scale are O(regions) and are recomputed on every render: memoizing them would
+ * require the consumer to stabilize `getId`/`getValue`/`classification`, and almost nobody does.
  */
 export const useChoropleth = <TDatum>(
   rawOptions: UseChoroplethOptions<TDatum>,
 ): UseChoroplethResult<TDatum> => {
-  // Estado de interacción (hover, puntero, cámara) fuera de React. Va primero: el drill lee la cámara.
+  // Interaction state (hover, pointer, camera) outside React. It goes first: the drill reads the camera.
   const [store] = useState(createMapStore);
 
-  // ── drill-down: el nivel que se muestra manda sobre las opciones del mapa ──────────────────────
-  // Para el resto del hook, un mapa con `drill` es un mapa de UN nivel con otras opciones.
+  // ── drill-down: the level being shown overrides the map's options ───────────────────────────────
+  // To the rest of the hook, a map with `drill` is a ONE-level map with different options.
   const engine = useDrillEngine<TDatum>({
     drill: rawOptions.drill,
     data: rawOptions.data,
@@ -428,8 +428,8 @@ export const useChoropleth = <TDatum>(
   const isBubble = options.variant === "bubble";
   const labels = resolveLabels(options.labels);
 
-  // ── geometría (depende solo de `geography`) ───────────────────────────────────────────────────
-  // Con `drill` la geometría la carga el motor (por nivel, con caché); aquí se le pasa una vacía.
+  // ── geometry (depends only on `geography`) ──────────────────────────────────────────────────────
+  // With `drill` the geometry is loaded by the engine (per level, with a cache); an empty one is passed here.
   const single = useGeography(
     engine.active ? NO_GEOGRAPHY : (options.geography ?? NO_GEOGRAPHY),
     options.geographyKey,
@@ -451,14 +451,14 @@ export const useChoropleth = <TDatum>(
         : geography === undefined
           ? EMPTY_FEATURES
           : toFeatureCollection({ geography, objectName }),
-    // `engine.features` ya viene filtrado y es estable (cachés del motor).
+    // `engine.features` already comes filtered and is stable (the engine's caches).
     // oxlint-disable-next-line react-hooks/exhaustive-deps
     [engine.active, engine.features, geography, objectName],
   );
 
-  // El filtro se aplica a CADA render (es O(regiones)) pero se memoiza por su RESULTADO: un
-  // `filterFeatures` en línea cambia de identidad en cada render, y si fuera la dependencia
-  // recalcularía todas las rutas. Los índices que sobreviven sí son un valor estable.
+  // The filter is applied on EVERY render (it is O(regions)) but memoized by its RESULT: an inline
+  // `filterFeatures` changes identity on every render, and if it were the dependency it would recompute
+  // all the paths. The indexes that survive are a stable value.
   const keptIndexes =
     filterFeatures === undefined
       ? null
@@ -475,25 +475,25 @@ export const useChoropleth = <TDatum>(
               return feature === undefined ? [] : [feature];
             }),
           },
-    // `keptIndexes` está resumido en `keptKey` (ver arriba).
+    // `keptIndexes` is summarized in `keptKey` (see above).
     // oxlint-disable-next-line react-hooks/exhaustive-deps
     [allFeatures, keptKey],
   );
   const bordersGeometry = useMemo<MultiLineString | null>(
     () =>
       geography === undefined ? null : createBorders({ geography, objectName, filterFeatures }),
-    // `filterFeatures` queda resumido en `keptKey`: su identidad no debe relanzar el cálculo.
+    // `filterFeatures` is summarized in `keptKey`: its identity must not relaunch the computation.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
     [geography, objectName, keptKey],
   );
 
-  // ── tamaño ────────────────────────────────────────────────────────────────────────────────────
+  // ── size ────────────────────────────────────────────────────────────────────────────────────────
   const autoAspect = useMemo(
     () =>
       options.aspectRatio === "auto"
         ? computeAspectRatio({
             name: projection,
-            // Con drill la proporción es la de la raíz: no debe cambiar al bajar de nivel.
+            // With drill the proportion is the root's: it must not change when going down a level.
             featureCollection: (engine.active ? engine.rootFeatures : undefined) ?? features,
           })
         : undefined,
@@ -505,9 +505,9 @@ export const useChoropleth = <TDatum>(
   const width = options.width ?? measured.width;
   const height = options.height ?? measured.height;
 
-  // ── cadena de proyecciones del drill (rebase, dd.md §11.2.4) ───────────────────────────────────
-  // La raíz se ajusta al mundo y cada nivel es la del padre reajustada al cuerpo principal de la región
-  // elegida: así el hijo se pinta a k = 1 con precisión completa y el vuelo termina en el mismo píxel.
+  // ── drill projection chain (rebase) ──────────────────────────────────────────────
+  // The root is fitted to the world and each level is its parent's readjusted to the chosen region's
+  // main body: that way the child is painted at k = 1 with full precision and the flight ends on the same pixel.
   const rebasePadding = typeof options.zoom === "object" ? (options.zoom.padding ?? 24) : 24;
   const drillFocusBounds = engine.levels.reduce<Record<string, LonLatBounds | null | undefined>>(
     (all, level) => ({ ...all, ...level.focusBounds }),
@@ -527,7 +527,7 @@ export const useChoropleth = <TDatum>(
             focusBounds: drillFocusBounds,
           })
         : null,
-    // `chainSig` resume el contenido de `engine.chain`; `focusKey`, el de `drillFocusBounds`.
+    // `chainSig` summarizes the content of `engine.chain`; `focusKey`, that of `drillFocusBounds`.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
     [engine.active, engine.chainSig, projection, width, height, rebasePadding, focusKey],
   );
@@ -540,7 +540,7 @@ export const useChoropleth = <TDatum>(
     }
   }, [chainMissing]);
 
-  /** La cadena de proyecciones de otra ruta con el tamaño y los encuadres vigentes (a dónde vuela la cámara). */
+  /** The projection chain of another route with the current size and framings (where the camera flies to). */
   const chainFor = (levels: ChainLevel[], path: readonly string[]): ProjectionChain =>
     buildProjectionChain({
       levels,
@@ -553,7 +553,7 @@ export const useChoropleth = <TDatum>(
     });
   useDrillChoreography({ engine, store, shownChain: chain, chainFor });
 
-  // Lo que se dejó atrás (capa que sale) y su proyección, solo mientras hace falta.
+  // What was left behind (the exiting layer) and its projection, only while needed.
   const { machine, previous } = engine;
   const leaving = machine.layers.some((layer) => layer.role === "exiting");
   const previousChain = useMemo(
@@ -573,7 +573,7 @@ export const useChoropleth = <TDatum>(
             focusBounds: drillFocusBounds,
           })
         : null,
-    // `previous` cambia solo al cambiar de nivel; `focusKey` resume `drillFocusBounds`.
+    // `previous` changes only when the level changes; `focusKey` summarizes `drillFocusBounds`.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
     [
       engine.active,
@@ -600,7 +600,7 @@ export const useChoropleth = <TDatum>(
       let idOf: ((f: Feature) => string | undefined) | undefined;
       let focusId: string | undefined;
       if (layer.role === "context") {
-        // Un nivel que dibuja las mismas regiones que el activo (`"inherit"`) no necesita capa aparte.
+        // A level that draws the same regions as the active one (`"inherit"`) needs no separate layer.
         if (contextMode === "none" || layer.depth >= engine.depth) continue;
         if (sourceDepth(engine.levels, layer.depth) === activeSource) continue;
         features = engine.levelFeatures[layer.depth]?.features;
@@ -645,12 +645,12 @@ export const useChoropleth = <TDatum>(
       });
     }
     return views;
-    // `layersKey` resume `machine.layers`; el resto cambia solo al cambiar de nivel o de tamaño.
+    // `layersKey` summarizes `machine.layers`; the rest changes only when the level or the size changes.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [engine.active, chain, previousChain, previous, layersKey, engine.chainSig, contextMode]);
 
-  // Migas: la ruta PEDIDA (optimista), con el nombre real de cada región (`properties.name`) salvo que el
-  // consumidor haya dado su `getLabel`. Cada paso se busca en el nivel de arriba, que ya está cargado.
+  // Breadcrumbs: the REQUESTED route (optimistic), with each region's real name (`properties.name`)
+  // unless the consumer gave a `getLabel`. Each step is looked up in the level above, which is already loaded.
   const controller = engine.controller;
   const drillNav = useMemo<DrillNav | null>(() => {
     if (!engine.active || controller === null) return null;
@@ -676,7 +676,7 @@ export const useChoropleth = <TDatum>(
       drillTo: (depth) => controller.drillTo(controller.path.slice(0, depth)),
       drillUp: (steps) => controller.drillUp(steps),
     };
-    // `engine.chain` cambia solo con `chainSig`; `labels` es un objeto nuevo por render: se resume en el texto.
+    // `engine.chain` changes only with `chainSig`; `labels` is a new object per render: it is summarized in the text.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [
     engine.active,
@@ -687,7 +687,7 @@ export const useChoropleth = <TDatum>(
     labels.breadcrumbRoot,
   ]);
 
-  /** La región hacia la que se baja (se atenúa el resto; si tarda, «respira»). */
+  /** The region being drilled into (the rest is dimmed; if it takes long, it "breathes"). */
   const drillFocusId =
     engine.active &&
     (machine.phase === "flying" || machine.phase === "loading") &&
@@ -696,7 +696,7 @@ export const useChoropleth = <TDatum>(
       ? (machine.path.at(-1) ?? null)
       : null;
 
-  // ── rutas (geometría + proyección + tamaño; nada de datos) ────────────────────────────────────
+  // ── paths (geometry + projection + size; no data) ───────────────────────────────────────────────
   const { paths, bordersPath, anchors, project, invert, toPath } = useMemo(() => {
     const geoProjection =
       chain?.projections[chain.projections.length - 1] ??
@@ -707,7 +707,7 @@ export const useChoropleth = <TDatum>(
         featureCollection: features,
       });
     const toPath = geoPath(geoProjection);
-    // d3 devuelve [NaN, NaN] (no null) para lo que no sabe proyectar: se normaliza aquí, una vez.
+    // d3 returns [NaN, NaN] (not null) for what it cannot project: it is normalized here, once.
     const toPoint = (coordinates: Point): Point | null => {
       const at = geoProjection([...coordinates]);
       return at !== null && Number.isFinite(at[0]) && Number.isFinite(at[1]) ? at : null;
@@ -715,9 +715,9 @@ export const useChoropleth = <TDatum>(
     return {
       paths: features.features.map((f) => toPath(f)),
       bordersPath: bordersGeometry === null ? null : toPath(bordersGeometry),
-      // Las anclas solo se calculan para `bubble` (es lo único que las usa). El centroide de
-      // `geoPath` cuenta los territorios lejanos (la burbuja de Francia caería en el Atlántico):
-      // se ancla en el polo de inaccesibilidad del cuerpo principal. El centroide queda de respaldo.
+      // Anchors are only computed for `bubble` (the only thing that uses them). `geoPath`'s centroid counts
+      // distant territories (France's bubble would land in the Atlantic): the anchor is the pole of
+      // inaccessibility of the main body. The centroid remains as a fallback.
       anchors: isBubble
         ? features.features.map((f): Point | null => {
             const anchor = getAnchorPoint({
@@ -731,7 +731,7 @@ export const useChoropleth = <TDatum>(
         : [],
       project: toPoint,
       toPath,
-      // Lo contrario: píxeles → [lon, lat]. Lo usa `toViewState` para el `ViewState` público.
+      // The reverse: pixels → [lon, lat]. Used by `toViewState` for the public `ViewState`.
       invert: (point: Point): Point | null => {
         const at = geoProjection.invert?.([point[0], point[1]]);
         return at != null && Number.isFinite(at[0]) && Number.isFinite(at[1])
@@ -741,11 +741,11 @@ export const useChoropleth = <TDatum>(
     };
   }, [features, bordersGeometry, projection, width, height, isBubble, chain]);
 
-  // ── datos → color ─────────────────────────────────────────────────────────────────────────────
-  // `data: undefined` = cargando. Se conserva el último dato definido para no vaciar el mapa (ni
-  // avisar por consola) mientras llega el siguiente. Una ref (y no estado) porque `data` suele
-  // llegar con identidad nueva en cada render: guardarlo en estado provocaría un render por cada
-  // uno. Escribir siempre «el último definido» es idempotente, así que es seguro en el render.
+  // ── data → color ────────────────────────────────────────────────────────────────────────────────
+  // `data: undefined` = loading. The last defined data is kept so as not to empty the map (nor warn on
+  // the console) while the next arrives. A ref (not state) because `data` usually arrives with a new
+  // identity on every render: storing it in state would cause one render for each. Always writing "the
+  // last defined" is idempotent, so it is safe during render.
   const lastData = useRef<readonly TDatum[] | undefined>(options.data);
   if (options.data !== undefined) lastData.current = options.data;
   const data: readonly TDatum[] = options.data ?? lastData.current ?? NO_DATA;
@@ -754,7 +754,7 @@ export const useChoropleth = <TDatum>(
   const idOf = getFeatureId ?? defaultFeatureId;
   const join = joinData({ features: features.features, data, getId, getFeatureId: idOf });
 
-  // Microestados: datos sin región cuyo id tiene un punto de respaldo.
+  // Microstates: data without a region whose id has a fallback point.
   const fallbacks: { id: string; datum: TDatum; coordinates: Point; at: Point }[] = [];
   if (fallbackPoints !== undefined && join.unmatchedData.length > 0) {
     const wanted = new Set(join.unmatchedData.filter((id) => fallbackPoints[id] !== undefined));
@@ -771,8 +771,8 @@ export const useChoropleth = <TDatum>(
   }
   const fallbackIds = new Set(fallbacks.map((f) => f.id));
 
-  // Burbujas con sus propias coordenadas (tiendas): los datos NO tienen por qué corresponder a una
-  // región, así que «sin cruzar» no es un error y no debe avisar.
+  // Bubbles with their own coordinates (stores): the data need NOT correspond to a region, so
+  // "unjoined" is not an error and must not warn.
   const hasOwnCoordinates = options.variant === "bubble" && options.getCoordinates !== undefined;
   const joinReport: JoinReport = {
     unmatchedData: hasOwnCoordinates ? [] : join.unmatchedData.filter((id) => !fallbackIds.has(id)),
@@ -780,9 +780,8 @@ export const useChoropleth = <TDatum>(
     duplicateDataIds: join.duplicateDataIds,
   };
 
-  // Un valor por REGIÓN (no por fila de `data`): los datos huérfanos no deben influir en la escala,
-  // y la leyenda cuenta regiones. Los microestados se añaden DESPUÉS de las regiones, para que los
-  // índices de las regiones no cambien.
+  // One value per REGION (not per `data` row): orphan data must not influence the scale, and the legend
+  // counts regions. Microstates are added AFTER the regions, so the regions' indexes do not change.
   const entries = features.features.map((feature) => {
     const id = idOf(feature);
     return { id, datum: id === undefined ? undefined : join.joined.get(id) };
@@ -811,16 +810,16 @@ export const useChoropleth = <TDatum>(
   features.features.forEach((feature, index) => {
     const path = paths[index];
     const entry = entries[index];
-    // Sin ruta (geometría vacía): no hay nada que pintar.
+    // No path (empty geometry): there is nothing to paint.
     if (path == null) return;
-    // Sin id no se puede seleccionar ni cruzar, pero SÍ debe verse: si no, quedan agujeros en el
-    // mapa (Kosovo, Chipre del Norte y Somalilandia en world-atlas). Capa no interactiva.
+    // Without an id it cannot be selected or joined, but it MUST be visible: otherwise there are holes in
+    // the map (Kosovo, Northern Cyprus and Somaliland in world-atlas). A non-interactive layer.
     if (entry?.id === undefined) {
       anonymousPaths.push(path);
       return;
     }
     const datum = entry.datum;
-    // Revelado «explosión»: las regiones entran antes cuanto más cerca del centro (donde quedó el clic).
+    // "Explosion" reveal: regions enter earlier the closer they are to the center (where the click landed).
     let wave: number | undefined;
     if (engine.active && machine.phase === "revealing") {
       const [cx, cy] = toPath.centroid(feature);
@@ -867,7 +866,7 @@ export const useChoropleth = <TDatum>(
           },
     );
   });
-  // Los microestados son burbujas en `bubble` (con sus coordenadas) y puntos sueltos en el resto.
+  // Microstates are bubbles in `bubble` (with their coordinates) and loose dots elsewhere.
   const fallbackCoordinates = new Map(fallbacks.map((f) => [f.id, f.coordinates]));
   const bubbles = isBubble
     ? variant.bubbles.map((bubble) => {
@@ -894,10 +893,10 @@ export const useChoropleth = <TDatum>(
         };
       });
 
-  // ── diagnóstico ───────────────────────────────────────────────────────────────────────────────
-  // Es un efecto de verdad (escribe en la consola y llama a un callback externo), así que no puede
-  // ir en el render: React puede renderizar varias veces y el hover renderiza en cada movimiento.
-  // La clave hace que solo se ejecute cuando cambia el RESULTADO del cruce, no en cada render.
+  // ── diagnostics ─────────────────────────────────────────────────────────────────────────────────
+  // It is a real effect (it writes to the console and calls an external callback), so it cannot go in
+  // render: React may render several times and hover renders on every move. The key makes it run only
+  // when the join RESULT changes, not on every render.
   const reportKey = [
     data.length,
     joinReport.unmatchedData.join("\u0001"),
@@ -906,7 +905,7 @@ export const useChoropleth = <TDatum>(
   ].join("\u0000");
   const { onJoinReport, diagnostics = true } = options;
   useEffect(() => {
-    // Sin geometría (cargando) o sin datos todavía, el cruce no significa nada.
+    // Without geometry (loading) or without data yet, the join means nothing.
     if (status !== "ready") return;
     onJoinReport?.(joinReport);
     if (!diagnostics || isProduction()) return;
@@ -921,12 +920,12 @@ export const useChoropleth = <TDatum>(
     if (message !== null) {
       console.warn(levelHint === null ? message : `${message}\n             ${levelHint}`);
     }
-    // Solo `reportKey`: el contenido de `joinReport` ya está resumido en ella, y volver a ejecutar
-    // por la identidad de `onJoinReport` (casi siempre una función inline) avisaría en cada render.
+    // Only `reportKey`: the content of `joinReport` is already summarized in it, and re-running on the
+    // identity of `onJoinReport` (almost always an inline function) would warn on every render.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [reportKey, status]);
 
-  // Ninguna región con id: ningún dato puede cruzar (casi siempre, un `getFeatureId` que lee otra cosa).
+  // No region with an id: no datum can join (almost always a `getFeatureId` reading something else).
   const noIdsMessage = formatNoIdsDiagnostic({
     featureCount: features.features.length,
     idCount: regions.length,
@@ -939,9 +938,9 @@ export const useChoropleth = <TDatum>(
     }
   }, [noIdsMessage, status, diagnostics]);
 
-  // ── selección (solo regiones) ─────────────────────────────────────────────────────────────────
-  // Controlada si se pasa `selectedId` (aunque sea `null`); si no, la lleva la librería. Sin
-  // ninguna de las tres props la selección no está activa: un clic no selecciona ni cambia el cursor.
+  // ── selection (regions only) ────────────────────────────────────────────────────────────────────
+  // Controlled if `selectedId` is passed (even `null`); otherwise the library holds it. Without any of
+  // the three props the selection is not active: a click neither selects nor changes the cursor.
   const { onSelectedIdChange } = options;
   const controlled = options.selectedId !== undefined;
   const selectable =
@@ -950,7 +949,7 @@ export const useChoropleth = <TDatum>(
     options.defaultSelectedId ?? null,
   );
   const selectedId = controlled ? (options.selectedId ?? null) : internalSelectedId;
-  // Una selección es de UN nivel: al cambiar de nivel se limpia (ajuste de estado durante el render).
+  // A selection belongs to ONE level: it is cleared on a level change (a state adjustment during render).
   const [selectionLevel, setSelectionLevel] = useState(engine.shownKey);
   if (selectionLevel !== engine.shownKey) {
     setSelectionLevel(engine.shownKey);
@@ -962,11 +961,11 @@ export const useChoropleth = <TDatum>(
     onSelectedIdChange?.(id);
   };
 
-  // ── interacción ───────────────────────────────────────────────────────────────────────────────
+  // ── interaction ─────────────────────────────────────────────────────────────────────────────────
   const { onItemClick, onItemHover } = options;
 
-  // Los colores de lo que se muestra, para que la capa que SALE al cambiar de nivel se desvanezca con su color.
-  // Se anotan tras cada commit y se leen en el render en que cambia el nivel.
+  // The colors of what is shown, so the layer that LEAVES on a level change fades out with its color.
+  // They are noted after each commit and read in the render in which the level changes.
   const { rememberFills } = engine;
   const drillActive = engine.active;
   useEffect(() => {
@@ -1022,13 +1021,14 @@ export const useChoropleth = <TDatum>(
     };
   };
 
-  // Táctil: el primer toque sobre una región navegable es una vista previa (tooltip + selección) y el segundo,
-  // sobre la misma, baja (dd.md §11.2.5). `previewed` es la región ya previsualizada; el hover la olvida en cuanto
-  // el dedo se va a otra cosa. (`pointerover` llega ANTES que `click`, así que el hover solo no distingue 1.º de 2.º.)
+  // Touch: the first tap on a drillable region is a preview (tooltip + selection) and the second, on the
+  // same one, drills down. `previewed` is the region already previewed; the hover forgets
+  // it as soon as the finger goes to something else. (`pointerover` arrives BEFORE `click`, so hover
+  // alone cannot tell the 1st from the 2nd.)
   const previewed = useRef<ItemRef | null>(null);
 
   const hoverItem = (ref: ItemRef | null) => {
-    // Sin cambio no hay nada que contar: ni el store ni el consumidor se enteran.
+    // Without a change there is nothing to report: neither the store nor the consumer find out.
     if (isSameItem(store.getState().hovered, ref)) return;
     if (!isSameItem(previewed.current, ref)) previewed.current = null;
     store.setState({ hovered: ref });
@@ -1039,8 +1039,8 @@ export const useChoropleth = <TDatum>(
     const item = getItemContext(ref);
     if (item === undefined) return;
     if (ref.kind === "region" && item.drillable && engine.controller !== null) {
-      // Con `drill`, un item navegable BAJA (no se selecciona); uno que no lo es, selecciona. La ruta
-      // se arma sobre lo que se está MOSTRANDO: si el nivel nuevo aún carga, un segundo clic redirige.
+      // With `drill`, a drillable item DRILLS DOWN (it is not selected); one that is not, selects. The route
+      // is built on what is being SHOWN: if the new level is still loading, a second click redirects.
       if (store.getState().pointerType === "touch" && !isSameItem(previewed.current, ref)) {
         hoverItem(ref);
         previewed.current = ref;
@@ -1050,16 +1050,15 @@ export const useChoropleth = <TDatum>(
       engine.noteItem(item);
       engine.controller.drillTo([...engine.shownPath, ref.id]);
     } else if (ref.kind === "region" && selectable) {
-      // Clic en la seleccionada la deselecciona. Los puntos no se seleccionan (su id puede coincidir
-      // con el de una región).
+      // A click on the selected one deselects it. Points are not selected (their id may coincide with a region's).
       setSelectedId(ref.id === selectedId ? null : ref.id);
     }
     onItemClick?.(item);
   };
 
-  // ── cierre del drill (paso 34) ────────────────────────────────────────────────────────────────
-  // 1) Prefetch por intención: 150 ms sobre una región navegable → se precarga la geometría de su nivel y se
-  //    avisa a `onDrillIntent` (para los datos). Vive en un efecto sobre el store: el hover no re-renderiza `Root`.
+  // ── drill closing (step 34) ─────────────────────────────────────────────────────────────────────
+  // 1) Intent prefetch: 150 ms over a drillable region → its level's geometry is preloaded and
+  //    `onDrillIntent` is notified (for the data). It lives in an effect on the store: hover does not re-render `Root`.
   const { onDrillIntent } = options;
   const intentRef = useRef({ regionsById, shownPath: engine.shownPath, idle: true, onDrillIntent });
   const { prefetch } = engine;
@@ -1076,7 +1075,7 @@ export const useChoropleth = <TDatum>(
     const timer = createIntentTimer({
       onIntent: (id) => {
         const current = intentRef.current;
-        if (!current.idle) return; // a mitad de una coreografía no hay nada que anticipar
+        if (!current.idle) return; // mid-choreography there is nothing to anticipate
         const path = [...current.shownPath, id];
         prefetch(path);
         current.onDrillIntent?.(contextOf(path));
@@ -1096,8 +1095,8 @@ export const useChoropleth = <TDatum>(
     };
   }, [engine.active, store, prefetch]);
 
-  // 2) ¿Es válida una navegación pedida? Solo se puede juzgar lo que ya está cargado: la parte de la ruta que
-  //    coincide con lo mostrado. Una región del nivel mostrado también se juzga con `canDrill` (tiene su dato).
+  // 2) Is a requested navigation valid? Only what is already loaded can be judged: the part of the route
+  //    that matches what is shown. A region of the shown level is also judged with `canDrill` (it has its datum).
   const findRequestProblem = (path: readonly string[]): DrillRequestProblem | null => {
     const shown = engine.shownPath;
     for (let depth = 0; depth < path.length; depth++) {
@@ -1121,7 +1120,7 @@ export const useChoropleth = <TDatum>(
     return null;
   };
 
-  // 3) La API del drill del handle. Un objeto estable que mira siempre la última versión de la lógica.
+  // 3) The handle's drill API. A stable object that always looks at the latest version of the logic.
   const latestDrill = useRef({ findRequestProblem, engine });
   useEffect(() => {
     latestDrill.current = { findRequestProblem, engine };
@@ -1153,19 +1152,19 @@ export const useChoropleth = <TDatum>(
     return () => store.registerDrill(null);
   }, [engine.active, store, drillApi]);
 
-  // 4) Una ruta que llega por otro camino (la URL, un `useDrillDown` ajeno) también se comprueba: aquí solo
-  //    se AVISA (el mapa ya hará lo que pueda, y si el nivel sale vacío lo deshará con su propio error).
+  // 4) A route that arrives some other way (the URL, someone else's `useDrillDown`) is also checked: here
+  //    it only WARNS (the map will do what it can, and if the level comes out empty it will undo it with its own error).
   const targetKey = JSON.stringify(engine.target);
   useEffect(() => {
     if (!engine.active || isProduction()) return;
     const problem = latestDrill.current.findRequestProblem(engine.target);
     if (problem !== null) console.warn(formatDrillRequestProblem(problem, "drill path"));
-    // `engine.target` se resume en `targetKey`.
+    // `engine.target` is summarized in `targetKey`.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [engine.active, targetKey]);
 
-  // En táctil no hay «salir»: el navegador manda `pointerleave` justo al levantar el dedo, y
-  // quitaría la vista previa al instante. El hover se retira al tocar fuera de cualquier item.
+  // On touch there is no "leave": the browser sends `pointerleave` right when the finger lifts, and it
+  // would remove the preview instantly. The hover is withdrawn when tapping outside any item.
   const leaveHandler =
     (ref: ItemRef): PointerEventHandler =>
     (event) => {
@@ -1195,12 +1194,12 @@ export const useChoropleth = <TDatum>(
     };
   };
 
-  // Al cambiar de nivel la proyección es otra y hay que recolocar la cámara ANTES de pintar
-  // (`useLayoutEffect`: con un efecto normal se vería un fotograma con la cámara vieja sobre la geometría
-  // nueva). Sin animar ni avisar a `onViewChange`.
-  //  - Bajar / lateral / saltar: identidad (el rebase deja el hijo a k = 1, justo donde acabó el vuelo).
-  //  - Subir: la cámara que reproduce lo que se veía (`R` entre las dos proyecciones); desde ahí vuela a la
-  //    que había antes de bajar (`use-drill-choreography`).
+  // On a level change the projection is another one and the camera must be repositioned BEFORE painting
+  // (`useLayoutEffect`: with a normal effect one frame would show the old camera over the new geometry).
+  // Without animating or notifying `onViewChange`.
+  //  - Down / lateral / jump: identity (the rebase leaves the child at k = 1, exactly where the flight ended).
+  //  - Up: the camera that reproduces what was seen (`R` between the two projections); from there it flies
+  //    to the one that existed before going down (`use-drill-choreography`).
   const shownKey = engine.shownKey;
   const previousLevel = useRef(shownKey);
   useIsoLayoutEffect(() => {
@@ -1216,15 +1215,15 @@ export const useChoropleth = <TDatum>(
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [engine.active, shownKey, store]);
 
-  // ── cámara: ZoomTarget → transform ────────────────────────────────────────────────────────────
+  // ── camera: ZoomTarget → transform ──────────────────────────────────────────────────────────────
   const zoomOptions = resolveZoomOptions(options.zoom, {
-    // Con `drill` el clic ya hace algo (bajar de nivel): el doble clic NO debe además hacer zoom ×2, o el
-    // segundo clic interrumpiría el vuelo del drill y se quedaría en un simple zoom (dd.md §11.1.2).
+    // With `drill` the click already does something (go down a level): the double click must NOT also zoom
+    // ×2, or the second click would interrupt the drill flight and end up as a plain zoom.
     clickIsBusy: onItemClick !== undefined || selectable || engine.active,
   });
   const focusBounds = { ...DEFAULT_FOCUS_BOUNDS, ...options.focusBounds };
 
-  /** Límites en píxeles del cuerpo principal de una región (Francia sin la Guayana). Perezoso. */
+  /** Pixel bounds of a region's main body (France without Guiana). Lazy. */
   const getRegionExtent = (id: string) => {
     const feature = featuresById.get(id);
     return feature === undefined ? null : getFocusExtent({ feature, path: toPath, project });
@@ -1242,7 +1241,7 @@ export const useChoropleth = <TDatum>(
       getRegionExtent,
       focusBounds,
     });
-    // `d3-zoom` solo aplica `constrain` a los gestos, no a las transiciones programáticas.
+    // `d3-zoom` only applies `constrain` to gestures, not to programmatic transitions.
     return transform !== null && zoomOptions.constrain === "contain"
       ? constrainTransform({
           transform,
@@ -1267,7 +1266,7 @@ export const useChoropleth = <TDatum>(
     drillLayers,
     drillNav,
     selectContextItem: (depth: number, id: string) => {
-      // Un item de una capa de contexto: ir a ese hermano (lateral si es el nivel justo encima, si no, salto).
+      // An item from a context layer: go to that sibling (lateral if it is the level right above, otherwise a jump).
       engine.controller?.drillTo([...engine.shownPath.slice(0, depth), id]);
     },
     status,
@@ -1302,15 +1301,15 @@ export const useChoropleth = <TDatum>(
   };
 };
 
-// `useLayoutEffect` avisa en el servidor; allí no hay cámara que reiniciar.
+// `useLayoutEffect` warns on the server; there is no camera to reset there.
 const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 const NO_GEOGRAPHY: GeographyData = { type: "FeatureCollection", features: [] };
 const EMPTY_FEATURES: FeatureCollection = { type: "FeatureCollection", features: [] };
 const NO_DATA: readonly never[] = [];
 
-// Color de «sin dato» tematizable con `--cm-empty-fill`; el valor tras la coma es el de respaldo
-// si no se ha cargado `styles.css`.
+// "No data" color themeable with `--cm-empty-fill`; the value after the comma is the fallback
+// if `styles.css` was not loaded.
 const EMPTY_FILL_VAR = `var(--cm-empty-fill, ${DEFAULT_EMPTY_FILL})`;
 
 const nameOf = (feature: Feature): string | undefined => {

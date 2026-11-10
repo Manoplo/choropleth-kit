@@ -18,7 +18,7 @@ const worldLevel: ChainLevel = { features: world.features, idOf: nameOf };
 const france = pick("France");
 const size = { width: 960, height: 500 };
 
-/** Dónde cae [lon, lat] en una proyección, comprobando que es finito. */
+/** Where [lon, lat] falls in a projection, checking that it is finite. */
 const at = (projection: unknown, point: [number, number]): [number, number] => {
   const p = (projection as (q: [number, number]) => [number, number] | null)(point);
   if (p === null || !p.every(Number.isFinite)) throw new Error(`no proyecta ${point}`);
@@ -36,9 +36,9 @@ describe("antimeridiano (Rusia, Fiyi)", () => {
     });
   };
 
-  it("Rusia: se encuadra su mitad más ancha (Moscú y la costa del Pacífico caben; no sale el mundo entero)", () => {
+  it("Russia: its wider half is framed (Moscow and the Pacific coast fit; the whole world does not show up)", () => {
     const { projections, missing } = frame("Russia");
-    const [mx, my] = at(projections[1], [37.6, 55.7]); // Moscú
+    const [mx, my] = at(projections[1], [37.6, 55.7]); // Moscow
     const [vx, vy] = at(projections[1], [131.9, 43.1]); // Vladivostok
 
     expect(missing).toBeNull();
@@ -50,11 +50,11 @@ describe("antimeridiano (Rusia, Fiyi)", () => {
       expect(v).toBeGreaterThanOrEqual(0);
       expect(v).toBeLessThanOrEqual(500);
     }
-    // La escala es la de «Rusia llena la vista», no la del mundo (que sería ~1/3 de esta).
+    // The scale is that of "Russia fills the view", not the world's (which would be ~1/3 of this).
     expect((projections[1]?.scale() ?? 0) / (projections[0]?.scale() ?? 1)).toBeGreaterThan(1.8);
   });
 
-  it("Fiyi: una escala razonable (no la de un mundo de 128 000 px)", () => {
+  it("Fiji: a reasonable scale (not that of a 128,000 px world)", () => {
     const { projections } = frame("Fiji");
 
     expect(projections[1]?.scale()).toBeLessThan((projections[0]?.scale() ?? 1) * 400);
@@ -65,7 +65,7 @@ describe("antimeridiano (Rusia, Fiyi)", () => {
     expect(y).toBeLessThanOrEqual(500);
   });
 
-  it("`focusBounds` que cruzan el antimeridiano también usan la mitad más ancha", () => {
+  it("`focusBounds` that cross the antimeridian also use the wider half", () => {
     const { projections } = buildProjectionChain({
       levels: [worldLevel, { features: france, idOf: nameOf }],
       path: ["Fiji"],
@@ -83,7 +83,7 @@ describe("antimeridiano (Rusia, Fiyi)", () => {
 });
 
 describe("buildProjectionChain", () => {
-  it("en la raíz hay una sola proyección, ajustada al mundo", () => {
+  it("at the root there is a single projection, fitted to the world", () => {
     const { projections, missing } = buildProjectionChain({
       levels: [worldLevel],
       path: [],
@@ -98,7 +98,7 @@ describe("buildProjectionChain", () => {
     expect(y1 - y0).toBeGreaterThan(400);
   });
 
-  it("un nivel por debajo: la proyección de la región encuadra su cuerpo principal con padding", () => {
+  it("one level down: the region's projection frames its main body with padding", () => {
     const { projections } = buildProjectionChain({
       levels: [worldLevel, { features: france, idOf: nameOf }],
       path: ["Spain"],
@@ -107,16 +107,16 @@ describe("buildProjectionChain", () => {
     });
     const [[x0, y0], [x1, y1]] = geoPath(projections[1]).bounds(pick("Spain")[0] as Feature);
 
-    // Con Canarias no (por defecto aquí no hay focusBounds): el cuerpo principal es la península.
+    // Not with the Canary Islands (by default there is no focusBounds here): the main body is the peninsula.
     expect(projections).toHaveLength(2);
     expect(x0).toBeGreaterThanOrEqual(24 - 1);
     expect(y0).toBeGreaterThanOrEqual(24 - 1);
     expect(x1).toBeLessThanOrEqual(960 - 24 + 1);
     expect(y1).toBeLessThanOrEqual(500 - 24 + 1);
-    expect(Math.max(x1 - x0 - 912, y1 - y0 - 452)).toBeGreaterThan(-3); // llena el lado limitante
+    expect(Math.max(x1 - x0 - 912, y1 - y0 - 452)).toBeGreaterThan(-3); // fills the limiting side
   });
 
-  it("el hijo es una afín del padre (continuidad del rebase)", () => {
+  it("the child is an affine map of the parent (rebase continuity)", () => {
     const { projections } = buildProjectionChain({
       levels: [worldLevel, { features: france, idOf: nameOf }],
       path: ["Spain"],
@@ -135,7 +135,7 @@ describe("buildProjectionChain", () => {
     expect(r.k).toBeGreaterThan(4);
   });
 
-  it("dos niveles de profundidad: cada uno se encuadra dentro del anterior", () => {
+  it("two levels deep: each one is framed within the previous one", () => {
     const { projections, missing } = buildProjectionChain({
       levels: [
         worldLevel,
@@ -148,7 +148,7 @@ describe("buildProjectionChain", () => {
 
     expect(missing).toBeNull();
     expect(projections).toHaveLength(3);
-    // El segundo nivel encuadra Francia (la región elegida en `levels[1]`), no el mundo.
+    // The second level frames France (the region chosen in `levels[1]`), not the world.
     const body = getFocusGeometry({
       feature: france[0] as Feature,
       path: geoPath(projections[2] as never),
@@ -161,7 +161,7 @@ describe("buildProjectionChain", () => {
     expect(projections[2]?.scale()).toBeGreaterThan(projections[0]?.scale() ?? Infinity);
   });
 
-  it("`focusBounds` manda sobre el cuerpo principal (España con Canarias abarca más)", () => {
+  it("`focusBounds` overrides the main body (Spain with the Canary Islands covers more)", () => {
     const base = {
       levels: [worldLevel, { features: france, idOf: nameOf }],
       path: ["Spain"],
@@ -181,7 +181,7 @@ describe("buildProjectionChain", () => {
     expect(withCanarias?.scale()).toBeLessThan(peninsula?.scale() ?? 0);
   });
 
-  it("`focusBounds: null` o ausente vuelve al cuerpo principal", () => {
+  it("`focusBounds: null` or absent returns to the main body", () => {
     const base = {
       levels: [worldLevel, { features: france, idOf: nameOf }],
       path: ["Spain"],
@@ -196,7 +196,7 @@ describe("buildProjectionChain", () => {
     expect(b).toBe(a);
   });
 
-  it("una región que no está en el nivel padre: no rompe, avisa con `missing` y repite la última", () => {
+  it("a region that is not in the parent level: does not break, reports it with `missing` and repeats the last one", () => {
     const { projections, missing } = buildProjectionChain({
       levels: [worldLevel, { features: france, idOf: nameOf }, { features: france, idOf: nameOf }],
       path: ["Atlantis", "France"],
@@ -209,7 +209,7 @@ describe("buildProjectionChain", () => {
     expect(projections[2]).toBe(projections[0]);
   });
 
-  it("una región sin geometría tampoco rompe", () => {
+  it("a region without geometry does not break either", () => {
     const hollow: Feature = {
       type: "Feature",
       id: "x",
@@ -228,13 +228,13 @@ describe("buildProjectionChain", () => {
     expect(missing).toBe("X");
   });
 
-  it("tamaño no válido: el error claro de createProjection", () => {
+  it("invalid size: createProjection's clear error", () => {
     expect(() =>
       buildProjectionChain({ levels: [worldLevel], path: [], width: 0, height: 500 }),
     ).toThrow(/createProjection/);
   });
 
-  it("proyecciones con nombre (mercator) se respetan", () => {
+  it("named projections (mercator) are respected", () => {
     const { projections } = buildProjectionChain({
       levels: [worldLevel, { features: france, idOf: nameOf }],
       path: ["Spain"],

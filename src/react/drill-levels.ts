@@ -13,41 +13,41 @@ import {
 import type { MapItem } from "./map-item";
 
 /**
- * Un nivel del drill-down (dd.md §11.2.2): geometría + datos + codificación visual de UNA profundidad
- * (mundo, país, región…). Los niveles se describen UNA vez; la librería se encarga del vuelo, la carga,
- * el fundido, las migas y el teclado.
+ * A drill-down level: geometry + data + visual encoding of ONE depth (world, country,
+ * region…). Levels are described ONCE; the library takes care of the flight, the loading, the fade, the
+ * breadcrumbs and the keyboard.
  */
 export type DrillLevel<TDatum> = {
-  /** `"country"`, `"region"`, `"store"`… Único dentro de la lista; es la clave del nivel. */
+  /** `"country"`, `"region"`, `"store"`… Unique within the list; it is the level's key. */
   id: string;
-  /** Nombre del NIVEL («Países»): raíz de las migas y anuncios de accesibilidad. */
+  /** Name of the LEVEL ("Countries"): root of the breadcrumbs and accessibility announcements. */
   label?: string;
   geography:
     | GeographyInput
-    | "inherit" // la del padre (p. ej. tiendas sobre el país)
+    | "inherit" // the parent's (e.g. stores over the country)
     | ((ctx: DrillContext) => GeographyInput); // ({ parentId }) => import(`./admin1/${parentId}.json`)
   objectName?: string;
-  /** Subconjunto para este padre: un admin-1 mundial filtrado por país. */
+  /** Subset for this parent: a world admin-1 filtered by country. */
   filterFeatures?: (feature: Feature, ctx: DrillContext) => boolean;
   getFeatureId?: (feature: Feature) => string | undefined;
-  /** Clave de caché de la geometría. Default: `${id}:${parentId}` si `geography` es función. */
+  /** Geometry cache key. Default: `${id}:${parentId}` if `geography` is a function. */
   geographyKey?: (ctx: DrillContext) => string;
-  /** Codificación visual de ESTE nivel. Si falta, se usan las props del mapa (variant, getValue…). */
+  /** Visual encoding of THIS level. If missing, the map's props are used (variant, getValue…). */
   encoding?: VariantConfig<TDatum> & { getId?: (datum: TDatum) => string };
-  /** ¿Se puede bajar desde este item? Default: `true` si existe un nivel siguiente. */
+  /** Can you drill down from this item? Default: `true` if a next level exists. */
   canDrill?: boolean | ((item: MapItem<TDatum>) => boolean);
-  /** `"inherit"` (default): continuidad perfecta (§11.2.4). Otra: fundido tras el vuelo. */
+  /** `"inherit"` (default): perfect continuity (§11.2.4). Anything else: a fade after the flight. */
   projection?: "inherit" | ProjectionName | (() => GeoProjection);
-  /** Qué queda visible del padre. Default `"siblings"`. */
+  /** What stays visible of the parent. Default `"siblings"`. */
   context?: "siblings" | "none";
-  /** Encuadre explícito por id en [lon, lat] (España con o sin Canarias…). */
+  /** Explicit framing by id in [lon, lat] (Spain with or without the Canary Islands…). */
   focusBounds?: Readonly<Record<string, [[number, number], [number, number]]>>;
 };
 
 /**
- * Identidad con comprobación: existe para que TypeScript infiera `TDatum` sin anotaciones
- * (`defineDrillLevels<Row>([...])`) y para que una lista mal formada (vacía, ids repetidos) falle al
- * DEFINIRLA, con un mensaje que dice qué tocar, y no a mitad de un clic.
+ * Identity with validation: it exists so TypeScript infers `TDatum` without annotations
+ * (`defineDrillLevels<Row>([...])`) and so a malformed list (empty, repeated ids) fails when it is
+ * DEFINED, with a message saying what to change, and not in the middle of a click.
  */
 export const defineDrillLevels = <TDatum>(
   levels: readonly DrillLevel<TDatum>[],
@@ -56,16 +56,16 @@ export const defineDrillLevels = <TDatum>(
   return levels;
 };
 
-/** Lo que reciben `onDrill` y `onDrillEnd`. */
+/** What `onDrill` and `onDrillEnd` receive. */
 export type DrillEvent<TDatum> = {
   direction: DrillDirection;
   from: DrillContext;
   to: DrillContext;
-  /** El item pulsado, si lo hubo (no hay en el breadcrumb, el teclado ni la URL). */
+  /** The clicked item, if any (there is none for the breadcrumb, the keyboard or the URL). */
   item?: MapItem<TDatum>;
 };
 
-/** El evento de pasar de `from` a `to`, o `null` si la ruta no cambia. */
+/** The event of going from `from` to `to`, or `null` if the route does not change. */
 export const buildDrillEvent = <TDatum>({
   from,
   to,
@@ -86,8 +86,8 @@ export const buildDrillEvent = <TDatum>({
 };
 
 /**
- * ¿Se puede bajar desde este item? (`data-drillable`, cursor, pista del tooltip.) Hace falta un nivel
- * por debajo del actual, y `canDrill` del nivel (booleano o función) no debe prohibirlo.
+ * Can you drill down from this item? (`data-drillable`, cursor, tooltip hint.) It needs a level below
+ * the current one, and the level's `canDrill` (boolean or function) must not forbid it.
  */
 export const isDrillable = <TDatum>(
   levels: readonly DrillLevel<TDatum>[],
@@ -102,9 +102,9 @@ export const isDrillable = <TDatum>(
 };
 
 /**
- * Profundidad cuya geometría se dibuja a `depth`: un nivel `"inherit"` dibuja la de su padre, así que
- * sube hasta el primero que no hereda. Dos profundidades con la misma fuente dibujan las mismas regiones
- * (tiendas sobre un país), y no hace falta una capa de contexto aparte.
+ * Depth whose geometry is drawn at `depth`: an `"inherit"` level draws its parent's, so it climbs up to
+ * the first one that does not inherit. Two depths with the same source draw the same regions (stores
+ * over a country), and no separate context layer is needed.
  */
 export const sourceDepth = <TDatum>(
   levels: readonly DrillLevel<TDatum>[],

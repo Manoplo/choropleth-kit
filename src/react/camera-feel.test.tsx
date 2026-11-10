@@ -6,8 +6,8 @@ import { Choropleth } from "./choropleth";
 import type { RootProps } from "./components/root";
 import type { ChoroplethMapHandle } from "./handle";
 
-// Paso 27: contraescalado de burbujas (`--cm-bubble-scale`), inercia al soltar y resize sin salto.
-// Con temporizadores falsos, `performance.now()` y `requestAnimationFrame` avanzan con `advanceTimersByTime`.
+// Step 27: bubble counter-scaling (`--cm-bubble-scale`), inertia on release and resize without a jump.
+// With fake timers, `performance.now()` and `requestAnimationFrame` advance with `advanceTimersByTime`.
 
 type Row = { code: string; v: number | null };
 const rows: Row[] = [
@@ -77,7 +77,7 @@ const zoomIn = (svg: Element, zoom: ZoomOptions = {}) => {
   advance(200);
 };
 
-/** Arrastra de `from` a `to` en `steps` movimientos, uno cada `stepMs`, y suelta. */
+/** Drags from `from` to `to` in `steps` moves, one every `stepMs`, and releases. */
 const drag = (
   svg: Element,
   from: [number, number],
@@ -102,14 +102,14 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("contraescalado de burbujas (--cm-bubble-scale)", () => {
-  it("al montar, la escala es 1 (k = 1)", () => {
+describe("bubble counter-scaling (--cm-bubble-scale)", () => {
+  it("on mount, the scale is 1 (k = 1)", () => {
     const { root } = setup();
 
     expect(root.style.getPropertyValue("--cm-bubble-scale")).toBe("1");
   });
 
-  it("por defecto (sqrt): 1/√k tras hacer zoom", () => {
+  it("by default (sqrt): 1/√k after zooming", () => {
     const { svg, root, viewport } = setup();
     zoomIn(svg);
     const { k } = cameraOf(viewport);
@@ -133,7 +133,7 @@ describe("contraescalado de burbujas (--cm-bubble-scale)", () => {
     expect(geo.root.style.getPropertyValue("--cm-bubble-scale")).toBe("1");
   });
 
-  it("cambiar la política reinstala y recalcula la variable con la cámara actual", () => {
+  it("changing the policy reinstalls and recomputes the variable with the current camera", () => {
     const { svg, root, viewport, rerenderWith } = setup();
     zoomIn(svg);
     const { k } = cameraOf(viewport);
@@ -144,10 +144,10 @@ describe("contraescalado de burbujas (--cm-bubble-scale)", () => {
 });
 
 describe("inercia", () => {
-  it("soltar un arrastre rápido sigue deslizando el mapa y luego frena", () => {
+  it("releasing a fast drag keeps sliding the map and then slows down", () => {
     const { svg, viewport } = setup({ zoom: { max: 4 } });
     zoomIn(svg);
-    drag(svg, [100, 50], [60, 50]); // hacia la izquierda, rápido (≈ 0,6 px/ms)
+    drag(svg, [100, 50], [60, 50]); // to the left, fast (≈ 0.6 px/ms)
     const released = cameraOf(viewport);
 
     advance(100);
@@ -156,13 +156,13 @@ describe("inercia", () => {
     const end = cameraOf(viewport);
     advance(500);
 
-    expect(mid.x).toBeLessThan(released.x); // siguió moviéndose tras soltar
+    expect(mid.x).toBeLessThan(released.x); // it kept moving after release
     expect(end.x).toBeLessThanOrEqual(mid.x);
-    expect(cameraOf(viewport)).toEqual(end); // y paró
-    expect(end.k).toBe(released.k); // inercia = solo pan
+    expect(cameraOf(viewport)).toEqual(end); // and stopped
+    expect(end.k).toBe(released.k); // inertia = pan only
   });
 
-  it("el deslizamiento respeta los límites (constrain)", () => {
+  it("the slide respects the limits (constrain)", () => {
     const { svg, viewport } = setup({ zoom: { max: 4 } });
     zoomIn(svg);
     drag(svg, [100, 50], [-200, 50], { steps: 4, stepMs: 8 });
@@ -171,20 +171,20 @@ describe("inercia", () => {
     expect(cameraOf(viewport).x).toBeGreaterThanOrEqual(200 - 200 * cameraOf(viewport).k - 1e-6);
   });
 
-  it("avisa a `onViewChange` UNA vez al terminar, con la cámara final (no por frame)", () => {
+  it("notifies `onViewChange` ONCE at the end, with the final camera (not per frame)", () => {
     const onViewChange = vi.fn<(view: ViewState) => void>();
     const { svg, viewport } = setup({ zoom: { max: 4, onViewChange } });
     zoomIn(svg);
     onViewChange.mockClear();
     drag(svg, [100, 50], [60, 50]);
-    expect(onViewChange).not.toHaveBeenCalled(); // aún desliza
+    expect(onViewChange).not.toHaveBeenCalled(); // still sliding
     advance(5000);
 
     expect(onViewChange).toHaveBeenCalledOnce();
     expect(onViewChange.mock.calls[0]?.[0].x).toBeCloseTo(cameraOf(viewport).x, 6);
   });
 
-  it("mientras desliza hay `data-interacting`; al parar se quita", () => {
+  it("while sliding there is `data-interacting`; when it stops it is removed", () => {
     const { svg, root } = setup({ zoom: { max: 4 } });
     zoomIn(svg);
     drag(svg, [100, 50], [60, 50]);
@@ -195,7 +195,7 @@ describe("inercia", () => {
     expect(root.hasAttribute("data-interacting")).toBe(false);
   });
 
-  it("un `pointerdown` la frena en seco y confirma la cámara", () => {
+  it("a `pointerdown` stops it dead and confirms the camera", () => {
     const onViewChange = vi.fn<(view: ViewState) => void>();
     const { svg, viewport, root } = setup({ zoom: { max: 4, onViewChange } });
     zoomIn(svg);
@@ -211,7 +211,7 @@ describe("inercia", () => {
     expect(root.hasAttribute("data-interacting")).toBe(false);
   });
 
-  it("agarrar el mapa (mousedown) también la frena", () => {
+  it("grabbing the map (mousedown) also stops it", () => {
     const { svg, viewport } = setup({ zoom: { max: 4 } });
     zoomIn(svg);
     drag(svg, [100, 50], [60, 50]);
@@ -224,7 +224,7 @@ describe("inercia", () => {
     mouse("mouseUp", window, { clientX: 100, clientY: 50 });
   });
 
-  it("si se detiene la mano antes de soltar, no hay inercia", () => {
+  it("if the hand stops before releasing, there is no inertia", () => {
     const { svg, viewport } = setup({ zoom: { max: 4 } });
     zoomIn(svg);
     drag(svg, [100, 50], [60, 50], { hold: 300 });
@@ -234,17 +234,17 @@ describe("inercia", () => {
     expect(cameraOf(viewport)).toEqual(released);
   });
 
-  it("un arrastre lento no desliza", () => {
+  it("a slow drag does not slide", () => {
     const { svg, viewport } = setup({ zoom: { max: 4 } });
     zoomIn(svg);
-    drag(svg, [100, 50], [96, 50], { stepMs: 50 }); // 4 px en 200 ms = 0,02 px/ms
+    drag(svg, [100, 50], [96, 50], { stepMs: 50 }); // 4 px in 200 ms = 0.02 px/ms
     const released = cameraOf(viewport);
     advance(3000);
 
     expect(cameraOf(viewport)).toEqual(released);
   });
 
-  it("inertia: false la desactiva", () => {
+  it("inertia: false disables it", () => {
     const { svg, viewport } = setup({ zoom: { max: 4, inertia: false } });
     zoomIn(svg);
     drag(svg, [100, 50], [60, 50]);
@@ -254,7 +254,7 @@ describe("inercia", () => {
     expect(cameraOf(viewport)).toEqual(released);
   });
 
-  it("un movimiento programático (zoomTo) frena la inercia", async () => {
+  it("a programmatic move (zoomTo) stops the inertia", async () => {
     const { svg, ref, viewport } = setup({ zoom: { max: 4 } });
     zoomIn(svg);
     drag(svg, [100, 50], [60, 50]);
@@ -267,8 +267,8 @@ describe("inercia", () => {
   });
 });
 
-describe("resize sin salto", () => {
-  it("al cambiar el tamaño se conservan el centro geográfico y la `k`", () => {
+describe("resize without a jump", () => {
+  it("on resize the geographic center and `k` are preserved", () => {
     const { svg, ref, rerenderWith } = setup({ zoom: { max: 8 } });
     zoomIn(svg);
     const before = ref.current?.getView();
@@ -282,7 +282,7 @@ describe("resize sin salto", () => {
     expect(after?.center[1]).toBeCloseTo(before?.center[1] ?? 0, 4);
   });
 
-  it("sin zoom (k = 1) sigue en el encaje", () => {
+  it("without zoom (k = 1) it stays at the fit", () => {
     const { ref, rerenderWith, viewport } = setup();
     rerenderWith({ width: 300, height: 150 });
 
@@ -290,7 +290,7 @@ describe("resize sin salto", () => {
     expect(cameraOf(viewport)).toMatchObject({ k: 1 });
   });
 
-  it("un cambio de opciones con el mismo tamaño restaura la cámara tal cual", () => {
+  it("an options change with the same size restores the camera as is", () => {
     const { svg, viewport, rerenderWith } = setup({ zoom: { max: 8 } });
     zoomIn(svg);
     const before = cameraOf(viewport);
@@ -299,7 +299,7 @@ describe("resize sin salto", () => {
     expect(cameraOf(viewport)).toEqual(before);
   });
 
-  it("la cámara resultante respeta `constrain: contain`", () => {
+  it("the resulting camera respects `constrain: contain`", () => {
     const { svg, viewport, rerenderWith } = setup({ zoom: { max: 8 } });
     zoomIn(svg);
     rerenderWith({ width: 300, height: 100 });

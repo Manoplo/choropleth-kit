@@ -10,40 +10,40 @@ import {
 import type { ItemRef } from "./map-item";
 
 /**
- * Lo que los botones, el teclado y (paso 26) el handle imperativo pueden pedirle al zoom. Lo
- * registra `use-zoom` al instalar `d3-zoom`; cada movimiento devuelve una `Promise` que resuelve al
- * terminar (`completed: false` si un gesto del usuario lo interrumpió).
+ * What the buttons, the keyboard and (step 26) the imperative handle can ask of the zoom. It is
+ * registered by `use-zoom` when installing `d3-zoom`; each move returns a `Promise` that resolves when
+ * done (`completed: false` if a user gesture interrupted it).
  */
 export type ZoomApi = {
   /**
-   * Vuela a una región, unos límites o un centro con zoom. `silent` (solo con `duration: 0`) coloca la
-   * cámara sin avisar a `onViewChange`: es lo que hacen `focusId` e `initialView` en el primer render.
+   * Flies to a region, some bounds or a center with zoom. `silent` (only with `duration: 0`) places the
+   * camera without notifying `onViewChange`: it is what `focusId` and `initialView` do on first render.
    */
   zoomTo: (
     target: ZoomTarget,
     options?: CameraOptions & { silent?: boolean },
   ) => Promise<TransitionResult>;
   /**
-   * Vuela a una cámara EXACTA (sin `constrain` ni límites de `k`): el drill-down necesita acabar justo en
-   * `R` (dd.md §11.2.4) para que el cambio de proyección sea invisible. `duration: 0` coloca la cámara;
-   * con `silent` no avisa a `onViewChange`.
+   * Flies to an EXACT camera (without `constrain` or `k` limits): the drill-down needs to end exactly at
+   * `R` so the projection change is invisible. `duration: 0` places the camera;
+   * with `silent` it does not notify `onViewChange`.
    */
   flyTo: (
     camera: CameraTransform,
     options?: { duration?: number; silent?: boolean },
   ) => Promise<TransitionResult>;
-  /** Multiplica el zoom actual (×2 acerca, ×0,5 aleja) centrado en la vista. */
+  /** Multiplies the current zoom (×2 zooms in, ×0.5 zooms out) centered on the view. */
   zoomBy: (factor: number, options?: { duration?: number }) => Promise<TransitionResult>;
-  /** Vuelo al encaje del nivel. `silent` (solo con `duration: 0`) no avisa a `onViewChange`. */
+  /** Flight to the level's fit. `silent` (only with `duration: 0`) does not notify `onViewChange`. */
   resetView: (options?: { duration?: number; silent?: boolean }) => Promise<TransitionResult>;
-  /** La vista actual (la real, también a mitad de un vuelo). */
+  /** The current view (the real one, also mid-flight). */
   getView: () => ViewState;
 };
 
 /**
- * Lo que el handle puede pedirle al drill (paso 34). Lo registra `useChoropleth` cuando el mapa tiene
- * `drill`; cada navegación devuelve una `Promise` que resuelve al volver a reposo en la ruta pedida
- * (`completed: false` si se canceló, falló, otra navegación la sustituyó o la petición no era válida).
+ * What the handle can ask of the drill (step 34). Registered by `useChoropleth` when the map has
+ * `drill`; each navigation returns a `Promise` that resolves on returning to rest at the requested
+ * route (`completed: false` if it was cancelled, failed, another navigation replaced it or the request was invalid).
  */
 export type DrillApi = {
   drillDown: (id: string) => Promise<TransitionResult>;
@@ -53,49 +53,49 @@ export type DrillApi = {
 
 export type PointerPosition = { x: number; y: number };
 
-/** Estado de interacción del mapa. Vive FUERA de React (dd.md §11.0, §12.1 y §14). */
+/** The map's interaction state. It lives OUTSIDE React. */
 export type MapState = {
-  /** Item (región o punto) bajo el cursor o con el primer toque (táctil). */
+  /** Item (region or point) under the cursor or with the first tap (touch). */
   hovered: ItemRef | null;
-  /** Posición del cursor relativa al contenedor; `null` si está fuera. */
+  /** Cursor position relative to the container; `null` if outside. */
   pointer: PointerPosition | null;
-  /** Tipo del último puntero que tocó el mapa: decide si el drill pide uno o dos toques. */
+  /** Type of the last pointer that touched the map: decides whether the drill asks for one or two taps. */
   pointerType: "mouse" | "pen" | "touch";
-  /** Hay un gesto de zoom/pan en curso (ratón, toque o rueda). No incluye vuelos programáticos. */
+  /** A zoom/pan gesture is in progress (mouse, touch or wheel). It does not include programmatic flights. */
   interacting: boolean;
   /**
-   * Cámara «confirmada»: la de la última vez que TERMINÓ un gesto. Durante el gesto la escribe
-   * `d3-zoom` directamente en el DOM y esto no cambia (dd.md §11.0: nada por frame en React).
+   * "Confirmed" camera: the one from the last time a gesture ENDED. During the gesture `d3-zoom` writes
+   * it straight to the DOM and this does not change (nothing per frame in React).
    */
   camera: CameraTransform;
-  /** Aviso de cómo hacer zoom (Ctrl/⌘ + rueda, dos dedos). Se apaga solo. */
+  /** Hint on how to zoom (Ctrl/⌘ + wheel, two fingers). It turns itself off. */
   gestureHint: "wheel" | "touch" | null;
 };
 
 export type MapStore = {
   subscribe: (listener: () => void) => () => void;
   getState: () => MapState;
-  /** Fusiona un parche. No notifica si ningún campo cambia (misma referencia / mismo valor). */
+  /** Merges a patch. It does not notify if no field changes (same reference / same value). */
   setState: (patch: Partial<MapState>) => void;
-  /** Enseña el aviso de gesto y lo quita solo tras `GESTURE_HINT_MS`. Repetirlo prolonga el aviso. */
+  /** Shows the gesture hint and removes it on its own after `GESTURE_HINT_MS`. Repeating it extends the hint. */
   showGestureHint: (kind: "wheel" | "touch") => void;
-  /** Cancela el temporizador del aviso (al desmontar). */
+  /** Cancels the hint timer (on unmount). */
   dispose: () => void;
-  /** `use-zoom` registra aquí su API al instalarse y `null` al desinstalarse. */
+  /** `use-zoom` registers its API here on install and `null` on uninstall. */
   registerZoom: (api: ZoomApi | null) => void;
-  /** La API de zoom, o `null` si el zoom está desactivado o aún no se ha instalado. */
+  /** The zoom API, or `null` if zoom is disabled or not yet installed. */
   getZoom: () => ZoomApi | null;
-  /** `useChoropleth` registra aquí la API del drill (`null` sin `drill` o al desmontar). */
+  /** `useChoropleth` registers the drill API here (`null` without `drill` or on unmount). */
   registerDrill: (api: DrillApi | null) => void;
-  /** La API del drill, o `null` si el mapa no tiene `drill`. */
+  /** The drill API, or `null` if the map has no `drill`. */
   getDrill: () => DrillApi | null;
-  /** `Root` registra cómo calcular la vista cuando NO hay zoom (`zoom={false}`): siempre el encaje. */
+  /** `Root` registers how to compute the view when there is NO zoom (`zoom={false}`): always the fit. */
   registerFallbackView: (read: (() => ViewState) | null) => void;
-  /** La vista de reserva, o `null` si aún no se ha registrado. */
+  /** The fallback view, or `null` if not yet registered. */
   getFallbackView: () => ViewState | null;
 };
 
-/** Cuánto dura el aviso «Usa Ctrl + rueda para hacer zoom» (dd.md §11.1.2). */
+/** How long the "Use Ctrl + scroll to zoom" hint lasts. */
 export const GESTURE_HINT_MS = 1500;
 
 const INITIAL_STATE: MapState = {
@@ -108,12 +108,12 @@ const INITIAL_STATE: MapState = {
 };
 
 /**
- * Hover, puntero, cámara confirmada, `interacting` y el aviso de gesto. (El foco de teclado llega
- * con la accesibilidad.)
+ * Hover, pointer, confirmed camera, `interacting` and the gesture hint. (Keyboard focus arrives with
+ * accessibility.)
  *
- * Si esto fuera `useState` en `Root`, cada cambio de región o cada `mousemove` re-renderizaría
- * `Root` y recalcularía join, escala, leyenda y burbujas. Aquí solo se re-renderiza quien se
- * suscribe con `useMapStore(store, selector)` y su selector devuelve un valor distinto.
+ * If this were `useState` in `Root`, every region change or every `mousemove` would re-render `Root`
+ * and recompute join, scale, legend and bubbles. Here only whoever subscribes with
+ * `useMapStore(store, selector)` re-renders, and only when its selector returns a different value.
  */
 export const createMapStore = (): MapStore => {
   let state = INITIAL_STATE;
@@ -159,9 +159,9 @@ export const createMapStore = (): MapStore => {
 };
 
 /**
- * Lee un trozo del store. El selector debe devolver un valor estable (primitivo o la misma
- * referencia mientras no cambie): si crea un objeto nuevo en cada llamada, React re-renderizará
- * en bucle.
+ * Reads a slice of the store. The selector must return a stable value (a primitive or the same
+ * reference while it does not change): if it creates a new object on every call, React will
+ * re-render in a loop.
  */
 export const useMapStore = <T>(store: MapStore, selector: (state: MapState) => T): T =>
   useSyncExternalStore(
