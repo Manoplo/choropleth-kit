@@ -1,0 +1,14 @@
+choropleth-prepub.md
+  h_b43887c3a179aa 1-415
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "7aa92308361fe2b624385c90a136c86c54b5887c",
+  "prompts": {},
+  "humans": {
+    "h_b43887c3a179aa": {
+      "author": "Manuel Martín Pérez <manuellmp@ext.inditex.com>"
+    }
+  }
+}
