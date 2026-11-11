@@ -191,6 +191,15 @@ importers:
 
   .:
     dependencies:
+      '@types/d3-geo':
+        specifier: ^3.1.1
+        version: 3.1.1
+      '@types/d3-interpolate':
+        specifier: ^3.0.4
+        version: 3.0.4
+      '@types/d3-scale-chromatic':
+        specifier: ^3.1.0
+        version: 3.1.0
       '@types/geojson':
         specifier: ^7946.0.16
         version: 7946.0.16
@@ -252,18 +261,9 @@ importers:
       '@types/d3-ease':
         specifier: ^3.0.2
         version: 3.0.2
-      '@types/d3-geo':
-        specifier: ^3.1.1
-        version: 3.1.1
-      '@types/d3-interpolate':
-        specifier: ^3.0.4
-        version: 3.0.4
       '@types/d3-scale':
         specifier: ^4.0.9
         version: 4.0.9
-      '@types/d3-scale-chromatic':
-        specifier: ^3.1.0
-        version: 3.1.0
       '@types/d3-selection':
         specifier: ^3.0.12
         version: 3.0.12
