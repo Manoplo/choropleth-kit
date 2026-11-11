@@ -1,7 +1,7 @@
 # ISSUE-007 · Visual review pending from the human
 
 - **Type:** Issue
-- **Status:** proposed
+- **Status:** done (reviewed by the maintainer, 2026-11-11)
 - **Priority (proposed):** medium
 - **Origin:** Build diary, «Estado actual y handoff».
 
@@ -17,3 +17,6 @@ Steps marked `✅*` until the human confirms them in a browser:
 ## Criteria to close it
 
 The human reviews each story in Storybook and updates the diary (`✅*` → `✅`).
+
+**Resolution:** the maintainer reviewed the stories in Storybook before the first publication. The diary
+is a historical record and is not updated.

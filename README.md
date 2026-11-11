@@ -1,5 +1,7 @@
 # choropleth-kit
 
+![The same map with the four built-in themes: light, dark, minimal and contrast](https://raw.githubusercontent.com/Manoplo/choropleth-kit/master/docs/assets/themes.png)
+
 Choropleth (thematic) maps for React: SVG on top of `d3-geo`, with zoom, drill-down between levels,
 legends, tooltips and theming. The common case is **ten lines**, and when you need more you can drop
 down a level without rewriting anything.

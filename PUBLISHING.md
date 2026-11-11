@@ -32,6 +32,13 @@ Releases are cut from `master`, after `develop` has been merged into it. Nothing
 8. **GitHub Release**: `gh release create vX.Y.Z --verify-tag --title "vX.Y.Z" --generate-notes`
    (add `--prerelease` for betas).
 
+## Changelog
+
+GitHub Releases are the changelog: every version has a Release page (<https://github.com/Manoplo/choropleth-kit/releases>)
+whose notes list the pull requests merged since the previous one. `--generate-notes` builds them from the PR
+titles, which `pr-title` requires to be Conventional Commits, so write titles a user can read. There is no
+`CHANGELOG.md`. Spanish version of this guide: [`PUBLISHING.es.md`](./PUBLISHING.es.md).
+
 ## Pre-releases
 
 Publish risky changes under a tag so `npm i choropleth-kit` keeps installing the stable one:

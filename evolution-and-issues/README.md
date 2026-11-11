@@ -59,9 +59,9 @@ without an explicit request).
 | [ISSUE-002](./issues/ISSUE-002-slow-test-suite.md)           | The test suite is slow                                                   | medium   | proposed |
 | [ISSUE-003](./issues/ISSUE-003-cdp-script-not-ci.md)         | `scripts/cdp-story.mjs` is neither wired up nor in CI                    | medium   | proposed |
 | [ISSUE-004](./issues/ISSUE-004-russia-bubble-anchor.md)      | Anchor of Russia's bubbles (antimeridian)                                | medium   | proposed |
-| [ISSUE-005](./issues/ISSUE-005-disputed-borders.md)          | Disputed borders and regions without an id                               | high     | proposed |
+| [ISSUE-005](./issues/ISSUE-005-disputed-borders.md)          | Disputed borders and regions without an id                               | high     | done     |
 | [ISSUE-006](./issues/ISSUE-006-no-data-warning-noise.md)     | The «no data» warning clutters the console with legitimately sparse data | low      | proposed |
-| [ISSUE-007](./issues/ISSUE-007-visual-review-pending.md)     | Visual review pending from the human                                     | medium   | proposed |
+| [ISSUE-007](./issues/ISSUE-007-visual-review-pending.md)     | Visual review pending from the human                                     | medium   | done     |
 | [ISSUE-008](./issues/ISSUE-008-esm-only.md)                  | ESM-only package                                                         | low      | proposed |
 | [ISSUE-009](./issues/ISSUE-009-first-render-not-measured.md) | Render budgets not rigorously measured                                   | low      | proposed |
 | [ISSUE-010](./issues/ISSUE-010-profiler-dev-only.md)         | The `Profiler` in the performance story only measures in development     | low      | proposed |
