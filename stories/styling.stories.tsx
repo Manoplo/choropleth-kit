@@ -88,7 +88,7 @@ const Themes = () => (
     <ThemeCell name='theme="dark"' theme="dark" />
     <ThemeCell name='theme="minimal"' theme="minimal" />
     <ThemeCell name='theme="contrast"' theme="contrast" />
-    <ThemeCell name="Propio: extendTheme('dark', { … })" theme={sunset} />
+    <ThemeCell name="Custom: extendTheme('dark', { … })" theme={sunset} />
   </div>
 );
 

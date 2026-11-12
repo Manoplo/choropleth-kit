@@ -36,6 +36,9 @@
     "README.md",
     "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -64,7 +67,7 @@
     }
   },
   "scripts": {
-    "prepare": "node -e \"const ua=process.env.npm_config_user_agent||''; if(!ua.includes('pnpm')){console.error('Usa pnpm. Este proyecto no admite npm ni yarn.');process.exit(1)}\"",
+    "prepare": "node -e \"const ua=process.env.npm_config_user_agent||''; if(!ua.includes('pnpm')){console.error('Use pnpm. This project does not support npm or yarn.');process.exit(1)}\"",
     "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
@@ -95,10 +98,7 @@
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",
     "@types/d3-ease": "^3.0.2",
-    "@types/d3-geo": "^3.1.1",
-    "@types/d3-interpolate": "^3.0.4",
     "@types/d3-scale": "^4.0.9",
-    "@types/d3-scale-chromatic": "^3.1.0",
     "@types/d3-selection": "^3.0.12",
     "@types/d3-transition": "^3.0.9",
     "@types/d3-zoom": "^3.0.9",
@@ -125,6 +125,9 @@
     "world-atlas": "^2.0.2"
   },
   "dependencies": {
+    "@types/d3-geo": "^3.1.1",
+    "@types/d3-interpolate": "^3.0.4",
+    "@types/d3-scale-chromatic": "^3.1.0",
     "@types/geojson": "^7946.0.16",
     "@types/topojson-specification": "^1.0.5",
     "d3-ease": "^3.0.2",
