@@ -33,6 +33,7 @@ import {
   getFocusExtent,
   getFocusGeometry,
   joinData,
+  regionRotation,
   resolveDrillData,
   resolveLabels,
   resolveVariant,
@@ -77,6 +78,7 @@ import { useContainerSize } from "./use-container-size";
 import { useDrillEngine } from "./use-drill-engine";
 import type { DrillController } from "./use-drill-down";
 import { useGeography, type GeographyStatus } from "./use-geography";
+import { useRegion, withoutOverseas, type RegionProp } from "./region";
 
 /** A region ready to paint. */
 export type Region<TDatum> = {
@@ -163,7 +165,14 @@ export type DrillNav = {
   drillUp: (steps?: number) => void;
 };
 
-export type JoinReport = Omit<JoinResult<unknown>, "joined">;
+export type JoinReport = Omit<JoinResult<unknown>, "joined"> & {
+  /**
+   * Ids of data that belong to the world but not to the map's `region` (e.g. a worldwide dataset on a map of
+   * Europe). They are expected, not an error: they are neither in `unmatchedData` nor warned about. `[]`
+   * without `region`.
+   */
+  outOfRegion: string[];
+};
 
 /** What is dimmed when there is a selection or hover. */
 export type DimOthers = "never" | "selection" | "hover-and-selection";
@@ -177,6 +186,15 @@ type BaseOptions<TDatum> = {
   /** Cache key for an async geometry (otherwise the function's identity is used). */
   geographyKey?: string;
   objectName?: string;
+  /**
+   * Restricts the map to a continent, a subregion or some countries, from the first frame (no flight, no
+   * world around it): `"europe"`, `"westernEurope"`, `"eu27"`, `"ES"`, `["ES", "PT"]`, `["europe", "MA"]`.
+   * It matches `feature.id` (or `getFeatureId`) against ISO 3166-1 alpha-2 codes. Overseas territories
+   * (Guiana, Svalbard, Hawaii…) are left out so they do not shrink the framing. Russia is in no preset:
+   * ask for it with `"RU"`. With `drill` it restricts the root level; the levels below bring their own
+   * geometry. Data outside the region is ignored without warnings (`joinReport.outOfRegion`).
+   */
+  region?: RegionProp;
   /** Discards regions before anything else (e.g. Antarctica: `(f) => f.id !== "010"`). */
   filterFeatures?: (feature: Feature) => boolean;
   /**
@@ -402,10 +420,12 @@ export const useChoropleth = <TDatum>(
 
   // ── drill-down: the level being shown overrides the map's options ───────────────────────────────
   // To the rest of the hook, a map with `drill` is a ONE-level map with different options.
+  const region = useRegion(rawOptions.region);
   const engine = useDrillEngine<TDatum>({
     drill: rawOptions.drill,
     data: rawOptions.data,
     filterFeatures: rawOptions.filterFeatures,
+    region,
     store,
     onDrill: rawOptions.onDrill,
     onDrillEnd: rawOptions.onDrillEnd,
@@ -443,7 +463,16 @@ export const useChoropleth = <TDatum>(
   const geography: GeographyData | undefined = engine.active ? engine.geography : single.geography;
   const status: GeographyStatus = engine.active ? engine.status : single.status;
   const objectName = engine.active ? engine.objectName : options.objectName;
-  const filterFeatures = engine.active ? engine.filterFeatures : options.filterFeatures;
+  // With `drill` the engine already folds the `region` into its filter (root level only).
+  const regionIdOf = getFeatureId ?? defaultFeatureId;
+  const userFilter = engine.active ? engine.filterFeatures : options.filterFeatures;
+  const filterFeatures =
+    engine.active || region === undefined
+      ? userFilter
+      : (feature: Feature): boolean => {
+          const id = regionIdOf(feature);
+          return id !== undefined && region.ids.has(id) && (userFilter?.(feature) ?? true);
+        };
   const allFeatures = useMemo(
     () =>
       engine.active
@@ -464,8 +493,8 @@ export const useChoropleth = <TDatum>(
       ? null
       : allFeatures.features.flatMap((f, index) => (filterFeatures(f) ? [index] : []));
   const keptKey = keptIndexes === null ? "" : keptIndexes.join(",");
-  const features = useMemo<FeatureCollection>(
-    () =>
+  const features = useMemo<FeatureCollection>(() => {
+    const kept: FeatureCollection =
       keptIndexes === null
         ? allFeatures
         : {
@@ -474,17 +503,39 @@ export const useChoropleth = <TDatum>(
               const feature = allFeatures.features[index];
               return feature === undefined ? [] : [feature];
             }),
-          },
-    // `keptIndexes` is summarized in `keptKey` (see above).
+          };
+    // With `drill` the engine has already dropped the overseas territories of the root.
+    return engine.active || region === undefined ? kept : withoutOverseas(kept, region);
+    // `keptIndexes` is summarized in `keptKey` (see above); `region`, in its key.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
-    [allFeatures, keptKey],
-  );
+  }, [allFeatures, keptKey, engine.active, region?.key]);
   const bordersGeometry = useMemo<MultiLineString | null>(
     () =>
       geography === undefined ? null : createBorders({ geography, objectName, filterFeatures }),
     // `filterFeatures` is summarized in `keptKey`: its identity must not relaunch the computation.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
     [geography, objectName, keptKey],
+  );
+
+  // ── rotation (regions that straddle the antimeridian) ───────────────────────────────────────────
+  // Oceania, Russia and North America sit on both sides of ±180°: the projection is rotated so the world is
+  // cut elsewhere. Only with `region`; without it the world keeps its orientation. Microstates drawn as dots
+  // count too (Samoa must land next to Fiji, not on the other edge).
+  const rotationFeatures = engine.active ? engine.rootFeatures : features;
+  const rotation = useMemo(() => {
+    if (region === undefined || rotationFeatures === undefined) return undefined;
+    const points = Object.entries(fallbackPoints ?? {}).flatMap(([id, point]) =>
+      region.ids.has(id) ? [point] : [],
+    );
+    return regionRotation(rotationFeatures.features, points);
+    // `region.key` summarizes the region; the rest are the inputs.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [region?.key, rotationFeatures, fallbackPoints]);
+  // The same values in a new array must not invalidate the paths and the chain: stable by VALUE.
+  const rotateLon = rotation?.[0];
+  const rotate = useMemo<readonly [number, number] | undefined>(
+    () => (rotateLon === undefined ? undefined : [rotateLon, 0]),
+    [rotateLon],
   );
 
   // ── size ────────────────────────────────────────────────────────────────────────────────────────
@@ -495,9 +546,10 @@ export const useChoropleth = <TDatum>(
             name: projection,
             // With drill the proportion is the root's: it must not change when going down a level.
             featureCollection: (engine.active ? engine.rootFeatures : undefined) ?? features,
+            rotate,
           })
         : undefined,
-    [options.aspectRatio, projection, features, engine.active, engine.rootFeatures],
+    [options.aspectRatio, projection, features, engine.active, engine.rootFeatures, rotate],
   );
   const measured = useContainerSize({
     aspectRatio: options.aspectRatio === "auto" ? autoAspect : options.aspectRatio,
@@ -525,11 +577,12 @@ export const useChoropleth = <TDatum>(
             height,
             padding: rebasePadding,
             focusBounds: drillFocusBounds,
+            rotate,
           })
         : null,
     // `chainSig` summarizes the content of `engine.chain`; `focusKey`, that of `drillFocusBounds`.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
-    [engine.active, engine.chainSig, projection, width, height, rebasePadding, focusKey],
+    [engine.active, engine.chainSig, projection, width, height, rebasePadding, focusKey, rotate],
   );
   const chainMissing = chain?.missing ?? null;
   useEffect(() => {
@@ -550,6 +603,7 @@ export const useChoropleth = <TDatum>(
       height,
       padding: rebasePadding,
       focusBounds: drillFocusBounds,
+      rotate,
     });
   useDrillChoreography({ engine, store, shownChain: chain, chainFor });
 
@@ -571,6 +625,7 @@ export const useChoropleth = <TDatum>(
             height,
             padding: rebasePadding,
             focusBounds: drillFocusBounds,
+            rotate,
           })
         : null,
     // `previous` changes only when the level changes; `focusKey` summarizes `drillFocusBounds`.
@@ -585,6 +640,7 @@ export const useChoropleth = <TDatum>(
       height,
       rebasePadding,
       focusKey,
+      rotate,
     ],
   );
   const activeProjection = chain?.projections[chain.projections.length - 1];
@@ -705,6 +761,7 @@ export const useChoropleth = <TDatum>(
         width,
         height,
         featureCollection: features,
+        rotate,
       });
     const toPath = geoPath(geoProjection);
     // d3 returns [NaN, NaN] (not null) for what it cannot project: it is normalized here, once.
@@ -739,7 +796,7 @@ export const useChoropleth = <TDatum>(
           : null;
       },
     };
-  }, [features, bordersGeometry, projection, width, height, isBubble, chain]);
+  }, [features, bordersGeometry, projection, width, height, isBubble, chain, rotate]);
 
   // ── data → color ────────────────────────────────────────────────────────────────────────────────
   // `data: undefined` = loading. The last defined data is kept so as not to empty the map (nor warn on
@@ -754,10 +811,31 @@ export const useChoropleth = <TDatum>(
   const idOf = getFeatureId ?? defaultFeatureId;
   const join = joinData({ features: features.features, data, getId, getFeatureId: idOf });
 
+  // Data that is not in the `region` (a worldwide dataset on a map of Europe) is expected, not an error: it is
+  // set apart BEFORE warning. Only ids that exist in the world (its geometry or the fallback points) count: a
+  // typo ("UK" for "GB") is in neither, so it keeps warning. With `drill`, only the level that draws the root.
+  const outOfRegion: string[] = [];
+  let unmatchedIds = join.unmatchedData;
+  const regionDrawn = !engine.active || sourceDepth(engine.levels, engine.depth) === 0;
+  if (region !== undefined && regionDrawn && unmatchedIds.length > 0) {
+    const world = engine.active ? engine.rootAll : allFeatures;
+    const worldIds = new Set<string>();
+    for (const feature of world?.features ?? []) {
+      const id = idOf(feature);
+      if (id !== undefined) worldIds.add(id);
+    }
+    unmatchedIds = unmatchedIds.filter((id) => {
+      const outside =
+        !region.ids.has(id) && (worldIds.has(id) || fallbackPoints?.[id] !== undefined);
+      if (outside) outOfRegion.push(id);
+      return !outside;
+    });
+  }
+
   // Microstates: data without a region whose id has a fallback point.
   const fallbacks: { id: string; datum: TDatum; coordinates: Point; at: Point }[] = [];
-  if (fallbackPoints !== undefined && join.unmatchedData.length > 0) {
-    const wanted = new Set(join.unmatchedData.filter((id) => fallbackPoints[id] !== undefined));
+  if (fallbackPoints !== undefined && unmatchedIds.length > 0) {
+    const wanted = new Set(unmatchedIds.filter((id) => fallbackPoints[id] !== undefined));
     const seen = new Set<string>();
     for (const datum of data) {
       const id = getId(datum);
@@ -775,9 +853,10 @@ export const useChoropleth = <TDatum>(
   // "unjoined" is not an error and must not warn.
   const hasOwnCoordinates = options.variant === "bubble" && options.getCoordinates !== undefined;
   const joinReport: JoinReport = {
-    unmatchedData: hasOwnCoordinates ? [] : join.unmatchedData.filter((id) => !fallbackIds.has(id)),
+    unmatchedData: hasOwnCoordinates ? [] : unmatchedIds.filter((id) => !fallbackIds.has(id)),
     featuresWithoutData: hasOwnCoordinates ? [] : join.featuresWithoutData,
     duplicateDataIds: join.duplicateDataIds,
+    outOfRegion: hasOwnCoordinates ? [] : outOfRegion,
   };
 
   // One value per REGION (not per `data` row): orphan data must not influence the scale, and the legend
@@ -902,6 +981,7 @@ export const useChoropleth = <TDatum>(
     joinReport.unmatchedData.join("\u0001"),
     joinReport.featuresWithoutData.join("\u0001"),
     joinReport.duplicateDataIds.join("\u0001"),
+    joinReport.outOfRegion.join("\u0001"),
   ].join("\u0000");
   const { onJoinReport, diagnostics = true } = options;
   useEffect(() => {
@@ -924,6 +1004,18 @@ export const useChoropleth = <TDatum>(
     // identity of `onJoinReport` (almost always an inline function) would warn on every render.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [reportKey, status]);
+
+  // A `region` that selects nothing: almost always ids that are not alpha-2 (numeric ISO, names…).
+  const emptyRegion = region !== undefined && regionDrawn && features.features.length === 0;
+  useEffect(() => {
+    if (status === "ready" && emptyRegion && diagnostics && !isProduction()) {
+      console.warn(
+        `[choropleth] region "${region?.key}" matches no region of the geometry. Regions are matched by ISO 3166-1 alpha-2 code against \`feature.id\`: if your geometry uses other ids, pass \`getFeatureId\`.`,
+      );
+    }
+    // `region.key` is only read to build the message.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [emptyRegion, status, diagnostics, region?.key]);
 
   // No region with an id: no datum can join (almost always a `getFeatureId` reading something else).
   const noIdsMessage = formatNoIdsDiagnostic({

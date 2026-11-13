@@ -31,6 +31,7 @@ import { buildDrillEvent, sourceDepth, type DrillEvent, type DrillLevel } from "
 import { isProduction } from "./env";
 import type { MapItem } from "./map-item";
 import type { MapStore } from "./map-store";
+import { withoutOverseas, type ResolvedRegion } from "./region";
 import {
   isDrillController,
   useDrillDown,
@@ -62,6 +63,8 @@ export type DrillEngineParams<TDatum> = {
   data: readonly TDatum[] | undefined | ((ctx: DrillContext) => readonly TDatum[] | undefined);
   /** The map's filter (Antarctica…). Applied only to the root geometry and whatever inherits it. */
   filterFeatures: ((feature: Feature) => boolean) | undefined;
+  /** The map's `region`: like the filter, applied only to the root geometry (and whatever inherits it). */
+  region: ResolvedRegion | undefined;
   /** To read the camera when starting to go down (saved to return to it when going up). */
   store: MapStore;
   onDrill: ((event: DrillEvent<TDatum>) => void) | undefined;
@@ -105,6 +108,8 @@ export type DrillEngine<TDatum> = {
   filterFeatures: ((feature: Feature) => boolean) | undefined;
   /** The root geometry (for the `"auto"` aspect ratio, which must not change when going down). */
   rootFeatures: FeatureCollection | undefined;
+  /** The root geometry BEFORE the map's filter and `region`: what a datum "outside the region" belongs to. */
+  rootAll: FeatureCollection | undefined;
   /** The shown level's data (`undefined` = loading). */
   data: readonly TDatum[] | undefined;
   /** Notes which item caused the next route change (received by `onDrill`). */
@@ -238,6 +243,7 @@ export const useDrillEngine = <TDatum>({
   drill,
   data,
   filterFeatures,
+  region,
   store,
   onDrill,
   onDrillEnd,
@@ -340,7 +346,10 @@ export const useDrillEngine = <TDatum>({
   }, [active, targetKey, levels, version]);
 
   // ── features per depth ────────────────────────────────────────────────────────────────────
-  /** The filter of the level at `depth`: the map's (root only) and each level's, with ITS context. */
+  /**
+   * The filter of the level at `depth`: the map's and its `region` (root only) and each level's, with ITS
+   * context.
+   */
   const keepFor = (depth: number, path: readonly string[]) => {
     const source = sourceOf(depth);
     return (feature: Feature): boolean => {
@@ -348,15 +357,28 @@ export const useDrillEngine = <TDatum>({
         const level = levels[k];
         if (level?.filterFeatures?.(feature, contextOf(path.slice(0, k))) === false) return false;
       }
-      return source !== 0 || filterFeatures === undefined || filterFeatures(feature);
+      if (source !== 0) return true;
+      if (region !== undefined) {
+        const id = (levels[0]?.getFeatureId ?? defaultFeatureId)(feature);
+        if (id === undefined || !region.ids.has(id)) return false;
+      }
+      return filterFeatures === undefined || filterFeatures(feature);
     };
   };
   const featuresAt = (depth: number, path: readonly string[]): FeatureCollection | undefined => {
     const geography = geographyAt(depth, path);
     if (geography === undefined) return undefined;
-    const raw = featureCollectionOf(geography, levels[sourceOf(depth)]?.objectName);
-    return stableFilter(raw, keepFor(depth, path));
+    const source = sourceOf(depth);
+    const raw = featureCollectionOf(geography, levels[source]?.objectName);
+    const kept = stableFilter(raw, keepFor(depth, path));
+    // The region's overseas territories are dropped from the ROOT only: deeper levels bring their own geometry.
+    return source === 0 && region !== undefined ? withoutOverseas(kept, region) : kept;
   };
+  const rootGeography = active ? geographyAt(0, EMPTY_PATH) : undefined;
+  const rootAll =
+    rootGeography === undefined || region === undefined
+      ? undefined
+      : featureCollectionOf(rootGeography, levels[sourceOf(0)]?.objectName);
   const featuresFor = (path: readonly string[]) =>
     Array.from({ length: path.length + 1 }, (_, d) => featuresAt(d, path));
 
@@ -647,6 +669,7 @@ export const useDrillEngine = <TDatum>({
     chainSig,
     filterFeatures: active && hasShown ? keepFor(depth, shownPath) : undefined,
     rootFeatures: hasShown ? shownFeatures[0] : undefined,
+    rootAll,
     data: !active ? undefined : shownIsTarget ? liveData : latest.data,
     noteItem,
     machine,

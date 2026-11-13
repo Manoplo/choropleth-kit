@@ -171,3 +171,5 @@ export {
 export type { DrillRequestProblem, IntentTimer, IntentTimerOptions } from "./drill-intent";
 export { buildProjectionChain } from "./drill-chain";
 export type { BuildProjectionChainParams, ChainLevel, ProjectionChain } from "./drill-chain";
+export { dropOverseas, regionRotation, resolveRegion } from "./region";
+export type { OverseasTable, RegionInput, RegionPresets } from "./region";
