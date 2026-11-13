@@ -162,6 +162,38 @@ drillable region previews it and the second one drills down.
 - `unstyled` removes all the base CSS.
 - UI texts are in English and can be replaced with `labels` (a Spanish pack ships with the library: `import { es } from "choropleth-kit/core"`).
 
+## Show only a continent, a subregion or some countries
+
+`region` restricts the map **from the first frame**: no zoom animation, no world around it, and the
+map fills its container.
+
+```tsx
+<ChoroplethMap geography={world110m} objectName="countries" region="europe" data={rows} … />
+<ChoroplethMap … region="westernEurope" />        // a subregion
+<ChoroplethMap … region="eu27" />                 // a political / commercial grouping
+<ChoroplethMap … region="ES" />                   // one country
+<ChoroplethMap … region={["ES", "PT", "MA"]} />   // some countries
+<ChoroplethMap … region={["iberia", "MA"]} />     // presets and codes can be mixed
+```
+
+- **Presets** (`REGION_PRESETS` in `choropleth-kit/geo`): continents (`africa`, `asia`, `europe`,
+  `northAmerica`, `southAmerica`, `oceania`), the UN subregions (`westernEurope`, `southeasternAsia`,
+  `caribbean`, `usAndCanada`…) and groupings (`eu27`, `nordics`, `iberia`, `latam`, `mena`). An unknown
+  name throws an error that lists the valid ones.
+- **Russia is in no preset** (it spans two continents and would dominate the framing): ask for it with
+  `region="RU"`. Turkey, Cyprus and the Caucasus count as Asia.
+- **Regions across the date line are re-centered**: Oceania (Fiji, New Zealand…) and Russia (Chukotka) would be
+  torn across both edges of a world map, so their projection is rotated. Regions that do not touch ±180°
+  keep the world's orientation.
+- **Overseas territories are left out** (French Guiana, Svalbard, Hawaii…) so they do not shrink the
+  framing. `world110m` does not draw the Canary Islands, the Azores or the Caribbean anyway.
+- **Your data can be worldwide**: rows for countries outside the region are ignored without warnings and
+  listed in `joinReport.outOfRegion`. A typo (`"UK"`) still warns.
+- **It works with `drill`**: `region` restricts the root level; the levels below bring their own geometry,
+  and going back up returns to the region.
+- It matches `feature.id` (or your `getFeatureId`) against ISO alpha-2 codes, so it needs a geometry that
+  uses them, like `world110m`.
+
 ## Geodata and borders
 
 `world110m` is Natural Earth 1:110m (public domain) with ISO alpha-2 ids, Kosovo (`XK`) included.
@@ -177,8 +209,8 @@ Measured with [`size-limit`](https://github.com/ai/size-limit) (gzip, minified; 
 
 | What                                                      | Gzip    |
 | --------------------------------------------------------- | ------- |
-| Own code (`core` + `react`, dependencies external)        | ≈ 29 KB |
-| `ChoroplethMap` with all of `d3` included (without React) | ≈ 72 KB |
+| Own code (`core` + `react`, dependencies external)        | ≈ 31 KB |
+| `ChoroplethMap` with all of `d3` included (without React) | ≈ 74 KB |
 | `styles.css`                                              | ≈ 2 KB  |
 | `choropleth-kit/geo` (data)                               | ≈ 40 KB |
 

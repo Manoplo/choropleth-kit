@@ -13,6 +13,7 @@ export type {
   UseChoroplethOptions,
   UseChoroplethResult,
 } from "./use-choropleth";
+export type { RegionProp } from "./region";
 export { buildDrillEvent, defineDrillLevels, isDrillable, sourceDepth } from "./drill-levels";
 export type { DrillEvent, DrillLevel } from "./drill-levels";
 export { REVEAL_MS, useDrillChoreography } from "./use-drill-choreography";

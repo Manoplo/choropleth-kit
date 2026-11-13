@@ -25,7 +25,7 @@ Statuses: `proposed` → `accepted` → `in progress` → `done` (or `discarded`
 The working rules in `AGENTS.md` still apply (one step at a time, tests in `src/core`, no commits
 without an explicit request).
 
-## Features (21)
+## Features (24)
 
 | Code                                                      | Title                                                     | Priority | Status   |
 | --------------------------------------------------------- | --------------------------------------------------------- | -------- | -------- |
@@ -50,8 +50,11 @@ without an explicit request).
 | [FEAT-019](./features/FEAT-019-vanilla-api.md)            | Vanilla API (no React)                                    | low      | proposed |
 | [FEAT-020](./features/FEAT-020-small-multiples.md)        | Small multiples                                           | low      | proposed |
 | [FEAT-021](./features/FEAT-021-use-timeline.md)           | `useTimeline`                                             | low      | proposed |
+| [FEAT-022](./features/FEAT-022-regional-maps.md)          | Regional maps (`region="europe"`, country lists)          | high     | proposed |
+| [FEAT-023](./features/FEAT-023-overseas-territories.md)   | Overseas territories: show or hide, per country           | medium   | proposed |
+| [FEAT-024](./features/FEAT-024-custom-color-ramps.md)     | Custom color ramps and fixed domains                      | high     | proposed |
 
-## Issues (12)
+## Issues (13)
 
 | Code                                                         | Title                                                                    | Priority | Status   |
 | ------------------------------------------------------------ | ------------------------------------------------------------------------ | -------- | -------- |
@@ -67,6 +70,7 @@ without an explicit request).
 | [ISSUE-010](./issues/ISSUE-010-profiler-dev-only.md)         | The `Profiler` in the performance story only measures in development     | low      | proposed |
 | [ISSUE-011](./issues/ISSUE-011-publishing-pending.md)        | Pending decisions before the first publish                               | high     | proposed |
 | [ISSUE-012](./issues/ISSUE-012-historical-docs-spanish.md)   | Two historical documents are still in Spanish                            | low      | proposed |
+| [ISSUE-013](./issues/ISSUE-013-legend-single-value.md)       | The legend of a map whose values are all equal shows identical classes   | medium   | proposed |
 
 ## Where the initial items come from
 
