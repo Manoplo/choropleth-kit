@@ -1,0 +1,177 @@
+name: Snapshot
+
+# Installable build of a pull request, to try it in another app (a playground, the docs site) BEFORE merging.
+#
+#  - Put the label `publish snapshot` on a PR: every push to it builds and publishes a snapshot.
+#  - Remove the label, or close/merge the PR: its snapshots are deleted.
+#
+# A snapshot is a GitHub pre-release (tag `snapshot-pr-<number>-g<sha>`) with the packed `.tgz` as its only asset
+# and a comment on the PR with the install command. It is never published to npm.
+#
+# Security: this runs PR code, so it uses `pull_request` (NOT `pull_request_target`) and only for PRs from this
+# repository. A fork gets a read-only token and no label from a stranger can change that. Only people with
+# triage access can add a label. The job never reads a secret other than the workflow's own `GITHUB_TOKEN`.
+on:
+  pull_request:
+    branches: [develop, master]
+    types: [labeled, unlabeled, synchronize, reopened, closed]
+
+# One run per PR at a time, in order: a publish and a cleanup must not interleave. A newer push waits for the
+# running one instead of cancelling it halfway through a release.
+concurrency:
+  group: snapshot-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish snapshot
+    # The label is on the PR, the event is not "closed"/"unlabeled", and if the event is a label being added it
+    # is OUR label (adding `bug` to a labeled PR must not publish again). Same-repo PRs only.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository
+      && contains(github.event.pull_request.labels.*.name, 'publish snapshot')
+      && github.event.action != 'closed'
+      && github.event.action != 'unlabeled'
+      && (github.event.action != 'labeled' || github.event.label.name == 'publish snapshot')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write # create the release and its tag
+      pull-requests: write # the comment with the install command
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PR: ${{ github.event.pull_request.number }}
+      SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      # The PR's own head commit, not the merge with the base: what the label asked to try is the PR's code.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # `0.1.0-pr.12.g1a2b3c4`: a valid semver pre-release that sorts below the real `0.1.0`, so a snapshot can
+      # never be mistaken for (or win against) a published version. The `g` keeps an all-digit short sha with a
+      # leading zero from being an invalid numeric identifier. Only the working copy changes; nothing is committed.
+      - name: Version
+        id: version
+        run: |
+          base="$(node -p "require('./package.json').version" | sed 's/-.*//')"
+          short="${SHA:0:7}"
+          version="${base}-pr.${PR}.g${short}"
+          npm pkg set "version=${version}"
+          {
+            echo "version=${version}"
+            echo "tag=snapshot-pr-${PR}-g${short}"
+            echo "file=choropleth-kit-${version}.tgz"
+          } >> "$GITHUB_OUTPUT"
+
+      - run: pnpm build
+
+      - name: Pack
+        run: pnpm pack --pack-destination "$RUNNER_TEMP/snapshot"
+
+      - name: Check the tarball
+        env:
+          FILE: ${{ steps.version.outputs.file }}
+        run: |
+          tgz="$RUNNER_TEMP/snapshot/$FILE"
+          test -f "$tgz" || { echo "::error::expected $tgz"; ls -la "$RUNNER_TEMP/snapshot"; exit 1; }
+          tar -tzf "$tgz" | grep -q '^package/dist/index.js$' || { echo "::error::dist/index.js is not in the tarball"; exit 1; }
+          ls -lh "$tgz"
+
+      - name: Release
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+          FILE: ${{ steps.version.outputs.file }}
+          REPO: ${{ github.repository }}
+        run: |
+          tgz="$RUNNER_TEMP/snapshot/$FILE"
+          notes="Snapshot of PR #${PR} at ${SHA}. **Not published to npm**; it is deleted when the PR is closed or the label is removed."
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            # A re-run of the same commit: replace the asset.
+            gh release upload "$TAG" "$tgz" --clobber
+          else
+            gh release create "$TAG" "$tgz" --target "$SHA" --prerelease --latest=false \
+              --title "Snapshot ${VERSION}" --notes "$notes"
+          fi
+
+      # One comment per PR, edited in place (found by a hidden marker, not by author).
+      - name: Comment
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+          FILE: ${{ steps.version.outputs.file }}
+          REPO: ${{ github.repository }}
+        run: |
+          url="https://github.com/${REPO}/releases/download/${TAG}/${FILE}"
+          {
+            echo '<!-- choropleth-kit-snapshot -->'
+            echo "### Snapshot \`${VERSION}\`"
+            echo
+            echo "Built from ${SHA}. Install it in the app you want to try it in:"
+            echo
+            echo '```bash'
+            echo "npm i ${url}"
+            echo "pnpm add ${url}"
+            echo '```'
+            echo
+            echo "Each new commit publishes a new snapshot and updates this comment. The tarball is immutable (its name has"
+            echo "the commit), so lockfiles keep working. Not on npm; all snapshots of this PR are deleted when it is"
+            echo "closed or the \`publish snapshot\` label is removed."
+          } > "$RUNNER_TEMP/comment.md"
+          id="$(gh api "repos/${REPO}/issues/${PR}/comments" --paginate \
+            --jq '.[] | select(.body | contains("<!-- choropleth-kit-snapshot -->")) | .id' | head -n1)"
+          if [ -n "$id" ]; then
+            gh api --method PATCH "repos/${REPO}/issues/comments/${id}" -F body=@"$RUNNER_TEMP/comment.md" >/dev/null
+          else
+            gh api --method POST "repos/${REPO}/issues/${PR}/comments" -F body=@"$RUNNER_TEMP/comment.md" >/dev/null
+          fi
+
+  cleanup:
+    name: Delete snapshots
+    # The PR is closed or merged, or its label was removed. Also for fork PRs (nothing to delete, harmless).
+    if: >-
+      github.event.action == 'closed'
+      || (github.event.action == 'unlabeled' && github.event.label.name == 'publish snapshot')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PR: ${{ github.event.pull_request.number }}
+      REPO: ${{ github.repository }}
+    steps:
+      # No checkout: it only talks to the GitHub API.
+      - name: Delete the PR's snapshot releases and tags
+        run: |
+          prefix="snapshot-pr-${PR}-"
+          gh release list --repo "$REPO" --limit 200 --json tagName --jq '.[].tagName' \
+            | grep "^${prefix}" \
+            | while read -r tag; do
+                echo "Deleting $tag"
+                gh release delete "$tag" --repo "$REPO" --cleanup-tag --yes
+              done || true
+
+      - name: Update the comment
+        run: |
+          id="$(gh api "repos/${REPO}/issues/${PR}/comments" --paginate \
+            --jq '.[] | select(.body | contains("<!-- choropleth-kit-snapshot -->")) | .id' | head -n1)"
+          [ -n "$id" ] || exit 0
+          printf '%s\n' '<!-- choropleth-kit-snapshot -->' '### Snapshots deleted' '' \
+            'This PR was closed or its `publish snapshot` label was removed, so its snapshots no longer exist.' \
+            > "$RUNNER_TEMP/comment.md"
+          gh api --method PATCH "repos/${REPO}/issues/comments/${id}" -F body=@"$RUNNER_TEMP/comment.md" >/dev/null
