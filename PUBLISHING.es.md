@@ -186,3 +186,24 @@ _Restrict deletions_ y _Restrict updates_, para que un tag publicado no se pueda
   (`git push --delete origin vX.Y.Z && git tag -d vX.Y.Z`), borra la Release y repite. Es destructivo: piénsalo dos veces.
 - **El código de un solo uso no llega o falla:** revisa la hora del dispositivo con la app de autenticación; los
   códigos de recuperación están en los ajustes de tu cuenta de npm.
+
+## 7. Probar una PR antes de mergearla (snapshots)
+
+Para probar un cambio en otra app (la web de documentación, un playground con datos reales o sintéticos) sin
+mergear ni publicar en npm, ponle a la PR la etiqueta **`publish snapshot`**. Desde entonces, cada push a la
+PR construye el paquete y publica una **snapshot**: una pre-release de GitHub `snapshot-pr-<número>-g<sha>` con
+el `.tgz`, y un comentario en la PR con el comando de instalación:
+
+```bash
+npm i https://github.com/Manoplo/choropleth-kit/releases/download/snapshot-pr-12-g1a2b3c4/choropleth-kit-0.1.0-pr.12.g1a2b3c4.tgz
+```
+
+- **La versión es `<versión del package.json>-pr.<número>.g<sha>`** (`0.1.0-pr.12.g1a2b3c4`): una pre-release de
+  semver, por debajo de la versión del `package.json` (no se confunde con una release) y distinta en cada commit (una snapshot instalada nunca se sobrescribe, así que
+  el hash del lockfile sigue valiendo). Para actualizar, instala la nueva.
+- **No se publica nada en npm** y el `package.json` del repositorio no cambia.
+- **Se limpia sola**: al cerrar o mergear la PR, o al quitar la etiqueta, se borran sus releases y tags.
+- **Solo PRs de este repositorio** (el token de un fork es de solo lectura, a propósito), y solo quien tenga
+  permiso de triage puede poner la etiqueta. Las PRs de Dependabot tampoco (token de solo lectura).
+- El workflow es `.github/workflows/snapshot.yml`; ejecuta código de la PR con `pull_request`, nunca con
+  `pull_request_target`. Que siga así.

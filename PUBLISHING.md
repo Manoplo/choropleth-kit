@@ -51,6 +51,28 @@ gh release create v0.2.0-beta.0 --verify-tag --prerelease --generate-notes
 
 Never publish a version twice: a bad one is deprecated and superseded.
 
+## Try a pull request before merging it (snapshots)
+
+To test a change in another app (a docs site, a playground with real or synthetic data) without merging or
+publishing to npm, put the label **`publish snapshot`** on the PR. Every push to it then builds the package
+and publishes a **snapshot**: a GitHub pre-release `snapshot-pr-<number>-g<sha>` with the packed `.tgz`, plus a
+comment on the PR with the install command:
+
+```bash
+npm i https://github.com/Manoplo/choropleth-kit/releases/download/snapshot-pr-12-g1a2b3c4/choropleth-kit-0.1.0-pr.12.g1a2b3c4.tgz
+```
+
+- **The version is `<package.json version>-pr.<number>.g<sha>`** (`0.1.0-pr.12.g1a2b3c4`): a semver pre-release,
+  below the version in `package.json` (so it can never be mistaken for a release), and different on every commit (an installed snapshot is never overwritten, so lockfiles keep
+  their integrity hash). Install the new one to update.
+- **Nothing goes to npm** and `package.json` is not modified in the repository.
+- **Clean-up is automatic**: closing or merging the PR, or removing the label, deletes its releases and tags.
+- **Only PRs from this repository** get snapshots (a fork's token is read-only, by design), and only people
+  with triage access can add the label. Dependabot PRs cannot either (read-only token).
+- Re-run the workflow (`Snapshot`) from the Actions tab if a build failed for a reason unrelated to the PR.
+- The workflow is `.github/workflows/snapshot.yml`; it runs PR code with `pull_request`, never with
+  `pull_request_target`. Keep it that way.
+
 ## When something goes wrong
 
 - **Published a bad version:** you cannot overwrite a version. Publish a fixed one, and mark the bad one with
