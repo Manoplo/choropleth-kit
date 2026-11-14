@@ -47,7 +47,7 @@ jobs:
       SHA: ${{ github.event.pull_request.head.sha }}
     steps:
       # The PR's own head commit, not the merge with the base: what the label asked to try is the PR's code.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
