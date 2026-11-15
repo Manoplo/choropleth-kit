@@ -471,8 +471,11 @@ describe("asynchronous loading", () => {
     await waitFor(() => expect(container.querySelector("svg")).not.toBeNull());
     const svg = container.querySelector("svg") as SVGSVGElement;
     const viewport = container.querySelector(".cm-viewport") as SVGGElement;
+    // The gestures are hooked up in an effect AFTER the <svg> is in the DOM: wait for it, or on a loaded
+    // machine the wheel lands before d3-zoom is installed and nothing writes the transform.
+    await waitFor(() => expect(zoomStateOf(svg)).toBeDefined());
     fireEvent.wheel(svg, { deltaY: -300, clientX: 100, clientY: 50 });
 
-    expect(cameraOf(viewport).k).toBeGreaterThan(1);
+    await waitFor(() => expect(cameraOf(viewport).k).toBeGreaterThan(1));
   });
 });
