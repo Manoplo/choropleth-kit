@@ -1,0 +1,1854 @@
+{
+ "source": {
+  "name": "Natural Earth admin-1 states and provinces, 1:10m (public domain)",
+  "version": "v5.1.1",
+  "url": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.1/geojson/ne_10m_admin_1_states_provinces.geojson",
+  "sha256": "22d0e3ad85eb3e27f17cabf8ba2d50e554fbc27a87796ff891d958185da62fb5"
+ },
+ "quantization": 10000,
+ "prunedPolygons": 3,
+ "droppedUnits": [],
+ "noCountry": [
+  "Dhekelia",
+  "Somaliland",
+  "Guantanamo Bay USNB",
+  "Northern Cyprus",
+  "Kashmir",
+  "Baykonur lease in Qyzylorda",
+  "Akrotiri",
+  "Cocos (Keeling) Islands",
+  "Coral Sea Islands",
+  "Christmas Island",
+  "Spratly Islands",
+  "Clipperton Island"
+ ],
+ "merged": [
+  {
+   "id": "MW-CT",
+   "parts": 2
+  },
+  {
+   "id": "LV-JEL",
+   "parts": 2
+  },
+  {
+   "id": "LV-DGV",
+   "parts": 2
+  },
+  {
+   "id": "AZ-SA",
+   "parts": 2
+  },
+  {
+   "id": "MZ-L",
+   "parts": 2
+  },
+  {
+   "id": "HR-12",
+   "parts": 2
+  },
+  {
+   "id": "MD-RE",
+   "parts": 2
+  },
+  {
+   "id": "PH-NCO",
+   "parts": 2
+  },
+  {
+   "id": "IE-WD",
+   "parts": 2
+  },
+  {
+   "id": "IE-CO",
+   "parts": 2
+  },
+  {
+   "id": "IE-LK",
+   "parts": 2
+  },
+  {
+   "id": "IE-G",
+   "parts": 2
+  },
+  {
+   "id": "LV-VEN",
+   "parts": 2
+  },
+  {
+   "id": "AZ-LA",
+   "parts": 2
+  },
+  {
+   "id": "PH-CEB",
+   "parts": 2
+  },
+  {
+   "id": "PH-ILI",
+   "parts": 2
+  },
+  {
+   "id": "LV-JKB",
+   "parts": 2
+  },
+  {
+   "id": "AF-URU",
+   "parts": 2
+  },
+  {
+   "id": "AF-PAR",
+   "parts": 2
+  },
+  {
+   "id": "UG-410",
+   "parts": 2
+  }
+ ],
+ "ambiguous": [
+  {
+   "id": "KZ-ALA",
+   "names": [
+    "Almaty",
+    "Almaty City"
+   ]
+  },
+  {
+   "id": "SD-DS",
+   "names": [
+    "Southern Darfur",
+    "Eastern Darfur"
+   ]
+  },
+  {
+   "id": "BA-BIH",
+   "names": [
+    "Herzegovina-Neretva",
+    "Una-Sana",
+    "West Bosnia",
+    "West Herzegovina",
+    "Central Bosnia",
+    "Zenica-Doboj",
+    "Tuzla",
+    "Sarajevo",
+    "Bosnian Podrinje"
+   ]
+  },
+  {
+   "id": "MD-SN",
+   "names": [
+    "Stîngă Nistrului",
+    "Transnistria"
+   ]
+  },
+  {
+   "id": "LA-VI",
+   "names": [
+    "Vientiane [prefecture]",
+    "Vientiane"
+   ]
+  },
+  {
+   "id": "SI-054",
+   "names": [
+    "Krško",
+    "Krsko"
+   ]
+  },
+  {
+   "id": "MG-M",
+   "names": [
+    "Boeny",
+    "Sofia",
+    "Melaky",
+    "Betsiboka"
+   ]
+  },
+  {
+   "id": "MG-D",
+   "names": [
+    "Diana",
+    "Sava"
+   ]
+  },
+  {
+   "id": "MG-A",
+   "names": [
+    "Analanjirofo",
+    "Atsinanana",
+    "Alaotra-Mangoro"
+   ]
+  },
+  {
+   "id": "MG-F",
+   "names": [
+    "Vatovavy-Fitovinany",
+    "Atsimo-Atsinanana",
+    "Amoron'i Mania",
+    "Ihorombe",
+    "Haute Matsiatra"
+   ]
+  },
+  {
+   "id": "MG-U",
+   "names": [
+    "Anosy",
+    "Androy",
+    "Atsimo-Andrefana",
+    "Menabe"
+   ]
+  },
+  {
+   "id": "AU-NSW",
+   "names": [
+    "New South Wales",
+    "Lord Howe Island"
+   ]
+  },
+  {
+   "id": "PE-LIM",
+   "names": [
+    "Lima",
+    "Lima Province"
+   ]
+  },
+  {
+   "id": "PH-DAV",
+   "names": [
+    "Davao del Norte",
+    "Davao"
+   ]
+  },
+  {
+   "id": "PH-PLW",
+   "names": [
+    "Palawan",
+    "Puerto Princesa"
+   ]
+  },
+  {
+   "id": "PH-AGN",
+   "names": [
+    "Agusan del Norte",
+    "Butuan"
+   ]
+  },
+  {
+   "id": "PH-MSR",
+   "names": [
+    "Misamis Oriental",
+    "Cagayan de Oro"
+   ]
+  },
+  {
+   "id": "PH-LAN",
+   "names": [
+    "Iligan",
+    "Lanao del Norte"
+   ]
+  },
+  {
+   "id": "PH-ZAN",
+   "names": [
+    "Zamboanga del Norte",
+    "Zamboanga"
+   ]
+  },
+  {
+   "id": "PH-SCO",
+   "names": [
+    "General Santos",
+    "South Cotabato"
+   ]
+  },
+  {
+   "id": "PH-LEY",
+   "names": [
+    "Leyte",
+    "Tacloban",
+    "Ormoc"
+   ]
+  },
+  {
+   "id": "PH-QUE",
+   "names": [
+    "Quezon",
+    "Lucena"
+   ]
+  },
+  {
+   "id": "PH-CAS",
+   "names": [
+    "Camarines Sur",
+    "Naga"
+   ]
+  },
+  {
+   "id": "PH-MNL",
+   "names": [
+    "Las Pinas",
+    "Paranaque",
+    "Pasay",
+    "Manila",
+    "Navotas",
+    "Muntinlupa",
+    "Caloocan",
+    "Malabon",
+    "Valenzuela",
+    "Quezon City",
+    "Taguig",
+    "Marikina",
+    "Pasig",
+    "Makati",
+    "Pateros",
+    "Mandaluyong City",
+    "San Juan"
+   ]
+  },
+  {
+   "id": "PH-PAM",
+   "names": [
+    "Pampanga",
+    "Angeles"
+   ]
+  },
+  {
+   "id": "PH-ZMB",
+   "names": [
+    "Olongapo",
+    "Zambales"
+   ]
+  },
+  {
+   "id": "PH-PAN",
+   "names": [
+    "Pangasinan",
+    "Dagupan"
+   ]
+  },
+  {
+   "id": "PH-ISA",
+   "names": [
+    "Isabela",
+    "Santiago"
+   ]
+  },
+  {
+   "id": "IE-D",
+   "names": [
+    "Dublin",
+    "Dún Laoghaire–Rathdown",
+    "Fingal",
+    "South Dublin"
+   ]
+  },
+  {
+   "id": "GL-UO",
+   "names": [
+    "Nationalparken",
+    "Pituffik"
+   ]
+  },
+  {
+   "id": "MU-PL",
+   "names": [
+    "Port Louis city",
+    "Port Louis"
+   ]
+  },
+  {
+   "id": "SB-CH",
+   "names": [
+    "Western",
+    "Choiseul"
+   ]
+  },
+  {
+   "id": "MV-12",
+   "names": [
+    "Meemu",
+    "Malé"
+   ]
+  },
+  {
+   "id": "MG-T",
+   "names": [
+    "Analamanga",
+    "Bongolava",
+    "Vakinankaratra",
+    "Itasy"
+   ]
+  },
+  {
+   "id": "LV-REZ",
+   "names": [
+    "Rezeknes",
+    "Rezekne"
+   ]
+  },
+  {
+   "id": "IE-TA",
+   "names": [
+    "North Tipperary",
+    "South Tipperary"
+   ]
+  },
+  {
+   "id": "CO-CUN",
+   "names": [
+    "Bogota",
+    "Cundinamarca"
+   ]
+  },
+  {
+   "id": "AZ-YEV",
+   "names": [
+    "Yevlakh Rayon",
+    "Yevlakh"
+   ]
+  },
+  {
+   "id": "PH-BEN",
+   "names": [
+    "Benguet",
+    "Baguio"
+   ]
+  },
+  {
+   "id": "IR-07",
+   "names": [
+    "Tehran",
+    "Alborz"
+   ]
+  }
+ ],
+ "countries": {
+  "AD": {
+   "name": "Andorra",
+   "units": 7,
+   "withoutId": 0,
+   "bytes": 2384
+  },
+  "AE": {
+   "name": "United Arab Emirates",
+   "units": 9,
+   "withoutId": 2,
+   "bytes": 12595
+  },
+  "AF": {
+   "name": "Afghanistan",
+   "units": 32,
+   "withoutId": 0,
+   "bytes": 53256
+  },
+  "AG": {
+   "name": "Antigua and Barbuda",
+   "units": 8,
+   "withoutId": 0,
+   "bytes": 2638
+  },
+  "AI": {
+   "name": "Anguilla",
+   "units": 15,
+   "withoutId": 14,
+   "bytes": 3187
+  },
+  "AL": {
+   "name": "Albania",
+   "units": 12,
+   "withoutId": 0,
+   "bytes": 14862
+  },
+  "AM": {
+   "name": "Armenia",
+   "units": 11,
+   "withoutId": 0,
+   "bytes": 10861
+  },
+  "AO": {
+   "name": "Angola",
+   "units": 18,
+   "withoutId": 0,
+   "bytes": 36133
+  },
+  "AQ": {
+   "name": "Antarctica",
+   "units": 2,
+   "withoutId": 2,
+   "bytes": 165138
+  },
+  "AR": {
+   "name": "Argentina",
+   "units": 24,
+   "withoutId": 0,
+   "bytes": 60647
+  },
+  "AS": {
+   "name": "American Samoa",
+   "units": 5,
+   "withoutId": 5,
+   "bytes": 1233
+  },
+  "AT": {
+   "name": "Austria",
+   "units": 9,
+   "withoutId": 0,
+   "bytes": 16874
+  },
+  "AU": {
+   "name": "Australia",
+   "units": 12,
+   "withoutId": 5,
+   "bytes": 106028
+  },
+  "AW": {
+   "name": "Aruba",
+   "units": 1,
+   "withoutId": 1,
+   "bytes": 601
+  },
+  "AX": {
+   "name": "Aland",
+   "units": 11,
+   "withoutId": 11,
+   "bytes": 4311
+  },
+  "AZ": {
+   "name": "Azerbaijan",
+   "units": 76,
+   "withoutId": 3,
+   "bytes": 34583
+  },
+  "BA": {
+   "name": "Bosnia and Herzegovina",
+   "units": 18,
+   "withoutId": 16,
+   "bytes": 14540
+  },
+  "BB": {
+   "name": "Barbados",
+   "units": 11,
+   "withoutId": 0,
+   "bytes": 3615
+  },
+  "BD": {
+   "name": "Bangladesh",
+   "units": 7,
+   "withoutId": 0,
+   "bytes": 25019
+  },
+  "BE": {
+   "name": "Belgium",
+   "units": 11,
+   "withoutId": 0,
+   "bytes": 12624
+  },
+  "BF": {
+   "name": "Burkina Faso",
+   "units": 45,
+   "withoutId": 0,
+   "bytes": 34813
+  },
+  "BG": {
+   "name": "Bulgaria",
+   "units": 28,
+   "withoutId": 0,
+   "bytes": 22952
+  },
+  "BH": {
+   "name": "Bahrain",
+   "units": 5,
+   "withoutId": 0,
+   "bytes": 2491
+  },
+  "BI": {
+   "name": "Burundi",
+   "units": 17,
+   "withoutId": 0,
+   "bytes": 9423
+  },
+  "BJ": {
+   "name": "Benin",
+   "units": 12,
+   "withoutId": 0,
+   "bytes": 10246
+  },
+  "BL": {
+   "name": "Saint Barthelemy",
+   "units": 1,
+   "withoutId": 1,
+   "bytes": 462
+  },
+  "BM": {
+   "name": "Bermuda",
+   "units": 11,
+   "withoutId": 0,
+   "bytes": 3107
+  },
+  "BN": {
+   "name": "Brunei",
+   "units": 4,
+   "withoutId": 0,
+   "bytes": 2511
+  },
+  "BO": {
+   "name": "Bolivia",
+   "units": 9,
+   "withoutId": 0,
+   "bytes": 24137
+  },
+  "BR": {
+   "name": "Brazil",
+   "units": 27,
+   "withoutId": 0,
+   "bytes": 165332
+  },
+  "BS": {
+   "name": "The Bahamas",
+   "units": 30,
+   "withoutId": 1,
+   "bytes": 17374
+  },
+  "BT": {
+   "name": "Bhutan",
+   "units": 20,
+   "withoutId": 0,
+   "bytes": 16088
+  },
+  "BW": {
+   "name": "Botswana",
+   "units": 15,
+   "withoutId": 0,
+   "bytes": 12493
+  },
+  "BY": {
+   "name": "Belarus",
+   "units": 7,
+   "withoutId": 0,
+   "bytes": 28057
+  },
+  "BZ": {
+   "name": "Belize",
+   "units": 6,
+   "withoutId": 0,
+   "bytes": 7838
+  },
+  "CA": {
+   "name": "Canada",
+   "units": 13,
+   "withoutId": 0,
+   "bytes": 512185
+  },
+  "CD": {
+   "name": "Democratic Republic of the Congo",
+   "units": 11,
+   "withoutId": 0,
+   "bytes": 45527
+  },
+  "CF": {
+   "name": "Central African Republic",
+   "units": 17,
+   "withoutId": 0,
+   "bytes": 37056
+  },
+  "CG": {
+   "name": "Republic of the Congo",
+   "units": 12,
+   "withoutId": 0,
+   "bytes": 24925
+  },
+  "CH": {
+   "name": "Switzerland",
+   "units": 26,
+   "withoutId": 0,
+   "bytes": 28553
+  },
+  "CI": {
+   "name": "Ivory Coast",
+   "units": 19,
+   "withoutId": 0,
+   "bytes": 35410
+  },
+  "CK": {
+   "name": "Cook Islands",
+   "units": 11,
+   "withoutId": 11,
+   "bytes": 2064
+  },
+  "CL": {
+   "name": "Chile",
+   "units": 16,
+   "withoutId": 0,
+   "bytes": 131413
+  },
+  "CM": {
+   "name": "Cameroon",
+   "units": 10,
+   "withoutId": 0,
+   "bytes": 22685
+  },
+  "CN": {
+   "name": "China",
+   "units": 32,
+   "withoutId": 1,
+   "bytes": 239945
+  },
+  "CO": {
+   "name": "Colombia",
+   "units": 34,
+   "withoutId": 3,
+   "bytes": 66009
+  },
+  "CR": {
+   "name": "Costa Rica",
+   "units": 7,
+   "withoutId": 0,
+   "bytes": 15138
+  },
+  "CU": {
+   "name": "Cuba",
+   "units": 16,
+   "withoutId": 0,
+   "bytes": 35589
+  },
+  "CV": {
+   "name": "Cape Verde",
+   "units": 22,
+   "withoutId": 0,
+   "bytes": 7513
+  },
+  "CW": {
+   "name": "Curaçao",
+   "units": 1,
+   "withoutId": 1,
+   "bytes": 803
+  },
+  "CY": {
+   "name": "Cyprus",
+   "units": 5,
+   "withoutId": 0,
+   "bytes": 6044
+  },
+  "CZ": {
+   "name": "Czech Republic",
+   "units": 14,
+   "withoutId": 0,
+   "bytes": 23820
+  },
+  "DE": {
+   "name": "Germany",
+   "units": 16,
+   "withoutId": 0,
+   "bytes": 68797
+  },
+  "DJ": {
+   "name": "Djibouti",
+   "units": 6,
+   "withoutId": 0,
+   "bytes": 3435
+  },
+  "DK": {
+   "name": "Denmark",
+   "units": 5,
+   "withoutId": 0,
+   "bytes": 21216
+  },
+  "DM": {
+   "name": "Dominica",
+   "units": 10,
+   "withoutId": 0,
+   "bytes": 3713
+  },
+  "DO": {
+   "name": "Dominican Republic",
+   "units": 32,
+   "withoutId": 0,
+   "bytes": 15967
+  },
+  "DZ": {
+   "name": "Algeria",
+   "units": 48,
+   "withoutId": 0,
+   "bytes": 41865
+  },
+  "EC": {
+   "name": "Ecuador",
+   "units": 24,
+   "withoutId": 0,
+   "bytes": 34006
+  },
+  "EE": {
+   "name": "Estonia",
+   "units": 15,
+   "withoutId": 0,
+   "bytes": 18691
+  },
+  "EG": {
+   "name": "Egypt",
+   "units": 27,
+   "withoutId": 0,
+   "bytes": 30222
+  },
+  "EH": {
+   "name": "Western Sahara",
+   "units": 1,
+   "withoutId": 1,
+   "bytes": 2868
+  },
+  "ER": {
+   "name": "Eritrea",
+   "units": 6,
+   "withoutId": 0,
+   "bytes": 11009
+  },
+  "ES": {
+   "name": "Spain",
+   "units": 52,
+   "withoutId": 0,
+   "bytes": 71768
+  },
+  "ET": {
+   "name": "Ethiopia",
+   "units": 11,
+   "withoutId": 0,
+   "bytes": 25417
+  },
+  "FI": {
+   "name": "Finland",
+   "units": 18,
+   "withoutId": 0,
+   "bytes": 45269
+  },
+  "FJ": {
+   "name": "Fiji",
+   "units": 5,
+   "withoutId": 0,
+   "bytes": 12366
+  },
+  "FK": {
+   "name": "Falkland Islands",
+   "units": 1,
+   "withoutId": 1,
+   "bytes": 12668
+  },
+  "FM": {
+   "name": "Federated States of Micronesia",
+   "units": 4,
+   "withoutId": 0,
+   "bytes": 2795
+  },
+  "FO": {
+   "name": "Faroe Islands",
+   "units": 1,
+   "withoutId": 1,
+   "bytes": 5135
+  },
+  "FR": {
+   "name": "France",
+   "units": 101,
+   "withoutId": 0,
+   "bytes": 100358
+  },
+  "GA": {
+   "name": "Gabon",
+   "units": 9,
+   "withoutId": 0,
+   "bytes": 19691
+  },
+  "GB": {
+   "name": "United Kingdom",
+   "units": 232,
+   "withoutId": 0,
+   "bytes": 138423
+  },
+  "GD": {
+   "name": "Grenada",
+   "units": 7,
+   "withoutId": 0,
+   "bytes": 2040
+  },
+  "GE": {
+   "name": "Georgia",
+   "units": 12,
+   "withoutId": 0,
+   "bytes": 10564
+  },
+  "GG": {
+   "name": "Guernsey",
+   "units": 1,
+   "withoutId": 1,
+   "bytes": 859
+  },
+  "GH": {
+   "name": "Ghana",
+   "units": 10,
+   "withoutId": 0,
+   "bytes": 24811
+  },
+  "GI": {
+   "name": "Gibraltar",
+   "units": 1,
+   "withoutId": 1,
+   "bytes": 397
+  },
+  "GL": {
+   "name": "Greenland",
+   "units": 6,
+   "withoutId": 2,
+   "bytes": 155478
+  },
+  "GM": {
+   "name": "Gambia",
+   "units": 6,
+   "withoutId": 0,
+   "bytes": 5431
+  },
+  "GN": {
+   "name": "Guinea",
+   "units": 34,
+   "withoutId": 0,
+   "bytes": 29432
+  },
+  "GQ": {
+   "name": "Equatorial Guinea",
+   "units": 7,
+   "withoutId": 0,
+   "bytes": 4996
+  },
+  "GR": {
+   "name": "Greece",
+   "units": 14,
+   "withoutId": 0,
+   "bytes": 55794
+  },
+  "GS": {
+   "name": "South Georgia and the Islands",
+   "units": 1,
+   "withoutId": 1,
+   "bytes": 5557
+  },
+  "GT": {
+   "name": "Guatemala",
+   "units": 22,
+   "withoutId": 0,
+   "bytes": 19925
+  },
+  "GU": {
+   "name": "Guam",
+   "units": 1,
+   "withoutId": 1,
+   "bytes": 840
+  },
+  "GW": {
+   "name": "Guinea Bissau",
+   "units": 9,
+   "withoutId": 0,
+   "bytes": 17079
+  },
+  "GY": {
+   "name": "Guyana",
+   "units": 10,
+   "withoutId": 0,
+   "bytes": 16945
+  },
+  "HK": {
+   "name": "Hong Kong S.A.R.",
+   "units": 18,
+   "withoutId": 18,
+   "bytes": 7396
+  },
+  "HM": {
+   "name": "Heard Island and McDonald Islands",
+   "units": 1,
+   "withoutId": 1,
+   "bytes": 929
+  },
+  "HN": {
+   "name": "Honduras",
+   "units": 18,
+   "withoutId": 0,
+   "bytes": 23350
+  },
+  "HR": {
+   "name": "Croatia",
+   "units": 20,
+   "withoutId": 0,
+   "bytes": 36824
+  },
+  "HT": {
+   "name": "Haiti",
+   "units": 10,
+   "withoutId": 0,
+   "bytes": 9738
+  },
+  "HU": {
+   "name": "Hungary",
+   "units": 43,
+   "withoutId": 0,
+   "bytes": 24283
+  },
+  "ID": {
+   "name": "Indonesia",
+   "units": 33,
+   "withoutId": 0,
+   "bytes": 166600
+  },
+  "IE": {
+   "name": "Ireland",
+   "units": 30,
+   "withoutId": 6,
+   "bytes": 47293
+  },
+  "IL": {
+   "name": "Israel",
+   "units": 6,
+   "withoutId": 0,
+   "bytes": 8378
+  },
+  "IM": {
+   "name": "Isle of Man",
+   "units": 1,
+   "withoutId": 1,
+   "bytes": 1203
+  },
+  "IN": {
+   "name": "India",
+   "units": 36,
+   "withoutId": 0,
+   "bytes": 150835
+  },
+  "IO": {
+   "name": "British Indian Ocean Territory",
+   "units": 1,
+   "withoutId": 1,
+   "bytes": 1359
+  },
+  "IQ": {
+   "name": "Iraq",
+   "units": 18,
+   "withoutId": 0,
+   "bytes": 25282
+  },
+  "IR": {
+   "name": "Iran",
+   "units": 31,
+   "withoutId": 2,
+   "bytes": 39945
+  },
+  "IS": {
+   "name": "Iceland",
+   "units": 9,
+   "withoutId": 0,
+   "bytes": 31582
+  },
+  "IT": {
+   "name": "Italy",
+   "units": 110,
+   "withoutId": 0,
+   "bytes": 102831
+  },
+  "JE": {
+   "name": "Jersey",
+   "units": 1,
+   "withoutId": 1,
+   "bytes": 831
+  },
+  "JM": {
+   "name": "Jamaica",
+   "units": 14,
+   "withoutId": 0,
+   "bytes": 7428
+  },
+  "JO": {
+   "name": "Jordan",
+   "units": 12,
+   "withoutId": 0,
+   "bytes": 7892
+  },
+  "JP": {
+   "name": "Japan",
+   "units": 47,
+   "withoutId": 0,
+   "bytes": 79274
+  },
+  "KE": {
+   "name": "Kenya",
+   "units": 8,
+   "withoutId": 0,
+   "bytes": 22134
+  },
+  "KG": {
+   "name": "Kyrgyzstan",
+   "units": 8,
+   "withoutId": 0,
+   "bytes": 20680
+  },
+  "KH": {
+   "name": "Cambodia",
+   "units": 24,
+   "withoutId": 0,
+   "bytes": 27683
+  },
+  "KI": {
+   "name": "Kiribati",
+   "units": 2,
+   "withoutId": 2,
+   "bytes": 5425
+  },
+  "KM": {
+   "name": "Comoros",
+   "units": 3,
+   "withoutId": 0,
+   "bytes": 1725
+  },
+  "KN": {
+   "name": "Saint Kitts and Nevis",
+   "units": 14,
+   "withoutId": 0,
+   "bytes": 3268
+  },
+  "KP": {
+   "name": "North Korea",
+   "units": 11,
+   "withoutId": 0,
+   "bytes": 27245
+  },
+  "KR": {
+   "name": "South Korea",
+   "units": 17,
+   "withoutId": 0,
+   "bytes": 34687
+  },
+  "KW": {
+   "name": "Kuwait",
+   "units": 6,
+   "withoutId": 0,
+   "bytes": 3665
+  },
+  "KY": {
+   "name": "Cayman Islands",
+   "units": 1,
+   "withoutId": 1,
+   "bytes": 1159
+  },
+  "KZ": {
+   "name": "Kazakhstan",
+   "units": 16,
+   "withoutId": 2,
+   "bytes": 42510
+  },
+  "LA": {
+   "name": "Laos",
+   "units": 17,
+   "withoutId": 2,
+   "bytes": 25248
+  },
+  "LB": {
+   "name": "Lebanon",
+   "units": 6,
+   "withoutId": 0,
+   "bytes": 6856
+  },
+  "LC": {
+   "name": "Saint Lucia",
+   "units": 11,
+   "withoutId": 0,
+   "bytes": 2936
+  },
+  "LI": {
+   "name": "Liechtenstein",
+   "units": 11,
+   "withoutId": 0,
+   "bytes": 3328
+  },
+  "LK": {
+   "name": "Sri Lanka",
+   "units": 25,
+   "withoutId": 0,
+   "bytes": 21061
+  },
+  "LR": {
+   "name": "Liberia",
+   "units": 15,
+   "withoutId": 2,
+   "bytes": 19067
+  },
+  "LS": {
+   "name": "Lesotho",
+   "units": 10,
+   "withoutId": 0,
+   "bytes": 11029
+  },
+  "LT": {
+   "name": "Lithuania",
+   "units": 10,
+   "withoutId": 0,
+   "bytes": 17641
+  },
+  "LU": {
+   "name": "Luxembourg",
+   "units": 3,
+   "withoutId": 0,
+   "bytes": 3174
+  },
+  "LV": {
+   "name": "Latvia",
+   "units": 115,
+   "withoutId": 2,
+   "bytes": 47734
+  },
+  "LY": {
+   "name": "Libya",
+   "units": 22,
+   "withoutId": 0,
+   "bytes": 14080
+  },
+  "MA": {
+   "name": "Morocco",
+   "units": 16,
+   "withoutId": 0,
+   "bytes": 17450
+  },
+  "MC": {
+   "name": "Monaco",
+   "units": 1,
+   "withoutId": 1,
+   "bytes": 457
+  },
+  "MD": {
+   "name": "Moldova",
+   "units": 39,
+   "withoutId": 2,
+   "bytes": 20732
+  },
+  "ME": {
+   "name": "Montenegro",
+   "units": 21,
+   "withoutId": 0,
+   "bytes": 9522
+  },
+  "MF": {
+   "name": "Saint Martin",
+   "units": 1,
+   "withoutId": 1,
+   "bytes": 561
+  },
+  "MG": {
+   "name": "Madagascar",
+   "units": 22,
+   "withoutId": 22,
+   "bytes": 36172
+  },
+  "MH": {
+   "name": "Marshall Islands",
+   "units": 2,
+   "withoutId": 0,
+   "bytes": 2332
+  },
+  "MK": {
+   "name": "Macedonia",
+   "units": 84,
+   "withoutId": 0,
+   "bytes": 42803
+  },
+  "ML": {
+   "name": "Mali",
+   "units": 9,
+   "withoutId": 0,
+   "bytes": 19127
+  },
+  "MM": {
+   "name": "Myanmar",
+   "units": 14,
+   "withoutId": 0,
+   "bytes": 59323
+  },
+  "MN": {
+   "name": "Mongolia",
+   "units": 22,
+   "withoutId": 0,
+   "bytes": 32282
+  },
+  "MO": {
+   "name": "Macau S.A.R",
+   "units": 1,
+   "withoutId": 0,
+   "bytes": 1304
+  },
+  "MP": {
+   "name": "Northern Mariana Islands",
+   "units": 4,
+   "withoutId": 4,
+   "bytes": 2301
+  },
+  "MR": {
+   "name": "Mauritania",
+   "units": 13,
+   "withoutId": 0,
+   "bytes": 14087
+  },
+  "MS": {
+   "name": "Montserrat",
+   "units": 3,
+   "withoutId": 0,
+   "bytes": 957
+  },
+  "MT": {
+   "name": "Malta",
+   "units": 68,
+   "withoutId": 0,
+   "bytes": 15473
+  },
+  "MU": {
+   "name": "Mauritius",
+   "units": 16,
+   "withoutId": 2,
+   "bytes": 4075
+  },
+  "MV": {
+   "name": "Maldives",
+   "units": 21,
+   "withoutId": 2,
+   "bytes": 14769
+  },
+  "MW": {
+   "name": "Malawi",
+   "units": 27,
+   "withoutId": 0,
+   "bytes": 21320
+  },
+  "MX": {
+   "name": "Mexico",
+   "units": 33,
+   "withoutId": 1,
+   "bytes": 110519
+  },
+  "MY": {
+   "name": "Malaysia",
+   "units": 16,
+   "withoutId": 0,
+   "bytes": 35890
+  },
+  "MZ": {
+   "name": "Mozambique",
+   "units": 10,
+   "withoutId": 0,
+   "bytes": 33768
+  },
+  "NA": {
+   "name": "Namibia",
+   "units": 13,
+   "withoutId": 0,
+   "bytes": 21331
+  },
+  "NC": {
+   "name": "New Caledonia",
+   "units": 3,
+   "withoutId": 3,
+   "bytes": 9710
+  },
+  "NE": {
+   "name": "Niger",
+   "units": 8,
+   "withoutId": 0,
+   "bytes": 13199
+  },
+  "NF": {
+   "name": "Norfolk Island",
+   "units": 1,
+   "withoutId": 1,
+   "bytes": 633
+  },
+  "NG": {
+   "name": "Nigeria",
+   "units": 37,
+   "withoutId": 0,
+   "bytes": 39623
+  },
+  "NI": {
+   "name": "Nicaragua",
+   "units": 17,
+   "withoutId": 0,
+   "bytes": 18956
+  },
+  "NL": {
+   "name": "Netherlands",
+   "units": 16,
+   "withoutId": 0,
+   "bytes": 13099
+  },
+  "NO": {
+   "name": "Norway",
+   "units": 21,
+   "withoutId": 1,
+   "bytes": 121838
+  },
+  "NP": {
+   "name": "Nepal",
+   "units": 14,
+   "withoutId": 0,
+   "bytes": 20407
+  },
+  "NR": {
+   "name": "Nauru",
+   "units": 14,
+   "withoutId": 0,
+   "bytes": 2539
+  },
+  "NU": {
+   "name": "Niue",
+   "units": 1,
+   "withoutId": 1,
+   "bytes": 721
+  },
+  "NZ": {
+   "name": "New Zealand",
+   "units": 23,
+   "withoutId": 6,
+   "bytes": 39734
+  },
+  "OM": {
+   "name": "Oman",
+   "units": 11,
+   "withoutId": 0,
+   "bytes": 11120
+  },
+  "PA": {
+   "name": "Panama",
+   "units": 12,
+   "withoutId": 0,
+   "bytes": 26182
+  },
+  "PE": {
+   "name": "Peru",
+   "units": 26,
+   "withoutId": 2,
+   "bytes": 48111
+  },
+  "PF": {
+   "name": "French Polynesia",
+   "units": 5,
+   "withoutId": 5,
+   "bytes": 9566
+  },
+  "PG": {
+   "name": "Papua New Guinea",
+   "units": 20,
+   "withoutId": 0,
+   "bytes": 46926
+  },
+  "PH": {
+   "name": "Philippines",
+   "units": 115,
+   "withoutId": 48,
+   "bytes": 91014
+  },
+  "PK": {
+   "name": "Pakistan",
+   "units": 8,
+   "withoutId": 0,
+   "bytes": 34793
+  },
+  "PL": {
+   "name": "Poland",
+   "units": 16,
+   "withoutId": 0,
+   "bytes": 22547
+  },
+  "PM": {
+   "name": "Saint Pierre and Miquelon",
+   "units": 2,
+   "withoutId": 2,
+   "bytes": 1290
+  },
+  "PN": {
+   "name": "Pitcairn Islands",
+   "units": 1,
+   "withoutId": 1,
+   "bytes": 693
+  },
+  "PS": {
+   "name": "Gaza Strip",
+   "units": 2,
+   "withoutId": 0,
+   "bytes": 2625
+  },
+  "PT": {
+   "name": "Portugal",
+   "units": 20,
+   "withoutId": 0,
+   "bytes": 23419
+  },
+  "PW": {
+   "name": "Palau",
+   "units": 16,
+   "withoutId": 0,
+   "bytes": 3717
+  },
+  "PY": {
+   "name": "Paraguay",
+   "units": 18,
+   "withoutId": 0,
+   "bytes": 24989
+  },
+  "QA": {
+   "name": "Qatar",
+   "units": 7,
+   "withoutId": 0,
+   "bytes": 4035
+  },
+  "RO": {
+   "name": "Romania",
+   "units": 42,
+   "withoutId": 0,
+   "bytes": 43810
+  },
+  "RS": {
+   "name": "Republic of Serbia",
+   "units": 25,
+   "withoutId": 0,
+   "bytes": 59488
+  },
+  "RU": {
+   "name": "Russia",
+   "units": 84,
+   "withoutId": 1,
+   "bytes": 562503
+  },
+  "RW": {
+   "name": "Rwanda",
+   "units": 5,
+   "withoutId": 0,
+   "bytes": 6366
+  },
+  "SA": {
+   "name": "Saudi Arabia",
+   "units": 13,
+   "withoutId": 0,
+   "bytes": 31001
+  },
+  "SB": {
+   "name": "Solomon Islands",
+   "units": 10,
+   "withoutId": 2,
+   "bytes": 19143
+  },
+  "SC": {
+   "name": "Seychelles",
+   "units": 26,
+   "withoutId": 1,
+   "bytes": 6964
+  },
+  "SD": {
+   "name": "Sudan",
+   "units": 17,
+   "withoutId": 2,
+   "bytes": 18729
+  },
+  "SE": {
+   "name": "Sweden",
+   "units": 21,
+   "withoutId": 0,
+   "bytes": 53556
+  },
+  "SG": {
+   "name": "Singapore",
+   "units": 5,
+   "withoutId": 0,
+   "bytes": 1983
+  },
+  "SH": {
+   "name": "Saint Helena",
+   "units": 3,
+   "withoutId": 0,
+   "bytes": 1160
+  },
+  "SI": {
+   "name": "Slovenia",
+   "units": 193,
+   "withoutId": 2,
+   "bytes": 59811
+  },
+  "SK": {
+   "name": "Slovakia",
+   "units": 8,
+   "withoutId": 0,
+   "bytes": 18358
+  },
+  "SL": {
+   "name": "Sierra Leone",
+   "units": 4,
+   "withoutId": 0,
+   "bytes": 10212
+  },
+  "SM": {
+   "name": "San Marino",
+   "units": 9,
+   "withoutId": 0,
+   "bytes": 2362
+  },
+  "SN": {
+   "name": "Senegal",
+   "units": 14,
+   "withoutId": 0,
+   "bytes": 21644
+  },
+  "SO": {
+   "name": "Somalia",
+   "units": 13,
+   "withoutId": 0,
+   "bytes": 8663
+  },
+  "SR": {
+   "name": "Suriname",
+   "units": 10,
+   "withoutId": 0,
+   "bytes": 11549
+  },
+  "SS": {
+   "name": "S. Sudan",
+   "units": 10,
+   "withoutId": 0,
+   "bytes": 15861
+  },
+  "ST": {
+   "name": "Sao Tome and Principe",
+   "units": 2,
+   "withoutId": 0,
+   "bytes": 1334
+  },
+  "SV": {
+   "name": "El Salvador",
+   "units": 14,
+   "withoutId": 0,
+   "bytes": 13884
+  },
+  "SY": {
+   "name": "Syria",
+   "units": 15,
+   "withoutId": 1,
+   "bytes": 18430
+  },
+  "SZ": {
+   "name": "Swaziland",
+   "units": 4,
+   "withoutId": 0,
+   "bytes": 3910
+  },
+  "TC": {
+   "name": "Turks and Caicos Islands",
+   "units": 6,
+   "withoutId": 6,
+   "bytes": 2840
+  },
+  "TD": {
+   "name": "Chad",
+   "units": 22,
+   "withoutId": 1,
+   "bytes": 27180
+  },
+  "TF": {
+   "name": "French Southern and Antarctic Lands",
+   "units": 4,
+   "withoutId": 4,
+   "bytes": 4770
+  },
+  "TG": {
+   "name": "Togo",
+   "units": 5,
+   "withoutId": 0,
+   "bytes": 7857
+  },
+  "TH": {
+   "name": "Thailand",
+   "units": 77,
+   "withoutId": 0,
+   "bytes": 121661
+  },
+  "TJ": {
+   "name": "Tajikistan",
+   "units": 5,
+   "withoutId": 1,
+   "bytes": 16463
+  },
+  "TK": {
+   "name": "New Zealand",
+   "units": 1,
+   "withoutId": 1,
+   "bytes": 542
+  },
+  "TL": {
+   "name": "East Timor",
+   "units": 13,
+   "withoutId": 0,
+   "bytes": 6606
+  },
+  "TM": {
+   "name": "Turkmenistan",
+   "units": 5,
+   "withoutId": 0,
+   "bytes": 17575
+  },
+  "TN": {
+   "name": "Tunisia",
+   "units": 23,
+   "withoutId": 0,
+   "bytes": 21189
+  },
+  "TO": {
+   "name": "Tonga",
+   "units": 5,
+   "withoutId": 0,
+   "bytes": 2656
+  },
+  "TR": {
+   "name": "Turkey",
+   "units": 81,
+   "withoutId": 0,
+   "bytes": 66670
+  },
+  "TT": {
+   "name": "Trinidad and Tobago",
+   "units": 16,
+   "withoutId": 0,
+   "bytes": 5871
+  },
+  "TV": {
+   "name": "Tuvalu",
+   "units": 1,
+   "withoutId": 1,
+   "bytes": 985
+  },
+  "TW": {
+   "name": "Taiwan",
+   "units": 21,
+   "withoutId": 0,
+   "bytes": 13380
+  },
+  "TZ": {
+   "name": "United Republic of Tanzania",
+   "units": 30,
+   "withoutId": 0,
+   "bytes": 33901
+  },
+  "UA": {
+   "name": "Ukraine",
+   "units": 27,
+   "withoutId": 0,
+   "bytes": 90187
+  },
+  "UG": {
+   "name": "Uganda",
+   "units": 111,
+   "withoutId": 0,
+   "bytes": 40682
+  },
+  "UM": {
+   "name": "United States Minor Outlying Islands",
+   "units": 8,
+   "withoutId": 0,
+   "bytes": 1575
+  },
+  "US": {
+   "name": "United States of America",
+   "units": 52,
+   "withoutId": 0,
+   "bytes": 292750
+  },
+  "UY": {
+   "name": "Uruguay",
+   "units": 19,
+   "withoutId": 0,
+   "bytes": 22249
+  },
+  "UZ": {
+   "name": "Uzbekistan",
+   "units": 14,
+   "withoutId": 0,
+   "bytes": 22963
+  },
+  "VA": {
+   "name": "Vatican",
+   "units": 1,
+   "withoutId": 1,
+   "bytes": 393
+  },
+  "VC": {
+   "name": "Saint Vincent and the Grenadines",
+   "units": 6,
+   "withoutId": 0,
+   "bytes": 2166
+  },
+  "VE": {
+   "name": "Venezuela",
+   "units": 26,
+   "withoutId": 1,
+   "bytes": 56712
+  },
+  "VG": {
+   "name": "British Virgin Islands",
+   "units": 1,
+   "withoutId": 1,
+   "bytes": 1338
+  },
+  "VI": {
+   "name": "United States Virgin Islands",
+   "units": 3,
+   "withoutId": 3,
+   "bytes": 1208
+  },
+  "VN": {
+   "name": "Vietnam",
+   "units": 63,
+   "withoutId": 0,
+   "bytes": 63500
+  },
+  "VU": {
+   "name": "Vanuatu",
+   "units": 6,
+   "withoutId": 0,
+   "bytes": 9732
+  },
+  "WF": {
+   "name": "Wallis and Futuna",
+   "units": 3,
+   "withoutId": 0,
+   "bytes": 1105
+  },
+  "WS": {
+   "name": "Samoa",
+   "units": 11,
+   "withoutId": 0,
+   "bytes": 3817
+  },
+  "XK": {
+   "name": "Kosovo",
+   "units": 30,
+   "withoutId": 30,
+   "bytes": 10816
+  },
+  "YE": {
+   "name": "Yemen",
+   "units": 21,
+   "withoutId": 0,
+   "bytes": 20707
+  },
+  "ZA": {
+   "name": "South Africa",
+   "units": 9,
+   "withoutId": 0,
+   "bytes": 32870
+  },
+  "ZM": {
+   "name": "Zambia",
+   "units": 10,
+   "withoutId": 0,
+   "bytes": 31258
+  },
+  "ZW": {
+   "name": "Zimbabwe",
+   "units": 10,
+   "withoutId": 0,
+   "bytes": 26947
+  }
+ }
+}

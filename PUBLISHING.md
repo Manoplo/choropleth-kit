@@ -1,36 +1,42 @@
 # Publishing choropleth-kit to npm
 
-A checklist for the first publish and for later releases. **Nothing here runs by itself**: publishing
+The release checklist. **`choropleth-kit@0.1.0` is already published** (2026-11-12, <https://www.npmjs.com/package/choropleth-kit>, tag `v0.1.0`);
+everything below is for the next versions. **Nothing here runs by itself**: publishing
 is always a decision of the maintainer (see `AGENTS.md`: agents never commit, push or publish unasked).
 
-## Once: set up npm
+## Once: set up npm (done for this project; kept for a new machine or maintainer)
 
 1. Create an account at <https://www.npmjs.com/signup> and verify your email.
 2. Turn on two-factor authentication (Account → Two-Factor Authentication → _Authorization and
    publishing_). npm will ask for a one-time code on every publish.
 3. Log in from the terminal: `npm login` (a browser window opens). Check with `npm whoami`.
-4. Check the name is free: `npm view choropleth-kit` should answer `404 Not Found` (it was free on
-   2026-11-07). The name is yours as soon as you publish it, so do not wait too long.
+4. Check what is published: `npm view choropleth-kit version` answers the latest version (`0.1.0` or later).
 
 ## Every release
 
-Releases are cut from `master`, after `develop` has been merged into it. Nothing is published from a branch.
+The flow is **`develop` → `master` → release branch from `master` → publish from `master`**. Nothing is published
+from a branch, and the version is never bumped on `develop`.
 
-1. **Bump the version** (not needed for `0.1.0`). On a branch `release/vX.Y.Z` from `master`, run
+1. **Merge `develop` into `master`.** Open a PR `develop` → `master` titled `chore: release vX.Y.Z` (it must be a
+   Conventional Commit) and merge it with **"Create a merge commit"**, not squash: a squash puts a commit on `master`
+   that `develop` does not have, and the two branches start to diverge.
+2. **Bump the version.** `git switch master && git pull --ff-only`, then on a branch `release/vX.Y.Z` run
    `npm version X.Y.Z --no-git-tag-version` (it only edits `package.json`; `pnpm version` behaves differently
    across pnpm versions, so do not use it). While the major is `0`, a `minor` bump may break the API.
    Commit `chore(release): vX.Y.Z`, open a PR against `master` and merge it.
-2. **Sync**: `git switch master && git pull --ff-only`. The tree must be clean.
-3. **Verify**: `pnpm install --frozen-lockfile && pnpm verify && pnpm smoke:package`.
-4. **Look at what will ship**: `pnpm pack --pack-destination /tmp/ck && tar -tzf /tmp/ck/choropleth-kit-X.Y.Z.tgz`.
+3. **Sync**: `git switch master && git pull --ff-only`. The tree must be clean.
+4. **Verify**: `pnpm install --frozen-lockfile && pnpm verify && pnpm smoke:package`.
+5. **Look at what will ship**: `pnpm pack --pack-destination /tmp/ck && tar -tzf /tmp/ck/choropleth-kit-X.Y.Z.tgz`.
    Expected: `dist/` without sourcemaps, `README.md`, `LICENSE`, `package.json`.
-5. **Publish**: `pnpm publish` (`publishConfig` already sets `access: public`). It runs `prepublishOnly`
+6. **Publish**: `pnpm publish` (`publishConfig` already sets `access: public`). It runs `prepublishOnly`
    (`pnpm verify`) and asks for the one-time code.
-6. **Check** <https://www.npmjs.com/package/choropleth-kit> and, in a scratch project, `npm i choropleth-kit`.
-7. **Tag the published commit** (after publishing, so the tag always means "this is what npm has"):
+7. **Check** <https://www.npmjs.com/package/choropleth-kit> and, in a scratch project, `npm i choropleth-kit`.
+8. **Tag the published commit** (after publishing, so the tag always means "this is what npm has"):
    `git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin vX.Y.Z`.
-8. **GitHub Release**: `gh release create vX.Y.Z --verify-tag --title "vX.Y.Z" --generate-notes`
+9. **GitHub Release**: `gh release create vX.Y.Z --verify-tag --title "vX.Y.Z" --generate-notes`
    (add `--prerelease` for betas).
+10. **Sync `develop`**: the release left commits that only exist on `master` (the merge commit and the version bump).
+    Open a PR `master` → `develop` and merge it with "Create a merge commit".
 
 ## Changelog
 
