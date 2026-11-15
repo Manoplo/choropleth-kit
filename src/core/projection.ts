@@ -48,6 +48,11 @@ export type CreateProjectionOptions = {
   height: number;
   /** Geometry that must fit entirely in `width × height`. */
   featureCollection: FeatureCollection;
+  /**
+   * `[λ, φ]` rotation applied BEFORE the fit (d3's `projection.rotate`). It moves the antimeridian cut away
+   * from the geometry (`regionRotation`): the Pacific or Russia would otherwise be torn across both edges.
+   */
+  rotate?: readonly [number, number];
 };
 
 /**
@@ -62,6 +67,7 @@ export const createProjection = ({
   width,
   height,
   featureCollection,
+  rotate,
 }: CreateProjectionOptions): GeoProjection => {
   // ── STEP 1: validate the size. Before creating anything. ──────────────────────────────────────
   // With width or height 0 (a hidden container, or one not yet measured), `fitSize` does not fail: it
@@ -76,6 +82,7 @@ export const createProjection = ({
 
   // ── STEP 2: new instance. Before the fit, because the fit modifies it. ───────────────────────
   const projection = PROJECTIONS[name]();
+  if (rotate !== undefined) projection.rotate([rotate[0], rotate[1]]);
 
   // ── STEP 3: fit to the container. LAST: it needs the validated size and the instance. ────────
   // With no features there is nothing to fit: `fitSize` would compute with an empty area (infinities).
@@ -102,12 +109,16 @@ const MAX_ASPECT_RATIO = 5;
 export const computeAspectRatio = ({
   name = DEFAULT_PROJECTION,
   featureCollection,
+  rotate,
 }: {
   name?: ProjectionName;
   featureCollection: FeatureCollection;
+  rotate?: readonly [number, number];
 }): number => {
   if (featureCollection.features.length === 0) return DEFAULT_ASPECT_RATIO;
-  const projection = PROJECTIONS[name]().fitWidth(1000, featureCollection);
+  const base = PROJECTIONS[name]();
+  if (rotate !== undefined) base.rotate([rotate[0], rotate[1]]);
+  const projection = base.fitWidth(1000, featureCollection);
   const [[x0, y0], [x1, y1]] = geoPath(projection).bounds(featureCollection);
   const ratio = (x1 - x0) / (y1 - y0);
   if (!Number.isFinite(ratio) || ratio <= 0) return DEFAULT_ASPECT_RATIO;

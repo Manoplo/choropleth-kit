@@ -7,6 +7,9 @@
 
 ## What
 
+**Where we are:** `0.1.0` was published **by hand** on 2026-11-12 ([npm](https://www.npmjs.com/package/choropleth-kit)). What is left is
+to automate it and to harden what surrounds it.
+
 - Public Storybook / docs (see FEAT-014).
 - `changesets` (versioning and changelog) and publishing from CI with provenance.
 - **Legal review of geodata and disputed borders** (Northern Cyprus, Somaliland, Western Sahara…).
@@ -14,4 +17,4 @@
 
 ## Acceptance criteria
 
-A first release published by CI; a license inventory in the repo; a link to the public docs in the README.
+A release published by CI with provenance (the first one, `0.1.0`, was manual); a license inventory in the repo; a link to the public docs in the README.

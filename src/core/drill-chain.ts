@@ -25,6 +25,8 @@ export type BuildProjectionChainParams = {
   padding?: number | Padding;
   /** Explicit framings by id in lon/lat (Spain with the Canary Islands). Overrides the main body. */
   focusBounds?: Readonly<Record<string, LonLatBounds | null | undefined>>;
+  /** Rotation of the ROOT projection (`regionRotation`); the levels below inherit it. */
+  rotate?: readonly [number, number];
 };
 
 export type ProjectionChain = {
@@ -102,6 +104,7 @@ export const buildProjectionChain = ({
   height,
   padding,
   focusBounds,
+  rotate,
 }: BuildProjectionChainParams): ProjectionChain => {
   const root = levels[0];
   const collection = (features: readonly Feature[]): FeatureCollection => ({
@@ -114,6 +117,7 @@ export const buildProjectionChain = ({
       width,
       height,
       featureCollection: collection(root?.features ?? []),
+      rotate,
     }),
   ];
   const factory = projectionFactory(name);

@@ -16,3 +16,6 @@ export const world110m = world as unknown as Topology;
 
 export { isoNumericToAlpha2 } from "./iso-numeric-to-alpha2";
 export { worldFallbackPoints } from "./fallback-points";
+export { REGION_PRESETS } from "./region-presets";
+export type { RegionPresetName } from "./region-presets";
+export { OVERSEAS_TERRITORIES } from "./overseas";
