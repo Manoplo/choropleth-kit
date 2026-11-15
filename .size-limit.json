@@ -47,5 +47,17 @@
     "import": "*",
     "gzip": true,
     "limit": "60 KB"
+  },
+  {
+    "name": "geo/admin1: United States (loaded on demand, outside the JS budget)",
+    "path": "dist/admin1/us.js",
+    "gzip": true,
+    "limit": "55 KB"
+  },
+  {
+    "name": "geo/admin1: Canada, the largest country (loaded on demand)",
+    "path": "dist/admin1/ca.js",
+    "gzip": true,
+    "limit": "120 KB"
   }
 ]

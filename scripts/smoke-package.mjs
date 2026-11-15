@@ -9,6 +9,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { build } from "vite";
 
 // `peerDependencies` promises `react >=18`, so both ends of the range are exercised.
 const REACT_MAJORS = [18, 19];
@@ -17,8 +18,9 @@ const REACT_MAJORS = [18, 19];
 const cleanEnv = Object.fromEntries(
   Object.entries(process.env).filter(([key]) => !key.toLowerCase().startsWith("npm_")),
 );
+// On Windows `pnpm`, `npm` and `npx` are `.cmd` shims, which Node only spawns through a shell.
 const run = (command, args, cwd, env = cleanEnv) =>
-  execFileSync(command, args, { cwd, env, stdio: "inherit" });
+  execFileSync(command, args, { cwd, env, stdio: "inherit", shell: process.platform === "win32" });
 
 const root = process.cwd();
 const tmp = mkdtempSync(join(tmpdir(), "choropleth-smoke-"));
@@ -55,7 +57,24 @@ const regions = (html.match(/data-region-id/g) ?? []).length;
 if (regions < 100) throw new Error("expected the world map, got " + regions + " regions");
 if (typeof createColorScale !== "function") throw new Error("choropleth-kit/core is broken");
 if (!import.meta.resolve("choropleth-kit/styles.css")) throw new Error("styles.css does not resolve");
-console.log("smoke test ok: " + regions + " regions rendered");
+
+// A country's admin-1 comes from its own subpath, which is a wildcard in \`exports\` (attw cannot check those).
+const us = (await import("choropleth-kit/geo/admin1/us")).default;
+const states = renderToString(
+  createElement(ChoroplethMap, {
+    geography: us,
+    objectName: "admin1",
+    data: [{ id: "US-CA", v: 1 }],
+    getId: (row) => row.id,
+    getValue: (row) => row.v,
+    variant: "sequential",
+    width: 600,
+    height: 300,
+  }),
+);
+const stateCount = (states.match(/data-region-id/g) ?? []).length;
+if (stateCount !== 52) throw new Error("expected 52 US units from choropleth-kit/geo/admin1/us, got " + stateCount);
+console.log("smoke test ok: " + regions + " regions rendered, " + stateCount + " US units from admin1");
 `;
 
 // A strict consumer. `skipLibCheck: false` also checks the library's `.d.ts` files, so a type import whose
@@ -64,10 +83,25 @@ const consumerFile = `
 import { ChoroplethMap } from "choropleth-kit";
 import { world110m } from "choropleth-kit/geo";
 import { createColorScale } from "choropleth-kit/core";
+import usAdmin1 from "choropleth-kit/geo/admin1/us";
 
 type Row = { id: string; value: number };
 
 export const scale = createColorScale;
+
+// A country's subdivisions are a Topology that the map takes as its geography.
+export const UsStates = (props: { rows: Row[] }) => (
+  <ChoroplethMap
+    geography={usAdmin1}
+    objectName="admin1"
+    data={props.rows}
+    getId={(row) => row.id}
+    getValue={(row) => row.value}
+    variant="sequential"
+    width={600}
+    height={300}
+  />
+);
 
 export const App = (props: { rows: Row[] }) => (
   <ChoroplethMap
@@ -149,3 +183,46 @@ for (const file of readdirSync(shipped).filter((name) => name.endsWith(".js"))) 
     throw new Error(`${file}: NODE_ENV must be read as process.env.NODE_ENV`);
 }
 console.log("NODE_ENV usage ok");
+
+// The promise of `choropleth-kit/geo/admin1/<cc>`: a consumer that loads a country with `import()` gets it as its
+// own file, and the data is NOT in the main bundle. Checked with a real bundler (Vite) on the installed package.
+console.log("\n› a country's admin-1 is a lazy chunk, outside the main bundle");
+const lazyDir = consumers[0];
+// The entry must RUN the `import()`: Vite drops unused exports of an app entry, and the dynamic import with them.
+writeFileSync(
+  join(lazyDir, "lazy-entry.js"),
+  [
+    'import { ChoroplethMap } from "choropleth-kit";',
+    'globalThis.loadUs = () => import("choropleth-kit/geo/admin1/us");',
+    "globalThis.Map = ChoroplethMap;",
+    "",
+  ].join("\n"),
+);
+const built = await build({
+  root: lazyDir,
+  configFile: false,
+  logLevel: "silent",
+  build: {
+    write: false,
+    minify: false,
+    rollupOptions: { input: join(lazyDir, "lazy-entry.js") },
+  },
+});
+const chunks = (Array.isArray(built) ? built : [built])
+  .flatMap((result) => result.output)
+  .filter((file) => file.type === "chunk");
+const MARKER = "US-CA"; // an id that only exists in the US admin-1 data
+const withData = chunks.filter((chunk) => chunk.code.includes(MARKER));
+if (withData.length !== 1) {
+  throw new Error(
+    `expected the US data in exactly one chunk, found it in ${withData.length} of: ` +
+      chunks.map((chunk) => chunk.fileName).join(", "),
+  );
+}
+if (withData[0].isEntry)
+  throw new Error("the US data ended up in the entry chunk (the bundle would grow)");
+if (!withData[0].isDynamicEntry) throw new Error("the US data is not a dynamic-import chunk");
+console.log(
+  `lazy chunk ok: ${withData[0].fileName} holds the US data (${(withData[0].code.length / 1024).toFixed(0)} KB), ` +
+    `the entry chunk does not`,
+);

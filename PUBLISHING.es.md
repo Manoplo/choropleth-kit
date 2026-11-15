@@ -5,34 +5,33 @@
 > son decisiones tuyas. Un agente puede preparar y comprobar, pero no ejecuta esos pasos sin que se lo pidas
 > de forma explícita para esa acción concreta.
 
-## 1. ¿Está lista la librería?
+## 1. Estado actual
 
-Técnicamente sí: `pnpm verify` y `pnpm smoke:package` pasan (con React 18 y 19), el paquete instalado con npm
-renderiza un mapa y sus tipos compilan, y el nombre `choropleth-kit` está libre en npm.
+**`choropleth-kit@0.1.0` ya está publicada en npm** (2026-11-12): <https://www.npmjs.com/package/choropleth-kit>. Tiene su tag `v0.1.0` y su
+[GitHub Release](https://github.com/Manoplo/choropleth-kit/releases/tag/v0.1.0). Esta guía sirve ahora para las
+**versiones siguientes**. Comprueba siempre qué hay publicado con `npm view choropleth-kit version`.
 
-Lo que decide si es buen momento **no es técnico**, y lo confirmas tú antes del paso 3:
+Antes de cada publicación, confirma tú:
 
-- [ ] Has decidido que puedes publicarla con tu nombre y licencia MIT (ISSUE-011).
-- [ ] Has revisado las stories que promociona el README (ISSUE-007, hecho el 2026-11-11).
-- [ ] La PR de documentación (README con imagen, ISSUE-005 cerrado) está mergeada en `develop`.
-- [ ] Has activado las protecciones de `master` (ver el apartado 5).
+- [ ] `pnpm verify` y `pnpm smoke:package` pasan (con React 18 y 19).
+- [ ] Has revisado a mano las stories que el cambio afecta.
+- [ ] Las protecciones de `master` siguen activas (ver el apartado 5).
 
-## 2. Una sola vez: preparar tu cuenta de npm
+## 2. Una sola vez: preparar tu cuenta de npm (ya hecho; por si cambias de máquina)
 
 1. Crea la cuenta en <https://www.npmjs.com/signup> y verifica el correo.
 2. Activa la verificación en dos pasos en _Account → Two-Factor Authentication_, con el modo
    **Authorization and publishing**. npm te pedirá un código de un solo uso en cada publicación.
 3. Inicia sesión desde la terminal: `npm login` (se abre el navegador) y comprueba con `npm whoami`.
-4. Comprueba que el nombre sigue libre: `npm view choropleth-kit` debe responder `404 Not Found`.
-   El nombre es tuyo en cuanto publiques, así que no esperes demasiado.
+4. Comprueba qué hay publicado: `npm view choropleth-kit version` responde la última versión.
 
-## 3. Publicar la versión 0.1.0, paso a paso
+## 3. Publicar una versión nueva, paso a paso
 
-La versión de `package.json` ya es `0.1.0`: **no hay que subirla**. Todos los comandos se ejecutan en tu
-terminal, en la raíz del proyecto.
+En los comandos, `X.Y.Z` es la versión nueva. **Primero súbela** (ver el apartado 4). Todos los comandos se
+ejecutan en tu terminal, en la raíz del proyecto.
 
 **3.1. Lleva `develop` a `master` con una PR de release.**
-Abre en GitHub una PR de `develop` hacia `master`, con el título `chore: release v0.1.0` (el check `pr-title`
+Abre en GitHub una PR de `develop` hacia `master`, con el título `chore: release vX.Y.Z` (el check `pr-title`
 exige Conventional Commits). Cuando los checks estén en verde, mergéala con **«Create a merge commit»**. No uses
 squash: con squash, `master` recibe un commit que `develop` no tiene y las dos ramas empiezan a divergir.
 
@@ -50,14 +49,14 @@ git status -sb        # debe mostrar solo: ## master...origin/master
 pnpm install --frozen-lockfile
 pnpm verify
 pnpm smoke:package
-npm view choropleth-kit        # debe seguir dando 404 la primera vez
+npm view choropleth-kit version  # la versión publicada ahora; X.Y.Z debe ser mayor
 ```
 
 **3.4. Mira exactamente qué se va a subir.**
 
 ```bash
 pnpm pack --pack-destination /tmp/ck
-tar -tzf /tmp/ck/choropleth-kit-0.1.0.tgz
+tar -tzf /tmp/ck/choropleth-kit-X.Y.Z.tgz
 ```
 
 Debe contener `dist/` (sin sourcemaps), `README.md`, `LICENSE` y `package.json`. No debe aparecer `src/`,
@@ -83,7 +82,7 @@ publicar si no estás en `master`, si el árbol no está limpio o si no estás a
 **3.7. Comprueba que está en npm.**
 
 ```bash
-npm view choropleth-kit version          # debe responder 0.1.0
+npm view choropleth-kit version          # debe responder X.Y.Z
 ```
 
 Abre <https://www.npmjs.com/package/choropleth-kit> y comprueba que el README se ve bien, con la imagen. Después, en
@@ -93,19 +92,18 @@ una carpeta vacía de pruebas: `npm init -y && npm i choropleth-kit react react-
 lo que hay en npm». Si la publicación fallase, no hay nada que deshacer.
 
 ```bash
-git tag -a v0.1.0 -m "v0.1.0"
-git push origin v0.1.0
+git tag -a vX.Y.Z -m "vX.Y.Z"
+git push origin vX.Y.Z
 ```
 
 **3.9. Crea la GitHub Release** (el changelog visible, ver el apartado 4):
 
 ```bash
-gh release create v0.1.0 --verify-tag --title "v0.1.0" --notes-file notas-0.1.0.md
+gh release create vX.Y.Z --verify-tag --title "vX.Y.Z" --generate-notes
 ```
 
-Para la primera release recomiendo escribir las notas a mano en `notas-0.1.0.md` (una lista corta de lo que
-incluye: tres niveles de API, cuatro variantes, zoom y drill-down, theming) en lugar de `--generate-notes`, que
-listaría todas las PRs desde el principio del repositorio. Desde la segunda release usa `--generate-notes`.
+`--generate-notes` lista las PRs mergeadas desde la release anterior. Si quieres un texto más cuidado, escríbelo a
+mano en un fichero y usa `--notes-file` en su lugar.
 
 **3.10. Vuelve a sincronizar `develop` con `master`.** La PR de release creó un commit de merge que solo existe en
 `master`. Abre una PR de `master` hacia `develop` y mergéala con «Create a merge commit» (si `develop` no está
@@ -143,7 +141,7 @@ Si más adelante quieres que las notas se agrupen en secciones («Features», «
 1. En una rama desde `develop`: `npm version 0.1.1 --no-git-tag-version` (solo edita `package.json`; no uses
    `pnpm version`, que se comporta distinto según la versión de pnpm).
 2. PR a `develop` con el título `chore: release v0.1.1`, merge.
-3. Repite los pasos 3.1 a 3.10 con la nueva versión. En el 3.9 usa `--generate-notes` en lugar de `--notes-file`.
+3. Repite los pasos 3.1 a 3.10 con la nueva versión.
 
 **Pre-releases** (para probar algo arriesgado sin afectar a quien instale la versión estable):
 
