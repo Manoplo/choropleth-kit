@@ -224,7 +224,7 @@ describe("createColorScale · fixed domain", () => {
   ] as const)("an invalid domain %j fails showing what was received", (domain, shown) => {
     expect(() =>
       createColorScale({ variant: "sequential", values, domain: [...domain] as [number, number] }),
-    ).toThrow(new RegExp(`min < max \\(received: ${shown.replace(/[[\]]/g, "\\$&")}\\)`));
+    ).toThrow(`min < max (received: ${shown})`);
   });
 });
 
