@@ -73,6 +73,8 @@ export { createColorScale, DEFAULT_EMPTY_FILL } from "./scales";
 export type { ColorScale, ColorScaleOptions } from "./scales";
 export { DIVERGING_PALETTES, SEQUENTIAL_PALETTES } from "./palettes";
 export type { DivergingPaletteName, SequentialPaletteName } from "./palettes";
+export { createRampInterpolator, diagnoseRamp, isCustomRamp } from "./ramps";
+export type { CustomRamp, DivergingRamp, RampSpace } from "./ramps";
 export {
   computeAspectRatio,
   createProjection,

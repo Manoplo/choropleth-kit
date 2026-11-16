@@ -25,8 +25,10 @@ import {
   clampPath,
   createIntentTimer,
   formatDrillRequestProblem,
+  diagnoseRamp,
   formatJoinDiagnostics,
   formatNoIdsDiagnostic,
+  isCustomRamp,
   formatTooDeepRequest,
   formatWrongLevelDataHint,
   getAnchorPoint,
@@ -1029,6 +1031,18 @@ export const useChoropleth = <TDatum>(
       console.warn(noIdsMessage);
     }
   }, [noIdsMessage, status, diagnostics]);
+
+  // A custom ramp whose ends are too close in lightness says so once, in development.
+  const customRamp =
+    options.variant === "sequential" && isCustomRamp(options.palette) ? options.palette : null;
+  const rampKey = customRamp === null ? null : JSON.stringify(customRamp);
+  useEffect(() => {
+    if (status !== "ready" || customRamp === null || !diagnostics || isProduction()) return;
+    const message = diagnoseRamp(customRamp);
+    if (message !== null) console.warn(message);
+    // `rampKey` is the content of the ramp: an inline `{ from, to }` has a new identity on every render.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [rampKey, status, diagnostics]);
 
   // ── selection (regions only) ────────────────────────────────────────────────────────────────────
   // Controlled if `selectedId` is passed (even `null`); otherwise the library holds it. Without any of

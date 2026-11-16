@@ -1,7 +1,7 @@
 # FEAT-024 · Custom color ramps and fixed domains (share / percentage maps)
 
 - **Type:** Feature
-- **Status:** proposed
+- **Status:** done
 - **Priority (proposed):** high
 - **Origin:** maintainer, 2026-11-13, on the Inditex tools: "a gradient from black to blue depending on the
   percentage of sales that come from physical stores vs. the .com, for instance on a map of Spain".
@@ -56,7 +56,7 @@ product convention (black = physical, blue = online) cannot be expressed at all.
 - `diverging` gets the same treatment (`palette={{ negative, neutral, positive }}`) in a second step, or this
   FEAT says why not.
 - README section «Your own colors».
-- Bundle: it must fit the budget (`ChoroplethMap` with d3 is at ~74.1 KB of 75 KB gzip, see FEAT-022).
+- Bundle: it must fit the budget (`ChoroplethMap` with d3 is at ~74.1 KB of 75 KB gzip, see FEAT-022; the limit was raised to 80 KB when the diverging step closed this FEAT at 75.02 KB).
   `d3-interpolate` is already a dependency; `interpolateLab` is a few hundred bytes more, verify with `pnpm size`.
 
 ## Notes

@@ -12,6 +12,7 @@ import type {
   DivergingPaletteName,
   SequentialPaletteName,
 } from "./palettes";
+import type { CustomRamp, DivergingRamp } from "./ramps";
 import { createColorScale, type ColorScale } from "./scales";
 
 /** Point [x, y] in pixels or [lon, lat] in degrees, depending on context. */
@@ -27,14 +28,20 @@ export type VariantConfig<TDatum> =
       variant: "sequential";
       getValue: (datum: TDatum) => number | null;
       classification?: Classification;
-      palette?: SequentialPaletteName;
+      /** A named ramp, or your own colors: `{ from: "#fff", to: "#2563eb" }` or `["#fff", "#888", "#2563eb"]`. */
+      palette?: SequentialPaletteName | CustomRamp;
+      /** Fixed `[min, max]` (a share: `[0, 100]`) instead of the data's range. Values outside it are clamped. */
+      domain?: readonly [number, number];
     }
   | {
       variant: "diverging";
       getValue: (datum: TDatum) => number | null;
       classification?: Classification;
-      palette?: DivergingPaletteName;
+      /** A named ramp, or your own: `{ negative, neutral, positive }`. */
+      palette?: DivergingPaletteName | DivergingRamp;
       midpoint?: number;
+      /** Fixed `[min, max]`, used as given (it need not be symmetric around the midpoint). */
+      domain?: readonly [number, number];
     }
   | {
       variant: "categorical";
@@ -169,8 +176,13 @@ export const resolveVariant = <TDatum>(
     classification: config.classification,
     emptyFill,
     ...(config.variant === "diverging"
-      ? { variant: "diverging", palette: config.palette, midpoint: config.midpoint }
-      : { variant: "sequential", palette: config.palette }),
+      ? {
+          variant: "diverging",
+          palette: config.palette,
+          midpoint: config.midpoint,
+          domain: config.domain,
+        }
+      : { variant: "sequential", palette: config.palette, domain: config.domain }),
   });
   return {
     fills: values.map((v) => scale.getColor(v)),
