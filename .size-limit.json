@@ -26,7 +26,7 @@
     "import": "{ ChoroplethMap }",
     "gzip": true,
     "ignore": ["react", "react-dom"],
-    "limit": "75 KB"
+    "limit": "80 KB"
   },
   {
     "name": "core alone with its dependencies (without React)",

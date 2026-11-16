@@ -25,7 +25,7 @@ Statuses: `proposed` → `accepted` → `in progress` → `done` (or `discarded`
 The working rules in `AGENTS.md` still apply (one step at a time, tests in `src/core`, no commits
 without an explicit request).
 
-## Features (25)
+## Features (26)
 
 | Code                                                       | Title                                                     | Priority | Status      |
 | ---------------------------------------------------------- | --------------------------------------------------------- | -------- | ----------- |
@@ -52,8 +52,9 @@ without an explicit request).
 | [FEAT-021](./features/FEAT-021-use-timeline.md)            | `useTimeline`                                             | low      | proposed    |
 | [FEAT-022](./features/FEAT-022-regional-maps.md)           | Regional maps (`region="europe"`, country lists)          | high     | proposed    |
 | [FEAT-023](./features/FEAT-023-overseas-territories.md)    | Overseas territories: show or hide, per country           | medium   | proposed    |
-| [FEAT-024](./features/FEAT-024-custom-color-ramps.md)      | Custom color ramps and fixed domains                      | high     | proposed    |
+| [FEAT-024](./features/FEAT-024-custom-color-ramps.md)      | Custom color ramps and fixed domains                      | high     | done        |
 | [FEAT-025](./features/FEAT-025-subnational-geographies.md) | Subnational geographies (states, provinces, NUTS)         | medium   | in progress |
+| [FEAT-026](./features/FEAT-026-composition-markers.md)     | Composition per region: pie or stacked-bar markers        | medium   | proposed    |
 
 ## Issues (13)
 
