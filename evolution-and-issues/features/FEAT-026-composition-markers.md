@@ -34,7 +34,7 @@ stacked bar, one slice per part.
 
 ## Why
 
-A choropleth paints one value per region. Two parts of a whole fit a diverging ramp (FEAT-024); three or
+A choropleth paints one value per region. Two parts of a whole fit a diverging ramp; three or
 more do not: the categorical variant shows only the dominant part and hides how close the others are.
 A pie or bar per region keeps the whole split visible and stays readable at the country level, where
 filling the region with a gradient would not (the area would encode the wrong thing).
@@ -53,14 +53,14 @@ filling the region with a gradient would not (the area would encode the wrong th
 
 ## Notes
 
-- **Related:** FEAT-002 (`Marker`, HTML anchored to lon/lat): a pie could be a marker with SVG content, or
+- **Related:** the `Marker` layer (HTML anchored to lon/lat, `<Choropleth.Marker>`): a pie could be a marker with SVG content, or
   this FEAT could reuse its anchoring; decide which comes first. The bubble variant already solves anchor
   point, radius scale, overlap order and zoom counter-scale, so most of the plumbing exists.
 - **Discarded: gradients inside each region.** A gradient or hard-stop fill per country makes the fill's
   _area_ (a function of the country's shape and bounding box) carry the share, so the same 30 % looks larger
-  in Norway than in Switzerland. Two-part splits are covered by a diverging ramp (FEAT-024), three or more by
+  in Norway than in Switzerland. Two-part splits are covered by a diverging ramp, three or more by
   this FEAT.
 - **Open questions:** overlapping pies in dense areas (Benelux, the Balkans) — shrink, offset with a leader
   line, or rely on zoom; whether `bar` is worth shipping in the first version or only `pie`/`donut`.
-- **Budget:** `ChoroplethMap` with all of d3 is at the 75 KB limit (FEAT-024 closed it); this FEAT needs the
+- **Budget:** `ChoroplethMap` with all of d3 is at the 75 KB limit (closed with the custom color ramps work); this FEAT needs the
   limit reviewed or code moved to a separately imported entry point.

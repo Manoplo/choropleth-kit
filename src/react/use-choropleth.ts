@@ -20,6 +20,8 @@ import {
   createProjection,
   DEFAULT_EMPTY_FILL,
   DEFAULT_FOCUS_BOUNDS,
+  DEFAULT_LABEL_FONT_SIZE,
+  DEFAULT_LABEL_PADDING,
   defaultFormatValue,
   checkDrillStep,
   clampPath,
@@ -52,6 +54,7 @@ import {
   type GeographyData,
   type GeographyInput,
   type JoinResult,
+  type LabelCandidate,
   type LegendItem,
   type LonLatBounds,
   type Padding,
@@ -244,6 +247,11 @@ type BaseOptions<TDatum> = {
    * `bubble`, as a bubble.
    */
   fallbackPoints?: Readonly<Record<string, Point>>;
+  /**
+   * Region names on the map (`true` for the defaults). Labels avoid overlapping: lower-priority ones are
+   * hidden and zooming in reveals more. Not to be confused with `labels` (UI texts).
+   */
+  regionLabels?: boolean | RegionLabelsOptions<TDatum>;
   /** Fixed size. If missing, the container (`containerRef`) is measured. */
   width?: number;
   height?: number;
@@ -291,6 +299,24 @@ type BaseOptions<TDatum> = {
 
 /** Common options + those of each `variant` (a discriminated union, see `core/variants.ts`). */
 export type UseChoroplethOptions<TDatum> = BaseOptions<TDatum> & VariantConfig<TDatum>;
+
+export type RegionLabelsOptions<TDatum> = {
+  /** Text of a label. Defaults to the region's `properties.name`, or its id. `null` / `""` = no label. */
+  format?: (region: Region<TDatum>) => string | null | undefined;
+  /** Higher wins a collision. Defaults to the region's projected area (big regions are named first). */
+  priority?: (region: Region<TDatum>) => number;
+  /** Font size in px used to estimate collisions; keep it equal to `--cm-label-size`. Defaults to 11. */
+  fontSize?: number;
+  /** Space kept between labels, in px. Defaults to 2. */
+  padding?: number;
+};
+
+/** The layer's resolved settings plus the candidates, already placed on the canvas. */
+export type RegionLabelsView = {
+  candidates: LabelCandidate[];
+  fontSize: number;
+  padding: number;
+};
 
 /** Props ready to spread onto a region's `<path>` (`<path {...getRegionProps(r)} />`). */
 export type RegionProps = {
@@ -351,6 +377,8 @@ export type UseChoroplethResult<TDatum> = {
   emptyFill: string;
   /** Microstates painted as a dot (empty in `bubble`: there they are bubbles). */
   fallbackPoints: FallbackPoint<TDatum>[];
+  /** Region-names layer (`regionLabels`); `null` if it is off. */
+  regionLabels: RegionLabelsView | null;
   labels: ChoroplethLabels;
   /** Already-resolved zoom options; `null` if `zoom={false}`. */
   zoom: ResolvedZoom | null;
@@ -755,7 +783,8 @@ export const useChoropleth = <TDatum>(
       : null;
 
   // ── paths (geometry + projection + size; no data) ───────────────────────────────────────────────
-  const { paths, bordersPath, anchors, project, invert, toPath } = useMemo(() => {
+  const wantsRegionLabels = options.regionLabels !== undefined && options.regionLabels !== false;
+  const { paths, bordersPath, anchors, labelAnchors, project, invert, toPath } = useMemo(() => {
     const geoProjection =
       chain?.projections[chain.projections.length - 1] ??
       createProjection({
@@ -788,6 +817,19 @@ export const useChoropleth = <TDatum>(
             return Number.isFinite(x) && Number.isFinite(y) ? [x, y] : null;
           })
         : [],
+      // Region names: the same anchor as the bubbles (pole of inaccessibility of the main body) and the
+      // projected area as the default priority. Only computed if the layer is on (polylabel is not free).
+      labelAnchors: wantsRegionLabels
+        ? features.features.map((f): { at: Point; area: number } | null => {
+            const at = getAnchorPoint({
+              geometry: getFocusGeometry({ feature: f, path: toPath }),
+              project: toPoint,
+            });
+            if (at === null) return null;
+            const area = toPath.area(f);
+            return { at, area: Number.isFinite(area) ? area : 0 };
+          })
+        : [],
       project: toPoint,
       toPath,
       // The reverse: pixels → [lon, lat]. Used by `toViewState` for the public `ViewState`.
@@ -798,7 +840,17 @@ export const useChoropleth = <TDatum>(
           : null;
       },
     };
-  }, [features, bordersGeometry, projection, width, height, isBubble, chain, rotate]);
+  }, [
+    features,
+    bordersGeometry,
+    projection,
+    width,
+    height,
+    isBubble,
+    wantsRegionLabels,
+    chain,
+    rotate,
+  ]);
 
   // ── data → color ────────────────────────────────────────────────────────────────────────────────
   // `data: undefined` = loading. The last defined data is kept so as not to empty the map (nor warn on
@@ -887,6 +939,8 @@ export const useChoropleth = <TDatum>(
     ? { id: engine.level?.id ?? ROOT_LEVEL.id, depth: engine.depth }
     : ROOT_LEVEL;
   const regions: Region<TDatum>[] = [];
+  /** Index in `features` of each entry of `regions` (the two arrays differ: regions without a path or id are skipped). */
+  const regionFeatureIndex: number[] = [];
   const anonymousPaths: string[] = [];
   features.features.forEach((feature, index) => {
     const path = paths[index];
@@ -935,6 +989,7 @@ export const useChoropleth = <TDatum>(
         }),
     };
     const custom = options.getRegionStyle?.(base);
+    regionFeatureIndex.push(index);
     regions.push(
       custom === undefined
         ? base
@@ -947,6 +1002,36 @@ export const useChoropleth = <TDatum>(
           },
     );
   });
+  // Region names: one candidate per region with an anchor and a text. The camera is not involved here;
+  // `Labels` places them against the confirmed camera.
+  const labelOptions =
+    typeof options.regionLabels === "object" && options.regionLabels !== null
+      ? options.regionLabels
+      : undefined;
+  const regionLabels: RegionLabelsView | null = wantsRegionLabels
+    ? {
+        fontSize: labelOptions?.fontSize ?? DEFAULT_LABEL_FONT_SIZE,
+        padding: labelOptions?.padding ?? DEFAULT_LABEL_PADDING,
+        candidates: regions.flatMap((region, i): LabelCandidate[] => {
+          const anchor = labelAnchors[regionFeatureIndex[i] ?? -1];
+          if (anchor == null) return [];
+          const text = labelOptions?.format
+            ? labelOptions.format(region)
+            : (nameOf(region.feature) ?? region.id);
+          if (text == null || text === "") return [];
+          return [
+            {
+              id: region.id,
+              text,
+              x: anchor.at[0],
+              y: anchor.at[1],
+              priority: labelOptions?.priority?.(region) ?? anchor.area,
+            },
+          ];
+        }),
+      }
+    : null;
+
   // Microstates are bubbles in `bubble` (with their coordinates) and loose dots elsewhere.
   const fallbackCoordinates = new Map(fallbacks.map((f) => [f.id, f.coordinates]));
   const bubbles = isBubble
@@ -1381,6 +1466,7 @@ export const useChoropleth = <TDatum>(
     anonymousPaths,
     emptyFill,
     fallbackPoints: fallbackMarks,
+    regionLabels,
     labels,
     zoom: zoomOptions,
     onViewChange: typeof options.zoom === "object" ? options.zoom.onViewChange : undefined,

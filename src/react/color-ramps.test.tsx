@@ -3,7 +3,7 @@ import { afterEach, beforeEach, vi } from "vitest";
 import { twoSquares } from "../../tests/fixtures";
 import { ChoroplethMap, type ChoroplethMapProps } from "./choropleth-map";
 
-// FEAT-024: your own colors and a fixed domain. What is tested here is that the LEGEND follows the scale (colors
+// Custom color ramps and fixed domains: your own colors and a fixed domain. What is tested here is that the LEGEND follows the scale (colors
 // and ends); the colors themselves are tested in src/core/ramps.test.ts. That it LOOKS right: the stories.
 
 type Row = { code: string; v: number };

@@ -7,6 +7,7 @@ import { Patterns } from "./patterns";
 import { Bubbles } from "./bubbles";
 import { DrillLayers } from "./drill-layers";
 import { FallbackPoints } from "./fallback-points";
+import { Labels } from "./labels";
 import { Regions } from "./regions";
 import { Selection } from "./selection";
 import { zoomKeyAction } from "../../core";
@@ -16,7 +17,7 @@ import { Viewport } from "./viewport";
 export type SvgProps = {
   /**
    * Map layers, bottom to top. By default, inside a `Viewport` (the camera): `Regions`, `Borders`,
-   * `Bubbles`, `FallbackPoints` and `Selection`. If you pass your own layers, wrap them in
+   * `Bubbles`, `FallbackPoints`, `Selection` and `Labels` (the latter draws only with `regionLabels`). If you pass your own layers, wrap them in
    * `<Choropleth.Viewport>` so they move with the zoom.
    */
   children?: ReactNode;
@@ -125,6 +126,7 @@ export const Svg = ({ children, className, ariaLabel }: SvgProps) => {
             <Bubbles />
             <FallbackPoints />
             <Selection />
+            <Labels />
             <DrillLayers role="exiting" />
           </Viewport>
         </>

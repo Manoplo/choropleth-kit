@@ -63,6 +63,13 @@ export {
   themeToCssVars,
 } from "./theme";
 export type { ChoroplethTheme, ThemeName } from "./theme";
+export {
+  DEFAULT_LABEL_FONT_SIZE,
+  DEFAULT_LABEL_PADDING,
+  placeLabels,
+  zoomBucket,
+} from "./label-layout";
+export type { LabelCandidate, PlaceLabelsParams } from "./label-layout";
 export { en, es, resolveLabels } from "./labels";
 export type { ChoroplethLabels } from "./labels";
 export { joinData } from "./join";

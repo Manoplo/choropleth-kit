@@ -11,6 +11,7 @@ import type { ChoroplethClassNames } from "./class-names";
 import { Breadcrumb } from "./components/breadcrumb";
 import { GestureHint } from "./components/gesture-hint";
 import { Legend } from "./components/legend";
+import { Marker, Markers, type MarkerSpec } from "./components/marker";
 import { Root } from "./components/root";
 import type { ChoroplethMapHandle } from "./handle";
 import { Svg } from "./components/svg";
@@ -36,6 +37,8 @@ export type ChoroplethMapProps<TDatum> = UseChoroplethOptions<TDatum> & {
   legend?: LegendOptions | false;
   /** Drill breadcrumbs (only with `drill`). `false` hides them; top-left by default. */
   breadcrumb?: { position?: LegendPosition } | false;
+  /** HTML pins or cards anchored to `[lon, lat]` that follow the map. Each one's `children` is its content. */
+  markers?: readonly MarkerSpec[];
   /** Tooltip content. Without this: the region's name and formatted value. */
   renderTooltip?: (context: TooltipContext<TDatum>) => ReactNode;
   className?: string;
@@ -66,6 +69,7 @@ const ChoroplethMapInner = <TDatum,>(
   {
     legend,
     breadcrumb,
+    markers,
     renderTooltip,
     className,
     style,
@@ -96,6 +100,13 @@ const ChoroplethMapInner = <TDatum,>(
       classNames={classNames}
     >
       <Svg ariaLabel={ariaLabel} />
+      {markers !== undefined && markers.length > 0 && (
+        <Markers>
+          {markers.map(({ id, ...marker }) => (
+            <Marker key={id} {...marker} />
+          ))}
+        </Markers>
+      )}
       {legendOptions !== null && (
         <div style={{ position: "absolute", ...CORNERS[legendOptions.position ?? "bottom-left"] }}>
           <Legend
