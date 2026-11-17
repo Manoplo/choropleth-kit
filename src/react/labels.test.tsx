@@ -4,7 +4,7 @@ import { Choropleth } from "./choropleth";
 import type { RootProps } from "./components/root";
 import { useChoropleth, type UseChoroplethOptions } from "./use-choropleth";
 
-// FEAT-001: the region-names layer (`regionLabels`). The collision math is tested in `core/label-layout`.
+// The region-names layer (`regionLabels`). The collision math is tested in `core/label-layout`.
 
 // Two big squares, far apart: `twoSquares` is ~1 px wide on the default projection, so its labels would collide.
 const square = (id: string, name: string, west: number, east: number) => ({

@@ -1,4 +1,4 @@
-// FEAT-002: HTML markers that follow the map. SYNTHETIC places and values.
+// HTML markers that follow the map. SYNTHETIC places and values.
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { toFeatureCollection } from "../src/core";
 import { world110m } from "../src/geo";

@@ -1,4 +1,4 @@
-// FEAT-001: region names with collision avoidance and a halo. SYNTHETIC, deterministic data.
+// Region names with collision avoidance and a halo. SYNTHETIC, deterministic data.
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { toFeatureCollection, type ThemeName } from "../src/core";
 import { world110m } from "../src/geo";

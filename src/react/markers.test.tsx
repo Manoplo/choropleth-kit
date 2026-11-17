@@ -4,7 +4,7 @@ import { Choropleth } from "./choropleth";
 import { ChoroplethMap } from "./choropleth-map";
 import type { RootProps } from "./components/root";
 
-// FEAT-002: HTML markers anchored to [lon, lat]. Position is CSS over variables that `use-zoom` writes per
+// HTML markers anchored to [lon, lat]. Position is CSS over variables that `use-zoom` writes per
 // frame, so moving the camera must not re-render the marker.
 
 const world: FeatureCollection = {

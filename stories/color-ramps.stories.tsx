@@ -1,4 +1,4 @@
-// FEAT-024: your own colors and a fixed domain. France by department (Natural Earth admin-1, ISO 3166-2 ids).
+// Custom color ramps and fixed domains: your own colors and a fixed domain. France by department (Natural Earth admin-1, ISO 3166-2 ids).
 // SYNTHETIC, deterministic data: the share of sales made online per department, between 31 % and 74 %.
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { Feature } from "geojson";
@@ -81,7 +81,7 @@ const Panel = ({
 );
 
 const meta = {
-  title: "Color/Custom ramps (FEAT-024)",
+  title: "Color/Custom ramps",
   parameters: { layout: "padded" },
 } satisfies Meta;
 export default meta;

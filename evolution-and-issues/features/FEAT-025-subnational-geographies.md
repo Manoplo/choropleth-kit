@@ -100,7 +100,7 @@ Conclusions:
 
 - **188 features have no real ISO 3166-2 code.** They carry placeholders such as `-99-X16~`, `AE-X01~` or `XK-X02~`:
   Dhekelia, Somaliland, UNDOF, Western Sahara, Kosovo's municipalities, St. Martin… Several are disputed territories,
-  so they connect to ISSUE-005. They must get a documented policy (exclude, or give them a stable id outside ISO).
+  so they connect to the library's disputed-borders policy. They must get a documented policy (exclude, or give them a stable id outside ISO).
 - **60 real codes are shared by several units.** Examples: Bosnia's nine cantons all carry `BA-BIH`; `MZ-L` and
   `MW-CT` appear twice with the same name (probably split polygons of one unit); `KZ-ALA` covers both the region and
   Almaty City. A join by id is ambiguous for those rows, so the build must either merge the duplicated polygons or
@@ -230,7 +230,7 @@ download from about 0.46 MB unpacked to about 2.25 MB packed. The consumer's **b
 - `scripts/smoke-package.mjs` did not run on Windows (it spawned `pnpm` without a shell); it now does. Node prints a
   `DEP0190` deprecation warning for that.
 - `choropleth-prepub.md` (a 2026-11-09 review that said `0.1.0` was unpublished) was deleted, and the docs that said
-  nothing was published were corrected: `PUBLISHING.md`, `PUBLISHING.es.md`, `README.md`, ISSUE-011 (now done) and
+  nothing was published were corrected: `PUBLISHING.md`, `PUBLISHING.es.md`, `README.md`, the publishing decisions (resolved) and
   FEAT-015.
 
 ## Step 4 (2026-11-14): the stories

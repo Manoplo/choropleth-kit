@@ -25,12 +25,10 @@ Statuses: `proposed` → `accepted` → `in progress` → `done` (or `discarded`
 The working rules in `AGENTS.md` still apply (one step at a time, tests in `src/core`, no commits
 without an explicit request).
 
-## Features (26)
+## Features (23)
 
 | Code                                                       | Title                                                     | Priority | Status      |
 | ---------------------------------------------------------- | --------------------------------------------------------- | -------- | ----------- |
-| [FEAT-001](./features/FEAT-001-labels-layer.md)            | `Labels` layer (country names)                            | high     | proposed    |
-| [FEAT-002](./features/FEAT-002-marker-layer.md)            | `Marker` layer (HTML that follows the map)                | medium   | proposed    |
 | [FEAT-003](./features/FEAT-003-sphere-graticule.md)        | `Sphere` and `Graticule` layers                           | low      | proposed    |
 | [FEAT-004](./features/FEAT-004-motion.md)                  | Motion ⭐: animations and the `animation` prop            | medium   | proposed    |
 | [FEAT-005](./features/FEAT-005-legend-extras.md)           | Legend: count tween, `filter`, `orientation`, `showEmpty` | low      | proposed    |
@@ -52,11 +50,10 @@ without an explicit request).
 | [FEAT-021](./features/FEAT-021-use-timeline.md)            | `useTimeline`                                             | low      | proposed    |
 | [FEAT-022](./features/FEAT-022-regional-maps.md)           | Regional maps (`region="europe"`, country lists)          | high     | proposed    |
 | [FEAT-023](./features/FEAT-023-overseas-territories.md)    | Overseas territories: show or hide, per country           | medium   | proposed    |
-| [FEAT-024](./features/FEAT-024-custom-color-ramps.md)      | Custom color ramps and fixed domains                      | high     | done        |
 | [FEAT-025](./features/FEAT-025-subnational-geographies.md) | Subnational geographies (states, provinces, NUTS)         | medium   | in progress |
 | [FEAT-026](./features/FEAT-026-composition-markers.md)     | Composition per region: pie or stacked-bar markers        | medium   | proposed    |
 
-## Issues (13)
+## Issues (10)
 
 | Code                                                         | Title                                                                    | Priority | Status   |
 | ------------------------------------------------------------ | ------------------------------------------------------------------------ | -------- | -------- |
@@ -64,13 +61,10 @@ without an explicit request).
 | [ISSUE-002](./issues/ISSUE-002-slow-test-suite.md)           | The test suite is slow                                                   | medium   | proposed |
 | [ISSUE-003](./issues/ISSUE-003-cdp-script-not-ci.md)         | `scripts/cdp-story.mjs` is neither wired up nor in CI                    | medium   | proposed |
 | [ISSUE-004](./issues/ISSUE-004-russia-bubble-anchor.md)      | Anchor of Russia's bubbles (antimeridian)                                | medium   | proposed |
-| [ISSUE-005](./issues/ISSUE-005-disputed-borders.md)          | Disputed borders and regions without an id                               | high     | done     |
 | [ISSUE-006](./issues/ISSUE-006-no-data-warning-noise.md)     | The «no data» warning clutters the console with legitimately sparse data | low      | proposed |
-| [ISSUE-007](./issues/ISSUE-007-visual-review-pending.md)     | Visual review pending from the human                                     | medium   | done     |
 | [ISSUE-008](./issues/ISSUE-008-esm-only.md)                  | ESM-only package                                                         | low      | proposed |
 | [ISSUE-009](./issues/ISSUE-009-first-render-not-measured.md) | Render budgets not rigorously measured                                   | low      | proposed |
 | [ISSUE-010](./issues/ISSUE-010-profiler-dev-only.md)         | The `Profiler` in the performance story only measures in development     | low      | proposed |
-| [ISSUE-011](./issues/ISSUE-011-publishing-pending.md)        | Decisions before the first publish                                       | high     | done     |
 | [ISSUE-012](./issues/ISSUE-012-historical-docs-spanish.md)   | Two historical documents are still in Spanish                            | low      | proposed |
 | [ISSUE-013](./issues/ISSUE-013-legend-single-value.md)       | The legend of a map whose values are all equal shows identical classes   | medium   | proposed |
 
