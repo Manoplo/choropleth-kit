@@ -12,7 +12,11 @@ const ids = toFeatureCollection({ geography: world110m, objectName: "countries" 
 );
 const rows: Row[] = ids.map((id) => ({ id, value: (seed(id) * 9301) % 100 }));
 
-const caption: React.CSSProperties = { font: "13px/1.5 sans-serif", maxWidth: 760, margin: "0 0 12px" };
+const caption: React.CSSProperties = {
+  font: "13px/1.5 sans-serif",
+  maxWidth: 760,
+  margin: "0 0 12px",
+};
 
 const meta = {
   title: "Layers/Labels",

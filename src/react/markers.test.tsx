@@ -139,7 +139,10 @@ describe("Marker", () => {
   it("adds the consumer's classes to the `markers` and `marker` slots", () => {
     const { container } = render(
       <Choropleth.Root
-        {...({ ...base, classNames: { markers: "mine-layer", marker: "mine-pin" } } as RootProps<Row>)}
+        {...({
+          ...base,
+          classNames: { markers: "mine-layer", marker: "mine-pin" },
+        } as RootProps<Row>)}
       >
         <Choropleth.Svg />
         <Choropleth.Marker coordinates={[0, 0]} />

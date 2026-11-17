@@ -21,7 +21,11 @@ const CITIES: { id: string; name: string; at: [number, number] }[] = [
   { id: "sydney", name: "Sydney", at: [151.2, -33.9] },
 ];
 
-const caption: React.CSSProperties = { font: "13px/1.5 sans-serif", maxWidth: 760, margin: "0 0 12px" };
+const caption: React.CSSProperties = {
+  font: "13px/1.5 sans-serif",
+  maxWidth: 760,
+  margin: "0 0 12px",
+};
 
 const card: React.CSSProperties = {
   background: "#fff",

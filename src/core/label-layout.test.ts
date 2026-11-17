@@ -45,8 +45,14 @@ describe("placeLabels", () => {
       camera: FIT,
       view: VIEW,
     };
-    const a = placeLabels({ ...params, candidates: [label("B", 100, 100, 1), label("A", 102, 100, 1)] });
-    const b = placeLabels({ ...params, candidates: [label("A", 102, 100, 1), label("B", 100, 100, 1)] });
+    const a = placeLabels({
+      ...params,
+      candidates: [label("B", 100, 100, 1), label("A", 102, 100, 1)],
+    });
+    const b = placeLabels({
+      ...params,
+      candidates: [label("A", 102, 100, 1), label("B", 100, 100, 1)],
+    });
     expect(a).toEqual(["A"]);
     expect(b).toEqual(["A"]);
   });

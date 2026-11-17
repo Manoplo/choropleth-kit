@@ -102,9 +102,8 @@ describe("regionLabels", () => {
 
 describe("regionLabels in the hook", () => {
   const hook = (regionLabels: UseChoroplethOptions<Row>["regionLabels"]) =>
-    renderHook(() =>
-      useChoropleth<Row>({ ...base, regionLabels } as UseChoroplethOptions<Row>),
-    ).result.current.regionLabels;
+    renderHook(() => useChoropleth<Row>({ ...base, regionLabels } as UseChoroplethOptions<Row>))
+      .result.current.regionLabels;
 
   it("is `null` when the layer is off", () => {
     expect(hook(undefined)).toBeNull();
