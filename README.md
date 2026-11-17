@@ -89,6 +89,48 @@ async with `() => import("./map.json")`), do not import it and it stays out of y
 />
 ```
 
+## Your own colors
+
+A named palette (`palette="blues"`) takes its range from the data. For a share or a rate you often want your
+own colors and a range that means something (0 % … 100 %):
+
+```tsx
+// Share of online sales per region: 0 % = all physical, 100 % = all .com
+<ChoroplethMap
+  {...common}
+  variant="sequential"
+  getValue={(r) => r.onlineShare}
+  palette={{ from: "#ffffff", to: "#2563eb" }} // or ["#fff7bc", "#fe9929", "#7a0177"] (N stops)
+  domain={[0, 100]} // fixed: 0 % is always the first color
+  classification={{ method: "linear" }} // a continuous gradient; or { method: "quantize", classes: 5 }
+  formatValue={(v) => `${v} %`}
+/>
+
+// A split around a neutral point: red = stores dominate, blue = online dominates
+<ChoroplethMap
+  {...common}
+  variant="diverging"
+  getValue={(r) => r.onlineShare}
+  palette={{ negative: "#dc2626", neutral: "#f5f5f5", positive: "#2563eb" }}
+  domain={[0, 100]}
+  midpoint={50}
+/>
+```
+
+- **`palette`** is a named palette, `{ from, to }`, a list of colors (evenly spaced stops) or, in `diverging`,
+  `{ negative, neutral, positive }`. Add `space: "lab"` or `"hcl"` to interpolate in a perceptual color space
+  (default `"rgb"`, what a CSS gradient does). Any CSS color works; an invalid one throws a message that says
+  what to pass.
+- **`domain: [min, max]`** replaces the data's range, so the same color always means the same value and two maps
+  can be compared. Values outside it take the end colors. It sets the range of `linear` and `quantize`
+  and the ends of the legend (formatted with `formatValue`); `quantile` and `threshold` keep taking their breaks
+  from the data and from `thresholds`. In `diverging` it is used as given, even if it is not symmetric around
+  `midpoint` (which must lie inside it); without it, the range is symmetric around `midpoint`.
+- **Pick ends with different lightness.** Black → blue looks almost uniform in the lower half. In development
+  the console warns when the two ends of a custom ramp differ by less than 50 points of lightness (CIE L\*);
+  `diagnostics={false}` turns it off. A light → dark ramp (white → blue) is the safe choice, and it never gets
+  confused with the gray of "no data".
+
 ## Interaction
 
 ```tsx
@@ -264,7 +306,7 @@ Measured with [`size-limit`](https://github.com/ai/size-limit) (gzip, minified; 
 | What                                                      | Gzip     |
 | --------------------------------------------------------- | -------- |
 | Own code (`core` + `react`, dependencies external)        | ≈ 31 KB  |
-| `ChoroplethMap` with all of `d3` included (without React) | ≈ 74 KB  |
+| `ChoroplethMap` with all of `d3` included (without React) | ≈ 75 KB  |
 | `styles.css`                                              | ≈ 2 KB   |
 | `choropleth-kit/geo` (data)                               | ≈ 40 KB  |
 | One country's subdivisions, loaded on demand (the US)     | ≈ 47 KB  |

@@ -88,6 +88,26 @@
     fill var(--cm-transition-duration, 250ms);
 }
 
+/*
+ * Region names. The text stays the same size on screen: `use-zoom` writes `--cm-k` per frame and the label
+ * scales by its inverse around its anchor (the origin of the group that positions it). The halo is painted
+ * UNDER the glyphs (`paint-order`), so it widens the text's outline without thinning it.
+ */
+:where(.cm-root:not([data-unstyled])) .cm-label {
+  fill: var(--cm-label-color, #111111);
+  font-family: var(--cm-font-family, inherit);
+  font-size: var(--cm-label-size, 11px);
+  font-weight: var(--cm-label-weight, 500);
+  text-anchor: middle;
+  dominant-baseline: central;
+  stroke: var(--cm-label-halo, #ffffff);
+  stroke-width: var(--cm-label-halo-width, 3px);
+  stroke-linejoin: round;
+  paint-order: stroke fill;
+  transform: scale(calc(1 / var(--cm-k, 1)));
+  user-select: none;
+}
+
 /* You can drill down from this region: the cursor promises it, and only if it is true. */
 :where(.cm-root:not([data-unstyled])) .cm-region[data-drillable] {
   cursor: zoom-in;
@@ -98,6 +118,23 @@
   stroke: var(--cm-bubble-stroke, #ffffff);
   stroke-width: 1px;
   vector-effect: non-scaling-stroke;
+}
+
+/* ── markers ─────────────────────────────────────────────────────────────────────────────── */
+
+/* Position is functional and goes inline (`marker.tsx`); this is only the default look of the dot. */
+:where(.cm-root:not([data-unstyled])) .cm-marker__dot {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--cm-marker-fill, var(--cm-bubble-fill, #2563eb));
+  border: 2px solid var(--cm-marker-stroke, #ffffff);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
+}
+/* No hover or tooltips from the map during a gesture; markers follow the same rule. */
+:where(.cm-root:not([data-unstyled]))[data-interacting] .cm-marker {
+  pointer-events: none !important;
 }
 
 /* ── zoom and pan ───────────────────────────────────────────────────────────────────────────── */

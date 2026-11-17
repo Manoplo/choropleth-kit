@@ -63,6 +63,13 @@ export {
   themeToCssVars,
 } from "./theme";
 export type { ChoroplethTheme, ThemeName } from "./theme";
+export {
+  DEFAULT_LABEL_FONT_SIZE,
+  DEFAULT_LABEL_PADDING,
+  placeLabels,
+  zoomBucket,
+} from "./label-layout";
+export type { LabelCandidate, PlaceLabelsParams } from "./label-layout";
 export { en, es, resolveLabels } from "./labels";
 export type { ChoroplethLabels } from "./labels";
 export { joinData } from "./join";
@@ -73,6 +80,8 @@ export { createColorScale, DEFAULT_EMPTY_FILL } from "./scales";
 export type { ColorScale, ColorScaleOptions } from "./scales";
 export { DIVERGING_PALETTES, SEQUENTIAL_PALETTES } from "./palettes";
 export type { DivergingPaletteName, SequentialPaletteName } from "./palettes";
+export { createRampInterpolator, diagnoseRamp, isCustomRamp } from "./ramps";
+export type { CustomRamp, DivergingRamp, RampSpace } from "./ramps";
 export {
   computeAspectRatio,
   createProjection,

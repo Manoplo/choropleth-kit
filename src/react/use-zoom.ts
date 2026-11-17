@@ -221,9 +221,12 @@ export const useZoom = ({
       .on(
         "zoom",
         ({ transform, sourceEvent }: { transform: ZoomTransform; sourceEvent: Event | null }) => {
-          // Per frame: four DOM writes and no React render.
+          // Per frame: a handful of DOM writes and no React render.
           viewport.setAttribute("transform", transform.toString());
           root.style.setProperty("--cm-k", String(transform.k));
+          // The translation too: HTML markers position themselves from `--cm-k`, `--cm-x` and `--cm-y` in CSS.
+          root.style.setProperty("--cm-x", String(transform.x));
+          root.style.setProperty("--cm-y", String(transform.y));
           root.style.setProperty(
             "--cm-bubble-scale",
             String(bubbleScale(transform.k, bubbleScaling)),
@@ -460,6 +463,8 @@ export const useZoom = ({
       svg.style.removeProperty("touch-action");
       root.toggleAttribute("data-zoomed", false);
       root.style.removeProperty("--cm-bubble-scale");
+      root.style.removeProperty("--cm-x");
+      root.style.removeProperty("--cm-y");
       store.setState({ interacting: false });
     };
   }, [

@@ -7,6 +7,8 @@ export type {
   DrillNav,
   DrillNavItem,
   Region,
+  RegionLabelsOptions,
+  RegionLabelsView,
   RegionStyle,
   PointProps,
   RegionProps,
@@ -57,6 +59,9 @@ export type { BreadcrumbProps, BreadcrumbRenderContext } from "./components/brea
 export { Bubbles } from "./components/bubbles";
 export { DrillLayers } from "./components/drill-layers";
 export { FallbackPoints } from "./components/fallback-points";
+export { Labels } from "./components/labels";
+export { Marker, Markers } from "./components/marker";
+export type { MarkerProps, MarkerSpec } from "./components/marker";
 export { Legend } from "./components/legend";
 export type { LegendProps, LegendRenderContext } from "./components/legend";
 export { Regions } from "./components/regions";
@@ -76,5 +81,7 @@ export type { ChoroplethMapProps, LegendOptions, LegendPosition } from "./chorop
 export type { CameraOptions, TransitionResult, ViewState, ZoomOptions, ZoomTarget } from "../core";
 export type { DrillContext } from "../core";
 export { THEMES, defineTheme, extendTheme, themeToCssVars } from "../core";
+export { placeLabels, zoomBucket } from "../core";
+export type { LabelCandidate, PlaceLabelsParams } from "../core";
 export type { ChoroplethTheme, ThemeName } from "../core";
 export type { ChoroplethClassNames, ClassSlot } from "./class-names";

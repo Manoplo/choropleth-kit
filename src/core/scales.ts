@@ -10,6 +10,13 @@ import {
   type DivergingPaletteName,
   type SequentialPaletteName,
 } from "./palettes";
+import {
+  createRampInterpolator,
+  isCustomRamp,
+  sampleRampColors,
+  type CustomRamp,
+  type DivergingRamp,
+} from "./ramps";
 
 // Color of regions without data. It must be distinguishable from the WHOLE ramp, including 0.
 export const DEFAULT_EMPTY_FILL = "#d4d4d4";
@@ -23,8 +30,28 @@ type CommonOptions = {
 
 export type ColorScaleOptions = CommonOptions &
   (
-    | { variant: "sequential"; palette?: SequentialPaletteName }
-    | { variant: "diverging"; palette?: DivergingPaletteName; midpoint?: number }
+    | {
+        variant: "sequential";
+        /** A named ramp, or your own colors: `{ from, to }` or `["#fff", "#888", "#2563eb"]`. */
+        palette?: SequentialPaletteName | CustomRamp;
+        /**
+         * Fixed `[min, max]` instead of the data's. Values outside it take the end colors (they are clamped, not
+         * extrapolated). It sets the range of `linear` and `quantize` and the ends of the legend; `quantile`
+         * and `threshold` take their breaks from the data and from `thresholds`, as always.
+         */
+        domain?: readonly [number, number];
+      }
+    | {
+        variant: "diverging";
+        /** A named ramp, or your own colors: `{ negative, neutral, positive }`. */
+        palette?: DivergingPaletteName | DivergingRamp;
+        midpoint?: number;
+        /**
+         * Fixed `[min, max]` instead of the symmetric range of the data. Used as given, even if it is not
+         * symmetric around the midpoint (`[-10, 40]` with `midpoint: 0`): each side gets its own scale.
+         */
+        domain?: readonly [number, number];
+      }
   );
 
 export type ColorScale = {
@@ -71,7 +98,20 @@ export const createColorScale = (options: ColorScaleOptions): ColorScale => {
   const midpoint = options.variant === "diverging" ? (options.midpoint ?? 0) : 0;
   const [min, max] = extent(values);
   let domain: [number, number] = [min, max];
-  if (options.variant === "diverging") {
+  if (options.domain !== undefined) {
+    // A fixed domain is the consumer's statement of what the range MEANS (0 % … 100 %): it wins over the data.
+    const [low, high] = options.domain;
+    if (!Number.isFinite(low) || !Number.isFinite(high) || low >= high) {
+      throw new Error(
+        `[choropleth] domain: expected finite [min, max] with min < max (received: [${String(low)}, ${String(high)}]).`,
+      );
+    }
+    domain = [low, high];
+    if (midpoint < low || midpoint > high) {
+      throw new Error(`[choropleth] midpoint: ${midpoint} is outside domain [${low}, ${high}].`);
+    }
+  }
+  if (options.variant === "diverging" && options.domain === undefined) {
     // `|| 1`: if all values equal the midpoint, d = 0 and the domain would degenerate into a point,
     // where d3 does not know which color to give. With d = 1 that value falls exactly on the neutral center.
     const spread = Math.max(Math.abs(min - midpoint), Math.abs(max - midpoint)) || 1;
@@ -90,10 +130,15 @@ export const createColorScale = (options: ColorScaleOptions): ColorScale => {
   const thresholds = computeThresholds({ values, classification, domain });
 
   // ── STEP 4: build the scale depending on whether there are classes. ──────────────────────────
+  const custom = options.variant === "sequential" && isCustomRamp(options.palette);
   const interpolate =
     options.variant === "diverging"
-      ? DIVERGING_PALETTES[options.palette ?? DEFAULT_DIVERGING_PALETTE]
-      : SEQUENTIAL_PALETTES[options.palette ?? DEFAULT_SEQUENTIAL_PALETTE];
+      ? isCustomRamp(options.palette)
+        ? createRampInterpolator(options.palette)
+        : DIVERGING_PALETTES[options.palette ?? DEFAULT_DIVERGING_PALETTE]
+      : isCustomRamp(options.palette)
+        ? createRampInterpolator(options.palette)
+        : SEQUENTIAL_PALETTES[options.palette ?? DEFAULT_SEQUENTIAL_PALETTE];
 
   const isUsable = (v: number | null | undefined): v is number =>
     typeof v === "number" && Number.isFinite(v);
@@ -120,7 +165,9 @@ export const createColorScale = (options: ColorScaleOptions): ColorScale => {
   const colors =
     options.variant === "diverging"
       ? sampleDivergingColors({ interpolate, classes })
-      : sampleSequentialColors({ interpolate, classes });
+      : custom
+        ? sampleRampColors({ interpolate, classes })
+        : sampleSequentialColors({ interpolate, classes });
   const classed = scaleThreshold<number, string>().domain(thresholds).range(colors);
 
   return {

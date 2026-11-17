@@ -28,6 +28,8 @@ export type ChoroplethTheme = {
   dim?: { opacity?: number };
   bubble?: { fill?: string; stroke?: string; opacity?: number };
   font?: { family?: string; size?: number; color?: string };
+  /** Region names (`regionLabels`): the halo keeps them legible over any fill. */
+  label?: { size?: number; weight?: number | string; halo?: string; haloWidth?: number };
   tooltip?: {
     background?: string;
     color?: string;
@@ -61,6 +63,7 @@ const light: ChoroplethTheme = {
   dim: { opacity: 0.45 },
   bubble: { fill: "#2563eb", stroke: "#ffffff", opacity: 0.75 },
   font: { color: "#111111" },
+  label: { halo: "#ffffff", haloWidth: 3 },
   tooltip: {
     background: "#ffffff",
     color: "#111111",
@@ -87,6 +90,7 @@ const dark: ChoroplethTheme = {
   dim: { opacity: 0.4 },
   bubble: { fill: "#60a5fa", stroke: "#0f172a", opacity: 0.8 },
   font: { color: "#e2e8f0" },
+  label: { halo: "#0f172a", haloWidth: 3 },
   tooltip: {
     background: "#f8fafc",
     color: "#0f172a",
@@ -109,6 +113,7 @@ const minimal: ChoroplethTheme = {
   dim: { opacity: 0.5 },
   bubble: { fill: "#111111", stroke: "#ffffff", opacity: 0.6 },
   font: { color: "#333333" },
+  label: { halo: "#ffffff", haloWidth: 2.5 },
   tooltip: {
     background: "#ffffff",
     color: "#222222",
@@ -134,6 +139,7 @@ const contrast: ChoroplethTheme = {
   dim: { opacity: 0.35 },
   bubble: { fill: "#003399", stroke: "#000000", opacity: 0.85 },
   font: { color: "#000000", size: 14 },
+  label: { weight: 700, halo: "#ffffff", haloWidth: 4 },
   tooltip: {
     background: "#000000",
     color: "#ffffff",
@@ -213,6 +219,10 @@ export const themeToCssVars = (theme: ChoroplethTheme | undefined): Record<strin
   set("font-family", theme.font?.family);
   set("font-size", theme.font?.size, px);
   set("label-color", theme.font?.color);
+  set("label-size", theme.label?.size, px);
+  set("label-weight", theme.label?.weight);
+  set("label-halo", theme.label?.halo);
+  set("label-halo-width", theme.label?.haloWidth, px);
   set("tooltip-bg", theme.tooltip?.background);
   set("tooltip-color", theme.tooltip?.color);
   set("tooltip-border", theme.tooltip?.border);
