@@ -1,7 +1,7 @@
 # FEAT-001 · `Labels` layer (country names)
 
 - **Type:** Feature
-- **Status:** proposed
+- **Status:** implemented, pending visual review (`Layers/Labels` story)
 - **Priority (proposed):** high
 - **Origin:** `dd.md §12` and §21 task 24; build diary, «Post-MVP → Decorative layers». Human decision: out of the MVP, first post-MVP piece.
 

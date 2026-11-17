@@ -6,6 +6,8 @@ import { Patterns } from "./components/patterns";
 import { DrillLayers } from "./components/drill-layers";
 import { FallbackPoints } from "./components/fallback-points";
 import { GestureHint } from "./components/gesture-hint";
+import { Labels } from "./components/labels";
+import { Marker, Markers } from "./components/marker";
 import { Legend } from "./components/legend";
 import { Regions } from "./components/regions";
 import { Root } from "./components/root";
@@ -27,6 +29,9 @@ export const Choropleth = {
   Bubbles,
   DrillLayers,
   FallbackPoints,
+  Labels,
+  Marker,
+  Markers,
   Selection,
   Viewport,
   ZoomControls,

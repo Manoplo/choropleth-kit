@@ -1,7 +1,7 @@
 # FEAT-002 · `Marker` layer (HTML that follows the map)
 
 - **Type:** Feature
-- **Status:** proposed
+- **Status:** implemented, pending visual review (`Layers/Markers` story)
 - **Priority (proposed):** medium
 - **Origin:** `dd.md §21` task 24; build diary, «Post-MVP → Decorative layers».
 
