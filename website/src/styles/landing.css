@@ -17,7 +17,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     --bg: #0b0c10;
     --surface: #12141a;
     --ink: #f2f3f7;
@@ -31,6 +31,21 @@
     --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 28px 56px -28px rgb(0 0 0 / 0.7);
     color-scheme: dark;
   }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0b0c10;
+  --surface: #12141a;
+  --ink: #f2f3f7;
+  --ink-2: #b6bacb;
+  --ink-3: #8f94a6;
+  --line: #1e212a;
+  --line-strong: #2d313d;
+  --accent: #7b93ff;
+  --accent-ink: #0b0c10;
+  --accent-soft: #181d36;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 28px 56px -28px rgb(0 0 0 / 0.7);
+  color-scheme: dark;
 }
 
 *,
@@ -141,6 +156,37 @@ a {
 }
 .brand .m4 {
   fill: #2547e8;
+}
+.top-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.theme {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+}
+.theme button {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+}
+.theme button:hover {
+  color: var(--ink);
+}
+.theme button[aria-pressed="true"] {
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 .top nav,
 .foot nav {
@@ -375,6 +421,13 @@ h1 {
     border-bottom: 0;
     border-right: 1px solid var(--line);
   }
+}
+.demo-map > .cm-root {
+  /* The map paints its own theme background: let it fill the panel instead of leaving a band. */
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 .demo-code {
   min-width: 0;

@@ -1,0 +1,72 @@
+---
+// Colour scheme selector for the landing. It shares Starlight's storage key and `data-theme`
+// attribute, so the choice made here carries over to the docs and back.
+---
+
+<div class="theme" role="group" aria-label="Color theme">
+  <button type="button" data-choice="light" aria-label="Light" title="Light">
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false">
+      <g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+        <circle cx="8" cy="8" r="2.8"></circle>
+        <path
+          d="M8 1.5v1.4M8 13.1v1.4M1.5 8h1.4M13.1 8h1.4M3.4 3.4l1 1M11.6 11.6l1 1M3.4 12.6l1-1M11.6 4.4l1-1"
+        ></path>
+      </g>
+    </svg>
+  </button>
+  <button type="button" data-choice="auto" aria-label="Match system" title="Match system">
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false">
+      <g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+        <rect x="1.8" y="2.6" width="12.4" height="8.4" rx="1.4"></rect>
+        <path d="M5.5 13.6h5M8 11v2.6"></path>
+      </g>
+    </svg>
+  </button>
+  <button type="button" data-choice="dark" aria-label="Dark" title="Dark">
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false">
+      <path
+        d="M13.4 9.6A5.6 5.6 0 0 1 6.4 2.6a5.6 5.6 0 1 0 7 7Z"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.4"
+        stroke-linejoin="round"></path>
+    </svg>
+  </button>
+</div>
+
+<script>
+  const KEY = "starlight-theme";
+  const root = document.documentElement;
+  const buttons = document.querySelectorAll<HTMLButtonElement>(".theme [data-choice]");
+  const dark = window.matchMedia("(prefers-color-scheme: dark)");
+
+  const read = (): "light" | "dark" | "auto" => {
+    try {
+      const stored = localStorage.getItem(KEY);
+      return stored === "light" || stored === "dark" ? stored : "auto";
+    } catch {
+      return "auto";
+    }
+  };
+
+  const apply = (choice: "light" | "dark" | "auto") => {
+    root.dataset.theme = choice === "auto" ? (dark.matches ? "dark" : "light") : choice;
+    buttons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.choice === choice)));
+  };
+
+  buttons.forEach((button) =>
+    button.addEventListener("click", () => {
+      const choice = button.dataset.choice as "light" | "dark" | "auto";
+      try {
+        localStorage.setItem(KEY, choice === "auto" ? "" : choice);
+      } catch {
+        // Storage can be blocked: the choice still applies for this visit.
+      }
+      apply(choice);
+    }),
+  );
+  dark.addEventListener("change", () => {
+    if (read() === "auto") apply("auto");
+  });
+  apply(read());
+</script>

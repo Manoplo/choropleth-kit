@@ -5,6 +5,7 @@ import "../styles/landing.css";
 import HeroDemo from "../components/HeroDemo";
 import ApiLevels from "../components/ApiLevels";
 import InstallChip from "../components/InstallChip";
+import ThemeSelect from "../components/ThemeSelect.astro";
 
 const repo = "https://github.com/Manoplo/choropleth-kit";
 
@@ -53,6 +54,18 @@ const features = [
       content="Choropleth (thematic) maps for React in ten lines. SVG on d3-geo with zoom, drill-down, legends and theming included."
     />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script is:inline>
+      // Runs before first paint so there is no flash of the wrong theme.
+      (function () {
+        try {
+          var stored = localStorage.getItem("starlight-theme");
+          var dark =
+            stored === "dark" ||
+            (stored !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.dataset.theme = dark ? "dark" : "light";
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <a class="skip" href="#main">Skip to content</a>
@@ -67,6 +80,7 @@ const features = [
           </svg>
           choropleth-kit
         </a>
+        <div class="top-right">
         <nav aria-label="Main">
           <a href="/getting-started/">Docs</a>
           <a class="gh" href={repo}>
@@ -79,6 +93,8 @@ const features = [
             GitHub
           </a>
         </nav>
+        <ThemeSelect />
+        </div>
       </div>
     </header>
 

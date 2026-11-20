@@ -73,14 +73,18 @@ export default function HeroDemo() {
   const [variant, setVariant] = useState<Variant>("sequential");
   const [theme, setTheme] = useState<ThemeName>("light");
 
-  // The page follows the visitor's colour scheme; so does the map until they pick a theme.
+  // The map follows the page theme (light or dark) until the visitor picks one of its own.
+  const [picked, setPicked] = useState(false);
   useEffect(() => {
-    try {
-      if (window.matchMedia("(prefers-color-scheme: dark)").matches) setTheme("dark");
-    } catch {
-      // matchMedia can be missing in odd embeds: stay on light.
-    }
-  }, []);
+    const root = document.documentElement;
+    const sync = () => {
+      if (!picked) setTheme(root.dataset.theme === "dark" ? "dark" : "light");
+    };
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => observer.disconnect();
+  }, [picked]);
 
   const code = useMemo(() => buildCode(variant, theme), [variant, theme]);
   const rows = sales as Row[];
@@ -101,7 +105,15 @@ export default function HeroDemo() {
     <div className="demo">
       <div className="demo-bar">
         <Segmented legend="Variant" value={variant} options={VARIANTS} onChange={setVariant} />
-        <Segmented legend="Theme" value={theme} options={THEMES} onChange={setTheme} />
+        <Segmented
+          legend="Theme"
+          value={theme}
+          options={THEMES}
+          onChange={(next) => {
+            setPicked(true);
+            setTheme(next);
+          }}
+        />
       </div>
       <div className="demo-body">
         <div className="demo-map" data-theme={theme}>
