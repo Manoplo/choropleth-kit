@@ -1,0 +1,29 @@
+---
+title: A guided tour
+description: Move the camera from code with promises, and chain flights without timers.
+---
+
+import Example from "../../../components/Example.astro";
+import Live from "../../../examples/flight-tour.tsx";
+import source from "../../../examples/flight-tour.tsx?raw";
+
+**Problem:** you want to walk the viewer through a story: Spain, then Germany, then Scandinavia, then back out.
+
+<Example source={source} filename="FlightTour.tsx" note="Synthetic data. Grab the map during the tour to interrupt it.">
+  <Live client:visible />
+</Example>
+
+## How it works
+
+- `useRef<ChoroplethMapHandle>` gives you the imperative handle on the map.
+- Every move returns a **promise**, so `await` chains flights in order. No timers, no guessing durations.
+- `zoomTo` takes a region id (`"ES"`), `{ bounds }` as `[[lonW, latS], [lonE, latN]]`, or `{ center, zoom }`.
+- A flight resolves with `completed: false` if the user interrupts it with a gesture. Check it before continuing a story.
+
+## Variations
+
+- Instant placement: `zoomTo("ES", { duration: 0 })`.
+- Declarative instead: `focusId={currentId}` flies whenever the id changes.
+- Read the camera: `map.current.getView()`, or `onViewChange` (fired once at the end of each gesture or flight).
+
+Background: [Camera and zoom model](/concepts/camera/) and [Zoom and programmatic flights](/guides/zoom-and-flights/).

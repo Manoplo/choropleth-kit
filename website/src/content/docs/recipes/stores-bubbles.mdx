@@ -1,0 +1,28 @@
+---
+title: Stores as bubbles
+description: Plot points with their own coordinates, sized by one metric and colored by another.
+---
+
+import Example from "../../../components/Example.astro";
+import Live from "../../../examples/stores-bubbles.tsx";
+import source from "../../../examples/stores-bubbles.tsx?raw";
+
+**Problem:** your data are points (stores, offices, cities), not regions. You want size for one metric and color for another.
+
+<Example source={source} filename="StoresBubbles.tsx" note="Synthetic stores. Bubble area is revenue; color is growth.">
+  <Live client:visible />
+</Example>
+
+## How it works
+
+- `getCoordinates` returns each datum's `[lon, lat]`. Without it, each bubble would sit at its region's centroid.
+- `getValue` gives the circle's **area**, so the eye reads proportion correctly. `null` and values of zero or less draw no circle.
+- `getColorValue` adds a second metric as color. Without it, bubbles use a single fill.
+- Here `getId` returns the store id. The join with the geography is not what places the bubble; the coordinates are.
+- Bubbles grow with zoom by `√k` by default. Change it with `zoom={{ bubbleScaling: "screen" }}`.
+
+## Variations
+
+- Bubbles at region centroids: drop `getCoordinates` and use country ids in `getId`.
+- Constant on-screen size: `bubbleScaling: "screen"`.
+- Pins or cards instead of circles: use [HTML markers](/guides/bubbles-and-markers/).

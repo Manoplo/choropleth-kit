@@ -1,6 +1,64 @@
 ---
-title: "Examples gallery"
-description: "One live example per variant."
+title: Examples gallery
+description: One live example per variant, plus drill-down, on the same synthetic world dataset.
 ---
 
-Stub page. The real content comes in a later step.
+import Example from "../../components/Example.astro";
+import Sequential from "../../examples/gallery-sequential.tsx";
+import Diverging from "../../examples/gallery-diverging.tsx";
+import Categorical from "../../examples/gallery-categorical.tsx";
+import Bubble from "../../examples/gallery-bubble.tsx";
+import Drill from "../../examples/gallery-drill.tsx";
+import sequentialSource from "../../examples/gallery-sequential.tsx?raw";
+import divergingSource from "../../examples/gallery-diverging.tsx?raw";
+import categoricalSource from "../../examples/gallery-categorical.tsx?raw";
+import bubbleSource from "../../examples/gallery-bubble.tsx?raw";
+import drillSource from "../../examples/gallery-drill.tsx?raw";
+
+Every map here is **live**, and the code below it is the **file that is running**. They all use one synthetic world dataset (`sales` from this site's `data/demo.ts`): one row per country with `{ country, sales, growth, zone }`. The numbers are generated deterministically and mean nothing.
+
+For small, self-contained examples you can paste as they are, see [Recipes](/recipes/).
+
+## Sequential
+
+One quantity from low to high. Here with the `viridis` palette.
+
+<Example source={sequentialSource} filename="Sequential.tsx" note="Hover a country. Ctrl/⌘ + scroll to zoom.">
+  <Sequential client:visible />
+</Example>
+
+## Diverging
+
+A quantity with a meaningful middle, around `midpoint={0}`.
+
+<Example source={divergingSource} filename="Diverging.tsx">
+  <Diverging client:visible />
+</Example>
+
+## Categorical
+
+Groups with no order. Fixed `categories` give every zone the same color on every map.
+
+<Example source={categoricalSource} filename="Categorical.tsx">
+  <Categorical client:visible />
+</Example>
+
+## Bubble
+
+Size for one metric, color for another. Without `getCoordinates`, each bubble sits at its country's centroid.
+
+<Example source={bubbleSource} filename="Bubble.tsx">
+  <Bubble client:visible />
+</Example>
+
+## Drill-down
+
+Click the United States to go from the world to its states. The states are loaded on demand: the bundler puts them in their own file, so they cost nothing until the user drills in. Use the breadcrumb, or `Escape`, to go back.
+
+<Example source={drillSource} filename="Drill.tsx" note="Only the US has a level below in this example.">
+  <Drill client:visible />
+</Example>
+
+## What is not here yet
+
+Regional maps, markers and themes have their own pages: [Regional maps](/guides/regional-maps/), [Bubbles and markers](/guides/bubbles-and-markers/) and [Theming and Tailwind](/guides/theming-and-tailwind/).

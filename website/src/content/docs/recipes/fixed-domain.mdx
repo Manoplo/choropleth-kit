@@ -1,0 +1,29 @@
+---
+title: A percentage on a fixed scale
+description: Make 0 % and 100 % mean the same color on every map, so two maps can be compared.
+---
+
+import Example from "../../../components/Example.astro";
+import Live from "../../../examples/fixed-domain.tsx";
+import source from "../../../examples/fixed-domain.tsx?raw";
+
+**Problem:** by default the color range comes from your data, so "the darkest country" on one map is not the same value as on another. For a share or a rate you want a range that means something.
+
+<Example source={source} filename="FixedDomain.tsx" note="Synthetic data: share of sales made online.">
+  <Live client:visible />
+</Example>
+
+## How it works
+
+- `domain={[0, 100]}` replaces the data's range. 0 % is always the first color and 100 % the last, on any map you draw with it.
+- `palette={{ from, to }}` is your own two-color ramp. Choose ends with different lightness; a white-to-blue ramp is the safe choice.
+- `classification={{ method: "linear" }}` gives a continuous gradient instead of classes.
+- `legend={{ variant: "bar" }}` draws the legend as a bar, which suits a continuous scale. The ends show `0 %` and `100 %` through `formatValue`.
+
+## Variations
+
+- Steps instead of a gradient: `classification={{ method: "quantize", classes: 5 }}` splits `[0, 100]` into five equal bands.
+- Your own breaks: `classification={{ method: "threshold", thresholds: [25, 50, 75] }}`.
+- Perceptually even steps: add `space: "lab"` to the palette.
+
+Background: [Classification and domain](/concepts/classification-and-domain/) and [Custom colors and fixed domains](/guides/custom-colors/).

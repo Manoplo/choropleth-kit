@@ -54,7 +54,18 @@ export default defineConfig({
             "guides/testing",
           ],
         },
-        { label: "Recipes", slug: "recipes" },
+        {
+          label: "Recipes",
+          items: [
+            { label: "Overview", slug: "recipes" },
+            "recipes/sales-by-country",
+            "recipes/fixed-domain",
+            "recipes/growth-diverging",
+            "recipes/stores-bubbles",
+            "recipes/detail-panel",
+            "recipes/flight-tour",
+          ],
+        },
         { label: "Examples gallery", slug: "gallery" },
         {
           label: "API reference",

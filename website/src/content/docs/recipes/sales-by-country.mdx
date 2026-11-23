@@ -1,0 +1,28 @@
+---
+title: Sales by country
+description: Color a continent by one number, with a legend, a formatted tooltip and hatched "no data".
+---
+
+import Example from "../../../components/Example.astro";
+import Live from "../../../examples/sales-by-country.tsx";
+import source from "../../../examples/sales-by-country.tsx?raw";
+
+**Problem:** you have one number per country and want a map you can read at a glance.
+
+<Example source={source} filename="SalesByCountry.tsx" note="Synthetic data. Hover a country; Ctrl/⌘ + scroll to zoom.">
+  <Live client:visible />
+</Example>
+
+## How it works
+
+- `region="europe"` restricts the map from the first frame, so it fills the container. Your rows can be worldwide: rows outside the region are ignored.
+- `sequential` groups values into 5 quantile classes by default, painted with the `blues` palette. Use `palette` to change it.
+- `formatValue` formats both the tooltip and the legend.
+- `emptyPattern="hatch"` marks countries with no row, so "no data" is not only a gray.
+- `zoom={{ wheel: "cooperative" }}` keeps the page scrollable: the wheel only zooms with Ctrl or ⌘.
+
+## Variations
+
+- Another number system: format with `Intl.NumberFormat("de-DE")`.
+- Another continent or a list: `region="asia"`, `region={["ES", "PT"]}`. See [Regional maps](/guides/regional-maps/).
+- Equal-width classes instead of quantiles: `classification={{ method: "quantize", classes: 5 }}`.
