@@ -1,6 +1,64 @@
 ---
-title: "SSR, Astro and Next"
-description: "Rendering the map on the server and hydrating on demand."
+title: SSR, Astro and Next
+description: Rendering a map in a server-rendered app and hydrating it on demand.
 ---
 
-Stub page. The real content comes in a later step.
+## How sizing works
+
+A map takes the width of its container. It measures it with `ResizeObserver` after mount, so the real size is only known in the browser. Where `ResizeObserver` does not exist (on the server, or in jsdom), the map uses a default size, or the `width` and `height` you pass.
+
+Consequences:
+
+- **The server renders the full SVG.** On the server it uses the default 960 × 500 `viewBox` and a responsive width (`width: 100%`), so it already fits its container; the browser then measures the real size.
+- If you want a stable first paint, pass `width` and `height`.
+- The container must have a real width in the browser (a collapsed or hidden container is ignored until it has one).
+
+## Astro
+
+This documentation site is built with Astro and uses React islands. The pattern:
+
+```astro
+---
+import SalesMap from "../components/SalesMap";
+---
+
+<SalesMap client:visible />
+```
+
+`client:visible` hydrates the map when it scrolls into view, so it does not cost anything above the fold. Use `client:load` for a map that is the main content.
+
+Import the stylesheet inside the React component, not in the Astro page:
+
+```tsx
+import "choropleth-kit/styles.css";
+```
+
+## Next.js
+
+The map uses hooks and browser APIs, so use it from a client component:
+
+```tsx
+"use client";
+
+import { ChoroplethMap } from "choropleth-kit";
+import { world110m } from "choropleth-kit/geo";
+import "choropleth-kit/styles.css";
+```
+
+If you want to skip server rendering entirely, load it with `next/dynamic` and `{ ssr: false }`.
+
+## Vite, Remix and others
+
+Nothing special: it is a React component. Make sure the package is not externalized in a way that breaks ESM, because choropleth-kit is **ESM only**.
+
+## CommonJS
+
+The package has no CommonJS build. In CommonJS code, use `await import("choropleth-kit")`.
+
+## Data fetching
+
+The map never fetches business data. Fetch it wherever your framework does (a loader, a server component, a query hook) and pass it as `data`. While it is loading, pass `data={undefined}`: the map keeps the previous data and shows no warnings. See the `loading` prop to force the loading pulse.
+
+## Bundle size
+
+Do not import `choropleth-kit/geo` if you bring your own geography, and load per-country subdivisions on demand. See [Performance model](/concepts/performance/).

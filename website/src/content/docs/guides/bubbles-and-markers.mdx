@@ -1,6 +1,64 @@
 ---
-title: "Bubbles and markers"
-description: "Points with their own coordinates and HTML markers."
+title: Bubbles and markers
+description: Points with their own coordinates, microstates as dots, and HTML markers anchored to the map.
 ---
 
-Stub page. The real content comes in a later step.
+## Bubbles
+
+`variant="bubble"` draws a circle per datum. Its **area** follows `getValue`, and an optional second metric colors it.
+
+```tsx
+<ChoroplethMap
+  {...common}
+  variant="bubble"
+  getValue={(s) => s.sales} // absolute value → circle area
+  getColorValue={(s) => s.growth} // optional second metric → color
+  getCoordinates={(s) => s.at} // [lon, lat]
+/>
+```
+
+- `null` and values of zero or less draw no circle.
+- Without `getCoordinates`, each bubble sits at its region's centroid.
+- Bubbles scale with zoom according to `zoom.bubbleScaling`: `"sqrt"` (default), `"screen"` (constant on screen) or `"geo"` (grows with the map).
+- The map exposes `sizeLegend`, the size reference circles, alongside the color legend.
+
+## Microstates as dots
+
+Countries too small to see in a 1:110m geometry (Andorra, Monaco…) can be given a coordinate:
+
+```tsx
+<ChoroplethMap
+  {...common}
+  fallbackPoints={{ AD: [1.52, 42.51], MC: [7.42, 43.73] }}
+/>
+```
+
+A datum whose id joins no region but is listed there is painted as a dot with the datum's color. In `bubble`, it becomes a bubble. `choropleth-kit/geo` exports `worldFallbackPoints` with a ready-made list.
+
+## HTML markers
+
+Markers are HTML pins or cards anchored to `[lon, lat]` that follow the map.
+
+```tsx
+<ChoroplethMap
+  {...common}
+  markers={[
+    { id: "hq", coordinates: [-3.7, 40.4], label: "Headquarters", children: <b>HQ</b> },
+  ]}
+/>
+```
+
+| Option         | Default    | Meaning                                                              |
+| -------------- | ---------- | -------------------------------------------------------------------- |
+| `anchor`       | `"bottom"` | Which point sits on the coordinate: a pin's tip, or `"center"`       |
+| `scaleWithMap` | `false`    | `false` keeps its size at any zoom; `true` grows with the map        |
+| `clip`         | `true`     | Hide it when its coordinate leaves the map                           |
+| `label`        | none       | Accessible name; without it the marker is decoration for assistive technology |
+
+Markers are positioned with CSS from the camera variables, so panning and zooming re-render nothing, however many there are.
+
+With the compound API, put `<Choropleth.Markers>` and `<Choropleth.Marker>` next to `<Choropleth.Svg>`. They are HTML, so they sit above the SVG.
+
+## Region names
+
+`regionLabels` writes region names on the map. Labels avoid overlapping, and zooming in reveals more. See [Labels and i18n](/guides/labels-and-i18n/).

@@ -1,6 +1,75 @@
 ---
 title: "Interaction: hover, click, selection, tooltips"
-description: "React to the user."
+description: React to the user with item callbacks, controlled selection and a custom tooltip.
 ---
 
-Stub page. The real content comes in a later step.
+## Click and hover
+
+```tsx
+<ChoroplethMap
+  {...common}
+  onItemClick={(item) => console.log(item.kind, item.id)}
+  onItemHover={(item) => console.log(item?.id)} // null on leaving
+/>
+```
+
+`item.kind` tells a region from a bubble or point. `onItemHover` is called only when the item changes. On touch, the first tap counts as hover.
+
+## Selection
+
+The library can hold the selection for you, or you can control it.
+
+```tsx
+// Controlled
+const [selectedId, setSelectedId] = useState<string | null>(null);
+
+<ChoroplethMap
+  {...common}
+  selectedId={selectedId}
+  onSelectedIdChange={setSelectedId}
+/>;
+```
+
+- Uncontrolled: pass `defaultSelectedId` and let the library keep the state.
+- Clicking the selected region again gives `null`.
+- `dimOthers` decides what gets dimmed: `"never"`, `"selection"` (default) or `"hover-and-selection"`.
+
+You can also react in your own `onItemClick`, for example `onItemClick={({ id }) => setSelectedId(id)}`.
+
+## Style one region by its data
+
+`getRegionStyle` applies per-region exceptions the scale cannot express:
+
+```tsx
+<ChoroplethMap
+  {...common}
+  getRegionStyle={(r) => (r.datum?.estimated ? { opacity: 0.6, pattern: "hatch" } : undefined)}
+/>
+```
+
+Priority: `getRegionStyle` over the scale color over `emptyFill`. Do not set `fill` on `.cm-region` in CSS: it would beat the data.
+
+## Tooltips
+
+By default the tooltip shows the region's name and formatted value. Replace its content with `renderTooltip`:
+
+```tsx
+<ChoroplethMap
+  {...common}
+  renderTooltip={({ label, formattedValue }) => (
+    <b>
+      {label}: {formattedValue}
+    </b>
+  )}
+/>
+```
+
+In the compound API, use `<Choropleth.Tooltip>` and pass your render function as its child.
+
+## Legend interaction
+
+Hovering a legend class highlights its regions. Turn it off with `legend={{ interactive: false }}`.
+
+## Cursor
+
+When there is an `onItemClick`, regions get a `pointer` cursor automatically.

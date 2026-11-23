@@ -1,6 +1,41 @@
 ---
-title: "Accessibility"
-description: "What is covered today and what is still pending (FEAT-006)."
+title: Accessibility
+description: What is covered today, what is not yet, and what you can do in the meantime.
 ---
 
-Stub page. The real content comes in a later step.
+:::caution[Full accessibility is not done yet]
+choropleth-kit is pre-1.0 and complete accessibility is planned work (FEAT-006), not a finished feature. This page says what exists today so you can decide whether it is enough for your case.
+:::
+
+## What exists today
+
+- **The SVG is exposed as an image.** It has `role="img"`, and you give it a name with `ariaLabel`.
+- **Keyboard zoom.** With the map focused (`Tab`), `+`, `−` and `0` zoom in, zoom out and reset. Disable it with `zoom={{ keyboard: false }}`.
+- **Keyboard drill-up.** `Escape` and `Backspace` go up a level.
+- **Semantic breadcrumbs.** The drill breadcrumb is a `<nav>` with an `aria-label` (translatable through `labels`).
+- **Zoom buttons have labels** (`aria-label`), also translatable.
+- **Visible focus.** The focus ring is themeable (`--cm-focus-ring`, `--cm-focus-ring-width`).
+- **Color is not the only signal for "no data".** `emptyPattern="hatch"` or `"dots"` marks them with a pattern.
+- **Reduced motion.** Motion respects `prefers-reduced-motion`; check your own animations too.
+
+## What is not there yet
+
+- Arrow-key navigation between regions, and focusable regions.
+- `Enter` on a focused region to drill down.
+- `aria-live` announcements for drill and selection.
+- An alternative data table with the same data.
+- A keyboard-focusable legend.
+
+## What you can do now
+
+1. **Always set `ariaLabel`** with a short description of what the map shows.
+2. **Provide the data in text form** next to the map. A table of the same rows is the most reliable alternative, and it is easy to build because you already have the data.
+3. **Do not rely on color alone.** Use `emptyPattern`, labels (`regionLabels`) and a tooltip.
+4. **Choose a palette with enough lightness difference**, and consider the `"contrast"` theme.
+5. **Use `wheel: "cooperative"`** on long pages so the map does not trap scrolling.
+
+```tsx
+<ChoroplethMap {...common} ariaLabel="Sales by country, 2025" emptyPattern="hatch" />
+```
+
+Planned work is tracked in [Status and roadmap](/project/status/).

@@ -1,6 +1,57 @@
 ---
-title: "Custom colors and fixed domains"
-description: "Use your own ramp and a range that means something."
+title: Custom colors and fixed domains
+description: Use your own ramp and a range that means something, so maps are comparable.
 ---
 
-Stub page. The real content comes in a later step.
+A named palette takes its range from the data. For a share or a rate you usually want **your own colors** and a **range that means something** (0 % to 100 %).
+
+## A sequential ramp with a fixed range
+
+```tsx
+// Share of online sales per region: 0 % = all physical, 100 % = all .com
+<ChoroplethMap
+  {...common}
+  variant="sequential"
+  getValue={(r) => r.onlineShare}
+  palette={{ from: "#ffffff", to: "#2563eb" }}
+  domain={[0, 100]}
+  classification={{ method: "linear" }}
+  formatValue={(v) => `${v} %`}
+/>
+```
+
+- `palette` can also be a list of colors, evenly spaced: `["#fff7bc", "#fe9929", "#7a0177"]`.
+- `domain: [0, 100]` makes 0 % always the first color, so two maps use the same scale.
+- `classification: { method: "linear" }` gives a continuous gradient. For steps, use `{ method: "quantize", classes: 5 }`.
+- `formatValue` formats legend ends and tooltips.
+
+## A diverging split around a neutral point
+
+```tsx
+<ChoroplethMap
+  {...common}
+  variant="diverging"
+  getValue={(r) => r.onlineShare}
+  palette={{ negative: "#dc2626", neutral: "#f5f5f5", positive: "#2563eb" }}
+  domain={[0, 100]}
+  midpoint={50}
+/>
+```
+
+Red means stores dominate, blue means online dominates. `midpoint` must lie inside `domain`.
+
+## Perceptual interpolation
+
+Add `space: "lab"` or `"hcl"` to interpolate in a perceptual color space. The default, `"rgb"`, is what a CSS gradient does.
+
+```tsx
+palette={{ from: "#ffffff", to: "#2563eb", space: "lab" }}
+```
+
+## Checklist
+
+- Choose ends with **different lightness**. In development, the console warns below 50 points of CIE L\*.
+- Do not use a light gray end: it is confused with "no data" (`#d4d4d4` by default).
+- Use a fixed `domain` whenever the map will be compared with another one.
+
+Background: [Palettes and color spaces](/concepts/palettes/) and [Classification and domain](/concepts/classification-and-domain/).
