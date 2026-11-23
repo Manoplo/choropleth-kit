@@ -1,13 +1,106 @@
 ---
-title: "Choosing an API level"
-description: "Preset, compound or headless: which one to pick and how to move between them."
+title: Choosing an API level
+description: Preset, compound or headless. The same map at each level, what each one gives you, and how to move between them.
 ---
 
-Stub page. The real content comes in a later step.
+import Example from "../../components/Example.astro";
+import Preset from "../../examples/level-preset.tsx";
+import Compound from "../../examples/level-compound.tsx";
+import Headless from "../../examples/level-headless.tsx";
+import presetSource from "../../examples/level-preset.tsx?raw";
+import compoundSource from "../../examples/level-compound.tsx?raw";
+import headlessSource from "../../examples/level-headless.tsx?raw";
 
-Planned content:
+choropleth-kit has **three API levels over one implementation**. They are not three libraries: each level is built from the one below, so moving from one to the next never means starting over.
 
-- `<ChoroplethMap>`
-- `<Choropleth.*>`
-- `useChoropleth`
-- Migrating up a level without a rewrite
+| Level        | You write                          | You get                                                  | You take over                              |
+| ------------ | ---------------------------------- | -------------------------------------------------------- | ------------------------------------------ |
+| **Preset**   | `<ChoroplethMap>`                  | Everything wired: map, legend, tooltip, zoom, drill-down | Nothing; you configure it with props       |
+| **Compound** | `<Choropleth.Root>` and its pieces | The same pieces, in the order and place you choose       | Layout: what is rendered, where and how    |
+| **Headless** | `useChoropleth()`                  | Geometry, colors, legend data and event props            | Every element: you paint each path yourself |
+
+Start with the preset. Drop down only when you hit something it cannot express.
+
+## The same map, three ways
+
+All three examples below draw the same data. The code shown is the file that is running.
+
+### 1. Preset
+
+One component. The legend, tooltip and camera come with it.
+
+<Example source={presetSource} filename="Preset.tsx" note="Synthetic data. Hover a country.">
+  <Preset client:visible />
+</Example>
+
+### 2. Compound
+
+The same pieces the preset uses, now in your hands. Here the legend moves to the bottom right, and you could add, remove or reorder anything.
+
+<Example source={compoundSource} filename="Compound.tsx">
+  <Compound client:visible />
+</Example>
+
+### 3. Headless
+
+The hook returns data, and you render it. There is no legend component, no tooltip and no camera here: those are yours to add (or not).
+
+<Example source={headlessSource} filename="Headless.tsx" note="No styles.css and no components: this is plain SVG that you control.">
+  <Headless client:visible />
+</Example>
+
+## What the preset actually is
+
+The preset has no logic of its own. It is exactly `Root` plus `Svg`, `Legend` and `Tooltip`, and it adds `Markers`, `Breadcrumb`, `ZoomControls` and `GestureHint` when your props ask for them. If you need another layout, you can copy it and change the pieces. That is the whole idea of the compound level.
+
+## The compound pieces
+
+All of them live under `Choropleth`, and they read from the `Root` around them.
+
+| Piece                        | What it is                                                                      |
+| ---------------------------- | ------------------------------------------------------------------------------- |
+| `Choropleth.Root`            | The container. It takes **all the options** (data, variant, theme, zoom…). It is a positioned box and exposes the `ref` handle. |
+| `Choropleth.Svg`             | The `<svg>`. With no children it renders the default layers (below).            |
+| `Choropleth.Legend`          | The legend. It is HTML, so it goes next to the `<svg>`, not inside it.          |
+| `Choropleth.Tooltip`         | The tooltip. Pass a render function as its child to replace the content.        |
+| `Choropleth.Breadcrumb`      | Drill-down navigation.                                                          |
+| `Choropleth.ZoomControls`    | The `+`, `−` and reset buttons.                                                 |
+| `Choropleth.GestureHint`     | The "Ctrl + scroll to zoom" hint for `wheel: "cooperative"`.                    |
+| `Choropleth.Marker`, `Markers` | HTML pins and cards anchored to `[lon, lat]`. HTML, so they sit above the SVG. |
+
+**Inside `Choropleth.Svg`**, you can pass your own children to choose the SVG layers. The defaults, in order, are: `Defs`, then a `Viewport` containing `DrillLayers` (context), `Regions`, `Patterns`, `Borders`, `Bubbles`, `FallbackPoints`, `Selection`, `Labels` and `DrillLayers` (exiting).
+
+:::caution
+If you pass children to `Choropleth.Svg`, they **replace** the defaults. Include the layers you still want, and keep them inside `Choropleth.Viewport`, the group that receives the camera transform.
+:::
+
+## Headless: what the hook returns
+
+`useChoropleth` takes the same options as the other levels and returns what you need to render:
+
+- `containerRef`, `width`, `height`: put the ref on a container so the map adapts to its width, and use the size for the `viewBox`.
+- `regions`: each with its `id`, `path` (the `d` attribute), `fill`, `datum`, `value` and `formattedValue`.
+- `borders`: the interior borders as one path, or `null` with GeoJSON.
+- `legend` (and `sizeLegend`): the legend items, as data.
+- `bubbles`, `fallbackPoints`, `regionLabels`: the other layers, as data.
+- `getRegionProps(region)`: the event props (`onClick`, `onPointerEnter`, `onPointerLeave`) to spread on each `<path>`. Without it, hover, click and tooltips will not work.
+- `store`: the interaction store, to read hover or the camera with `useMapStore`.
+- `drillNav`, `status`, `scale`, `joinReport` and more.
+
+Keep `geography` at a **stable reference** (a module constant, or `useMemo`): the hook memoizes the geometry by its identity.
+
+## Which one should I use?
+
+- **Preset:** you want a good map quickly, and props are enough. Most cases.
+- **Compound:** you need a different layout (legend somewhere else, no tooltip, an extra layer) or your own tooltip, legend or controls, but you still want the camera, drill-down and theming.
+- **Headless:** you need to control every element: a custom renderer, an unusual design system, or output that is not the stock SVG. You give up the built-in camera and components, and add what you need.
+
+## Moving between levels
+
+- **Options stay the same.** `data`, `getId`, `getValue`, `variant`, `palette`, `drill`, `zoom` and the callbacks are the same props on `ChoroplethMap`, `Choropleth.Root` and `useChoropleth`.
+- **The handle stays the same.** `ref` on `ChoroplethMap` or `Choropleth.Root`, and `useChoroplethApi()` inside the compound, give you the same `zoomTo`, `drillDown` and friends.
+- **Small defaults travel with the preset.** For example, the preset passes `emptyLabel` so "No data" appears in the legend; with `Choropleth.Root` you set `emptyLabel` yourself, as the compound example above does.
+- **What changes** is who renders. Going from preset to compound, move the props that configure the legend, tooltip, breadcrumb, zoom controls and markers onto the matching piece.
+- Presentation props such as `theme`, `classNames` and `unstyled` belong to the preset and compound levels. In headless you style your own elements.
+
+See [Theming contract](/concepts/theming/) for styling, and [How a map is built](/concepts/how-a-map-is-built/) for what every level shares.
