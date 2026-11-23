@@ -1,13 +1,62 @@
 ---
-title: "Theming contract"
-description: "The --cm-* variables, data-* attributes and classNames."
+title: Theming contract
+description: Themes, --cm-* CSS variables, data-* attributes and classNames.
 ---
 
-Stub page. The real content comes in a later step.
+choropleth-kit styles itself with plain CSS, and gives you three stable ways to change it. Nothing is hidden inside JavaScript.
 
-Planned content:
+## 1. Themes
 
-- Themes
-- Variables
-- data-* state contract
-- unstyled
+```tsx
+<ChoroplethMap {...common} theme="dark" emptyPattern="hatch" />
+```
+
+Built-in themes: `"light"`, `"dark"`, `"minimal"` and `"contrast"`. A theme can also be an object built with `defineTheme`, or derived from another with `extendTheme`. A theme covers: background, empty regions (fill and pattern), context layers, borders, hover and selected strokes, focus ring, dimming, bubbles, fonts, labels, tooltip, and controls.
+
+## 2. CSS variables
+
+Every theme value is exposed as a `--cm-*` variable, and you can override any of them on an ancestor:
+
+```css
+.my-dashboard {
+  --cm-border-color: #94a3b8;
+  --cm-hover-stroke: #2563eb;
+}
+```
+
+All base styles use `:where()`, so they have zero specificity and your rules win without `!important`. See the full list in [Styles and CSS variables](/reference/styles/).
+
+## 3. `classNames` and `data-*`
+
+`classNames` adds your classes (Tailwind, CSS Modules) to the `cm-*` ones:
+
+```tsx
+<ChoroplethMap {...common} classNames={{ root: "rounded-xl", tooltip: "shadow-lg" }} />
+```
+
+Slots include `root`, `region`, `legend`, `tooltip`, `controls` and `breadcrumb`.
+
+State is exposed as `data-*` attributes, so you can style it with selectors:
+
+| Attribute                | Meaning                                     |
+| ------------------------ | ------------------------------------------- |
+| `data-class`             | The region's class in the scale             |
+| `data-empty`             | The region has no data                      |
+| `data-drillable`         | The region can be drilled into              |
+| `data-region-id`         | The region's id                             |
+| `data-selection`         | The hover or selected overlay (`hover`, `selected`) |
+| `data-theme`             | On the root: the theme name, or `custom`    |
+
+```css
+.cm-root [data-empty] {
+  opacity: 0.6;
+}
+```
+
+## `unstyled`
+
+`unstyled` removes all base CSS. You then own every visual detail, and the `data-*` contract still applies.
+
+## What is stable
+
+The `--cm-*` variable names and the `data-*` attributes are the public styling contract. Class names starting with `cm-` are for targeting, but prefer the variables and `data-*` first. Pre-1.0, anything may change; see [Status and roadmap](/project/status/).

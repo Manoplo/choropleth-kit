@@ -1,11 +1,58 @@
 ---
-title: "Variants"
-description: "Sequential, diverging, categorical and bubble."
+title: Variants
+description: Sequential, diverging, categorical and bubble, and what each one needs.
 ---
 
-Stub page. The real content comes in a later step.
+`variant` decides what the map means. It is a discriminated union: each variant asks for its own props, and TypeScript rejects invalid combinations, such as a diverging palette on a sequential map.
 
-Planned content:
+| Variant       | Use it for                                              | Required accessor | Default palette |
+| ------------- | ------------------------------------------------------- | ----------------- | --------------- |
+| `sequential`  | One quantity from low to high (sales, density)          | `getValue`        | `blues`         |
+| `diverging`   | A quantity with a meaningful middle (growth, deviation) | `getValue`        | `rdbu`          |
+| `categorical` | Groups with no order (zone, party, type)                | `getCategory`     | `tableau10`     |
+| `bubble`      | A quantity as circle area, optionally a second as color | `getValue`        | n/a             |
 
-- When to use each one
-- Required accessors per variant
+## Sequential
+
+```tsx
+<ChoroplethMap {...common} variant="sequential" getValue={(r) => r.sales} />
+```
+
+Light to dark. Values are grouped into classes (by default, 5 quantiles). Pick it when only the order matters.
+
+## Diverging
+
+```tsx
+<ChoroplethMap {...common} variant="diverging" getValue={(r) => r.growth} midpoint={0} />
+```
+
+Two hues around a neutral `midpoint`. Without `domain`, the range is symmetric around the midpoint, so the neutral color means "no change". By default it uses 5 equal classes over that symmetric range.
+
+## Categorical
+
+```tsx
+<ChoroplethMap {...common} variant="categorical" getCategory={(r) => r.zone} />
+```
+
+One color per category. Pass `categories` for a fixed order and fixed colors, so the same category always has the same color across maps.
+
+## Bubble
+
+```tsx
+<ChoroplethMap
+  {...common}
+  variant="bubble"
+  getValue={(s) => s.sales}
+  getColorValue={(s) => s.growth}
+  getCoordinates={(s) => s.at} // [lon, lat]
+/>
+```
+
+`getValue` is an **absolute** value that gives the circle's **area**. `null` and values of zero or less draw no circle. `getColorValue` adds a second metric as color. Without `getCoordinates`, each bubble sits at its region's centroid.
+
+## Choosing
+
+- A **rate or share** between 0 and 100: `sequential` with a fixed `domain`.
+- A **change** that can be positive or negative: `diverging`.
+- **Which group** a region belongs to: `categorical`.
+- **How much**, at points that are not regions (stores, cities): `bubble`.

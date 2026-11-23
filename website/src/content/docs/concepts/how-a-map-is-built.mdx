@@ -1,10 +1,41 @@
 ---
-title: "How a map is built"
-description: "The pipeline from geography to pixels."
+title: How a map is built
+description: The pipeline from geography and data to the pixels on screen.
 ---
 
-Stub page. The real content comes in a later step.
+Every choropleth-kit map, at any API level, goes through the same four stages. Knowing them tells you where to look when something is not what you expected.
 
-Planned content:
+```
+geography ──► join ──► scale ──► render
+ (shapes)    (your     (values    (SVG, legend,
+              data)    → colors)   camera)
+```
 
-- geography → join → scale → render
+## 1. Geography
+
+A **geography** is the set of shapes to draw: TopoJSON or GeoJSON. You pass it as `geography` (plus `objectName` for TopoJSON, such as `"countries"`). It can be a value, or a function that returns a promise, so it can load on demand.
+See [Geography and ids](/concepts/geography-and-ids/).
+
+## 2. Join
+
+Your `data` is an array of rows. `getId` returns the region id of each row, and the map matches it with the id of each shape. The join is **exact**: it does not guess or fix ids. Instead it reports what did not match, so a gray map is a message, not a mystery.
+
+## 3. Scale
+
+`getValue` (or `getCategory`) turns each row into a number or a category. A **scale** maps it to a color: the values are grouped into classes by a [classification](/concepts/classification-and-domain/) and painted from a [palette](/concepts/palettes/). The legend is built from the same breaks, not recomputed.
+
+Regions with no row, or with a `null` value, are "no data". A `0` is data, not an absence.
+
+## 4. Render
+
+The result is SVG on top of `d3-geo`: one path per region, colored by the scale, with a [camera](/concepts/camera/) for zoom and pan, an optional legend and tooltip, and [drill-down](/concepts/drill-down/) between levels. Styling is plain CSS through `--cm-*` variables; see [Theming contract](/concepts/theming/).
+
+## Where the code lives
+
+| Stage                       | Package entry point | Depends on React? |
+| --------------------------- | ------------------- | ----------------- |
+| Join, scale, classification | `choropleth-kit/core` | No                |
+| Camera math, drill machine  | `choropleth-kit/core` | No                |
+| Components and hooks        | `choropleth-kit`    | Yes               |
+
+The pure logic in `core` has no React and no DOM, so you can call it directly (to compute breaks, for example) without rendering anything.

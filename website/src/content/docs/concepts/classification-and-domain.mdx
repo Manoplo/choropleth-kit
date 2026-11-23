@@ -1,11 +1,56 @@
 ---
-title: "Classification and domain"
-description: "How values become classes and colors."
+title: Classification and domain
+description: How values become classes and colors, and how to make two maps comparable.
 ---
 
-Stub page. The real content comes in a later step.
+A choropleth rarely paints every value with its own color. It groups values into **classes**, and the way you group them changes the story the map tells.
 
-Planned content:
+## Classification
 
-- quantize, quantile, linear, threshold
-- Fixed domains and comparable maps
+`classification` chooses the method:
+
+| Method      | What it does                                                          | Good for                         |
+| ----------- | --------------------------------------------------------------------- | -------------------------------- |
+| `quantile`  | Splits the **data** into groups with about the same number of regions | Skewed data; uses every color    |
+| `quantize`  | Splits the **range** `[min, max]` into equal bands                    | Comparing against a fixed scale  |
+| `linear`    | A continuous gradient, no classes                                     | Smooth variation                 |
+| `threshold` | Breaks you choose: `{ method: "threshold", thresholds: [0, 5, 10] }`  | Meaningful cut-offs              |
+
+```tsx
+classification={{ method: "quantize", classes: 5 }}
+```
+
+**Defaults:** `sequential` uses `quantile` with 5 classes; `diverging` uses `quantize` with 5 classes over a range symmetric around the midpoint.
+
+**Trade-offs worth knowing**
+
+- `quantize` on very skewed data puts most regions in the first classes: faithful to the scale, but it can mislead.
+- `quantile` always uses the whole palette, but a color jump can mean a tiny or a huge difference. With many repeated values (many zeros), several breaks can coincide and some classes come out empty.
+- `thresholds` must be finite and strictly ascending. Otherwise the library throws a `[choropleth]` error instead of painting wrong colors.
+
+## What counts as a value
+
+Only finite numbers are values. `null`, `undefined`, `NaN` and `Infinity` are discarded before any statistic, so a single bad value cannot turn the whole map one color. A `0` **is** kept: it is data, not an absence.
+
+## Breaks and the legend
+
+A classification produces **breaks**: N classes give N-1 ascending numbers. A value exactly on a break belongs to the class above. The legend uses these same breaks as the map, so they always agree.
+
+## Domain
+
+By default the range comes from your data. `domain: [min, max]` replaces it:
+
+```tsx
+<ChoroplethMap
+  {...common}
+  variant="sequential"
+  getValue={(r) => r.onlineShare}
+  domain={[0, 100]} // 0 % is always the first color
+  classification={{ method: "linear" }}
+/>
+```
+
+- The same color then always means the same value, so **two maps can be compared**.
+- Values outside the domain take the end colors.
+- It sets the range of `linear` and `quantize`, and the ends of the legend. `quantile` and `threshold` still take their breaks from the data and from `thresholds`.
+- In `diverging` it is used as given, even if it is not symmetric around `midpoint` (which must lie inside it).
