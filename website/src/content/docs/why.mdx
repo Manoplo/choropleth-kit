@@ -1,16 +1,119 @@
 ---
-title: "Why choropleth-kit?"
-description: "What choropleth-kit is for, how it differs from other map libraries, and when not to use it."
+title: Why choropleth-kit?
+description: What choropleth-kit is for, how it differs from Leaflet, react-simple-maps and d3-geo, and when not to use it.
 ---
 
-Stub page. The real content comes in a later step.
+import SalesMap from "../../components/SalesMap";
 
-Planned content:
+**choropleth-kit gives you a finished choropleth map in a React app: color scale, legend, tooltip, zoom, drill-down and theming included.**
+The common case is ten lines. When you need more, you drop down a level without rewriting anything.
 
-- One sentence and the ten-line map
-- The problem it solves: a finished choropleth, not a map canvas
-- Curated comparison with honest trade-offs
-- The three API levels
-- Performance and accessibility, only what is measured
-- When not to use it
-- Status: pre-1.0
+<div class="not-content">
+  <SalesMap client:visible />
+</div>
+
+```tsx
+import { ChoroplethMap } from "choropleth-kit";
+import { world110m } from "choropleth-kit/geo";
+import "choropleth-kit/styles.css";
+
+const data = [
+  { country: "ES", sales: 120 },
+  { country: "FR", sales: 95 },
+  { country: "DE", sales: 150 },
+];
+
+export const SalesMap = () => (
+  <ChoroplethMap
+    geography={world110m}
+    objectName="countries"
+    data={data}
+    getId={(row) => row.country}
+    getValue={(row) => row.sales}
+    variant="sequential"
+    legend={{ title: "Sales" }}
+  />
+);
+```
+
+_The data above is synthetic._
+
+## The problem it solves
+
+Most map libraries give you a map and leave the _thematic_ part to you. A choropleth is not a map with colors:
+it is a chain of decisions. How are values grouped into classes? Which palette is readable? What does the legend
+say? What happens to a region with no data? Where does the user click to go deeper?
+
+choropleth-kit makes those decisions for you, with defaults you can override one by one:
+
+- **Four variants:** `sequential`, `diverging`, `categorical` and `bubble` (size and color).
+- **Classification and legend in one place:** the legend is derived from the same scale that paints the map.
+- **Honest "no data":** regions without a value are drawn as such (gray, or hatched), and in development the console tells you when your ids do not match the geography.
+- **Camera:** cooperative wheel, pinch, inertia, controls and flights you can `await` (`await map.zoomTo("ES")`).
+- **Drill-down:** world → country → region, declared once. States and provinces of 238 countries ship with the package, each as its own lazy module.
+- **Theming:** four themes, `--cm-*` CSS variables, Tailwind-friendly `classNames` and a `data-*` contract.
+
+## Three API levels, one implementation
+
+| Level        | You write                           | Use it when                                    |
+| ------------ | ----------------------------------- | ---------------------------------------------- |
+| **Preset**   | `<ChoroplethMap>`                   | You want a map now.                            |
+| **Compound** | `<Choropleth.Root>` and its pieces  | You want to choose and place legend, tooltip…  |
+| **Headless** | `useChoropleth()`                   | You want to paint every path yourself.         |
+
+The three share one engine, so moving up a level never means starting over. See [Choosing an API level](/api-levels/).
+
+## How it compares
+
+A curated selection, not an exhaustive one. These are the libraries you are most likely to be weighing.
+Facts below were checked against the npm registry and each project's repository on 23 November 2026.
+
+| | **choropleth-kit** | **Leaflet** | **react-simple-maps** | **visx `@visx/geo` / d3-geo** |
+| --- | --- | --- | --- | --- |
+| What it is | Thematic maps for React | Interactive slippy maps (tiles, layers, markers) | Composable SVG map components over d3-geo | Low-level geo primitives (projections, paths) |
+| Starting point | A finished choropleth | A tiled basemap | An empty SVG map to compose | Projection and path generator |
+| Color scale and classification | Built in | You write it (style a GeoJSON layer) | You write it | You write it |
+| Legend | Built in, derived from the scale | You write it | You write it | You write it |
+| Zoom / pan | Built in | Built in | Built in (`./zoom`) | You write it |
+| Drill-down between levels | Built in | You write it | You write it | You write it |
+| Theming | Themes, `--cm-*` variables, `classNames` | CSS and style callbacks | Props and your own CSS | Entirely yours |
+| Street-level basemap, tiles, routing | **No** | **Yes** (its core purpose) | No | No |
+| Module formats | ESM only | UMD / global script | ESM and CJS | ESM |
+| React | `>=18` | Via `react-leaflet` | 16.8 to 19 | 18 to 19 (visx) |
+
+**Leaflet** is the right tool when the map is the product: a street-level basemap, tiles, many layers and
+geolocation. A choropleth in Leaflet is possible (a styled GeoJSON layer), but the scale, legend and
+interaction design are yours. choropleth-kit is not a Leaflet replacement; it is for the case where the _data on
+the regions_ is the product.
+
+**react-simple-maps** is a mature, actively maintained, composable layer over d3-geo, and it is a fine choice
+when you want full control of what is drawn. It gives you the pieces (geographies, markers, annotations, zoom);
+choropleth-kit gives you the finished thematic map and lets you compose only when you need to. If you
+prefer to assemble everything yourself, start there.
+
+**visx and d3-geo directly** give you the most control and the smallest surface, and you will write the scale,
+legend, tooltip, camera and accessibility yourself. choropleth-kit is built on `d3-geo` and keeps its pure logic
+in `choropleth-kit/core` with no React or DOM, so you can use the parts without the components.
+
+### What we do not claim
+
+We do not publish benchmarks, download counts or "faster / lighter" claims, because we have not measured them against these libraries.
+What we can say: hover, zoom and pan do not re-render the map (interaction state lives outside React), and two maps on the same page never share ids.
+The bundle is not tiny: see [Known limitations](/project/limitations/).
+
+## When not to use it
+
+- You need a **street-level basemap**, tiles, routing or geocoding. Use Leaflet or MapLibre GL.
+- You need **millions of points** or a WebGL globe. choropleth-kit renders SVG.
+- You need a **CommonJS** build. The package is ESM only.
+- You do not use React. A framework-free API is planned; see [Status and roadmap](/project/status/).
+
+## Status
+
+choropleth-kit is **pre-1.0**: the API may change between minor versions. It ships its own types and requires `react` and `react-dom` 18 or later.
+See [Status and roadmap](/project/status/) for what is planned and what is known to be limited.
+
+## Next
+
+- [Getting started](/getting-started/): install it and render your first map.
+- [Choosing an API level](/api-levels/): preset, compound or headless.
