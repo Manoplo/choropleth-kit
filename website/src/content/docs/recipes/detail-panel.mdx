@@ -1,0 +1,28 @@
+---
+title: A detail panel
+description: Click a region and show its details beside the map, with controlled selection.
+---
+
+import Example from "../../../components/Example.astro";
+import Live from "../../../examples/detail-panel.tsx";
+import source from "../../../examples/detail-panel.tsx?raw";
+
+**Problem:** the map is the overview, and the details belong in your own UI next to it.
+
+<Example source={source} filename="DetailPanel.tsx" note="Synthetic accounts. Click a country; click it again to clear.">
+  <Live client:visible />
+</Example>
+
+## How it works
+
+- `selectedId` and `onSelectedIdChange` make the selection **controlled**: your state is the source of truth, and the panel reads from it.
+- Clicking the selected region again calls `onSelectedIdChange(null)`.
+- The map dims everything except the selection (`dimOthers` defaults to `"selection"`).
+- The panel is plain React. `aria-live="polite"` announces changes to assistive technology, which the map itself does not do yet (see [Accessibility](/guides/accessibility/)).
+
+## Variations
+
+- Uncontrolled: pass `defaultSelectedId` and read the value from `onItemClick`.
+- Fly to the selection: add `focusId={selectedId}`.
+- Only dim on hover: `dimOthers="hover-and-selection"`.
+- Open a custom tooltip instead of a panel: [`renderTooltip`](/guides/interaction/).

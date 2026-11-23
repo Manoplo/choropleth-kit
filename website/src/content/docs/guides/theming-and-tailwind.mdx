@@ -1,0 +1,79 @@
+---
+title: Theming and Tailwind
+description: Themes, CSS variables and classNames in practice.
+---
+
+For the model behind this, read [Theming contract](/concepts/theming/). This page is the practical side.
+
+## Pick a theme
+
+```tsx
+<ChoroplethMap {...common} theme="dark" emptyPattern="hatch" />
+```
+
+Built-in: `"light"`, `"dark"`, `"minimal"`, `"contrast"`. `emptyPattern` (`"hatch"` or `"dots"`) marks regions without data with a pattern, so they can be told apart without relying on color.
+
+## Build your own theme
+
+```tsx
+import { defineTheme, extendTheme } from "choropleth-kit";
+
+const brand = extendTheme("light", {
+  border: { color: "#cbd5e1", width: 0.5 },
+  hover: { stroke: "#2563eb", width: 1.5 },
+  tooltip: { background: "#0f172a", color: "#f8fafc", radius: 8 },
+});
+
+<ChoroplethMap {...common} theme={brand} />;
+```
+
+`defineTheme` creates one from scratch. The groups you can set are: `background`, `empty`, `context`, `border`, `hover`, `selected`, `focus`, `dim`, `bubble`, `font`, `label`, `tooltip` and `controls`.
+
+## Override a variable
+
+Any `--cm-*` variable can be overridden on an ancestor:
+
+```css
+.dashboard {
+  --cm-border-color: #94a3b8;
+  --cm-hover-stroke: #2563eb;
+}
+```
+
+The base styles use `:where()`, so your rules win without `!important`.
+
+## Tailwind and CSS Modules
+
+`classNames` adds your classes to the `cm-*` ones:
+
+```tsx
+<ChoroplethMap
+  {...common}
+  classNames={{
+    root: "rounded-xl border border-slate-200",
+    tooltip: "shadow-lg",
+    legend: "text-sm",
+  }}
+/>
+```
+
+Slots include `root`, `region`, `legend`, `tooltip`, `controls`, `breadcrumb` and `markers`.
+
+State is exposed as `data-*` attributes, so Tailwind's arbitrary variants work:
+
+```tsx
+classNames={{ region: "data-[empty]:opacity-60" }}
+```
+
+## Follow the page's color scheme
+
+Choose the theme from your app's state, for example:
+
+```tsx
+const theme = isDark ? "dark" : "light";
+<ChoroplethMap {...common} theme={theme} />;
+```
+
+## Remove all base CSS
+
+`unstyled` removes every base style. You then own every visual detail, and the `data-*` contract still applies. List of variables: [Styles and CSS variables](/reference/styles/).

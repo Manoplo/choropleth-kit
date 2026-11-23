@@ -1,0 +1,62 @@
+---
+title: Bring your own geography
+description: Use your own TopoJSON or GeoJSON, loaded async, without the bundled geodata.
+---
+
+You do not need `choropleth-kit/geo`. Any TopoJSON or GeoJSON works, and if you do not import the bundled data it stays out of your bundle (it is about 40 KB gzip).
+
+## Pass it directly
+
+```tsx
+import myMap from "./my-map.json";
+
+<ChoroplethMap
+  geography={myMap}
+  objectName="regions" // TopoJSON only: the object to draw
+  data={rows}
+  getId={(r) => r.code}
+  getValue={(r) => r.value}
+  variant="sequential"
+/>;
+```
+
+An already-loaded geography must have a **stable reference** (a module constant or `useMemo`), or the map will treat it as new on every render.
+
+## Load it on demand
+
+`geography` also accepts a promise or `() => import("…")`:
+
+```tsx
+<ChoroplethMap
+  geography={() => import("./map.json")}
+  geographyKey="my-map" // cache key; otherwise the function's identity is used
+  onGeographyError={(error) => reportError(error)}
+/>
+```
+
+- While it loads, the map shows a skeleton. If it fails, it shows an error message, and you get `onGeographyError` (without it, a console warning).
+- `clearGeographyCache` empties the cache; `useGeography` is the hook underneath.
+
+## Match your ids
+
+By default the map matches `feature.id`. If your file keeps the id in a property, say so:
+
+```tsx
+getFeatureId={(feature) => feature.properties?.iso_a2}
+```
+
+A shape that returns `undefined` is drawn as a non-interactive layer. See [Geography and ids](/concepts/geography-and-ids/) for the join report.
+
+## Preparing a TopoJSON
+
+TopoJSON is smaller than GeoJSON because it shares borders. If you only have GeoJSON you can pass it as is, but in that case there are no shared interior borders (`borders` is `null`): use `stroke` on each region instead.
+
+## Projection and proportions
+
+- `projection` chooses the projection by name.
+- `aspectRatio="auto"` derives the map's proportion from the geometry.
+- `width` and `height` fix the size. Without them, the map measures its container.
+
+## Disputed borders
+
+If you publish a map in a product, check that the borders are what you want to show. Passing your own geography is how you control that.

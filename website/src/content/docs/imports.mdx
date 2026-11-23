@@ -1,0 +1,105 @@
+---
+title: What to import from where
+description: The five entry points of choropleth-kit, what each one contains, and which ones end up in your bundle.
+---
+
+choropleth-kit is one package with several **entry points**. Each one has a single job, so you only pay for what you import.
+
+| Import                           | Contents                                                                                  | Needs React? |
+| -------------------------------- | ----------------------------------------------------------------------------------------- | ------------ |
+| `choropleth-kit`                 | The React components and hooks.                                                           | Yes          |
+| `choropleth-kit/styles.css`      | The base styles.                                                                          | No           |
+| `choropleth-kit/core`            | Pure functions: scales, classification, join, camera, drill machine, UI texts.            | No           |
+| `choropleth-kit/geo`             | Geodata: the world map, region presets and a few helpers.                                 | No           |
+| `choropleth-kit/geo/admin1/<cc>` | The states, provinces or departments of one country. One module each, loaded on demand.   | No           |
+
+## `choropleth-kit`
+
+The React layer. It is where almost everything you use lives.
+
+```tsx
+import { ChoroplethMap, Choropleth, useChoropleth, useCamera, defineDrillLevels } from "choropleth-kit";
+```
+
+- **Components:** `ChoroplethMap` (the preset) and `Choropleth.*` (the compound pieces: `Root`, `Svg`, `Legend`, `Tooltip`, `Breadcrumb`, `ZoomControls`, `Marker`…).
+- **Hooks:** `useChoropleth` (headless), `useCamera`, `useDrillDown`, `useGeography`, `useContainerSize`, `useMapStore`.
+- **Drill helpers:** `defineDrillLevels`.
+- **Theming helpers:** `defineTheme`, `extendTheme`, `themeToCssVars` and the `THEMES` object.
+- **Types:** `ChoroplethMapProps`, `ChoroplethMapHandle`, `MapItem`, `Region`, `JoinReport`, `ViewState`, `ChoroplethTheme`…
+
+`react` and `react-dom` 18 or later are peer dependencies. See [Choosing an API level](/api-levels/) for the three ways to use it.
+
+## `choropleth-kit/styles.css`
+
+```tsx
+import "choropleth-kit/styles.css";
+```
+
+The base styles, about 2 KB gzip. Everything uses `:where()` (zero specificity) and `--cm-*` variables, so your own CSS overrides it without `!important`. Without this import the map still renders, but the legend, tooltip and controls lose their styling.
+
+The package declares CSS as a side effect (`"sideEffects": ["**/*.css"]`), so bundlers keep the import. Skip it only if you use the `unstyled` prop and style everything yourself. See [Theming contract](/concepts/theming/).
+
+## `choropleth-kit/core`
+
+Pure logic with **no React and no DOM**. You can use it on a server, in a worker or in a test, and you can use it without rendering a map at all.
+
+```ts
+import { joinData, computeThresholds, createColorScale, es } from "choropleth-kit/core";
+```
+
+What is in there:
+
+- **Data:** `joinData`, `finiteValues`, `toFeatureCollection`.
+- **Scales and classes:** `computeThresholds`, `createColorScale`, `createCategoricalScale`, `createRadiusScale`, `buildLegend`.
+- **Palettes and ramps:** `SEQUENTIAL_PALETTES`, `DIVERGING_PALETTES`, `CATEGORICAL_PALETTES`, `createRampInterpolator`, `diagnoseRamp`.
+- **Geometry:** `createProjection`, `createBorders`, bounds and framing helpers.
+- **Camera:** the transform math (`applyTransform`, `constrainTransform`, flights, inertia).
+- **Texts:** `en`, `es` and the `ChoroplethLabels` type, for [Labels and i18n](/guides/labels-and-i18n/).
+- **Drill:** the drill state machine, as a pure reducer.
+
+## `choropleth-kit/geo`
+
+Geodata, so you can draw a map without bringing your own files.
+
+```ts
+import { world110m, REGION_PRESETS, worldFallbackPoints, isoNumericToAlpha2 } from "choropleth-kit/geo";
+```
+
+| Export                | What it is                                                                                |
+| --------------------- | ----------------------------------------------------------------------------------------- |
+| `world110m`           | The world at 1:110m as TopoJSON, with **ISO alpha-2** ids (`"ES"`). Use `objectName="countries"`. |
+| `REGION_PRESETS`      | The names accepted by `region`: continents, subregions and groupings.                     |
+| `worldFallbackPoints` | Coordinates of microstates that 1:110m does not draw (Andorra, Monaco…), for `fallbackPoints`. |
+| `OVERSEAS_TERRITORIES`| The curated list of overseas territories that `region` leaves out.                                        |
+| `isoNumericToAlpha2`  | A table from ISO 3166 numeric codes to alpha-2, if your data uses `"724"` for Spain.      |
+
+**This entry is data, about 40 KB gzip.** If you bring your own geography, do not import it, and it stays out of your bundle.
+
+## `choropleth-kit/geo/admin1/<cc>`
+
+The first level below a country, for 238 countries. Each one is its own module, named by the lowercase ISO alpha-2 code:
+
+```ts
+import usStates from "choropleth-kit/geo/admin1/us"; // static: it is in your bundle
+const loadSpain = () => import("choropleth-kit/geo/admin1/es"); // dynamic: its own file
+```
+
+Use a static import for a page about one country, and a dynamic `import()` with the country written out for drill-down. Do not build the path with a variable: bundlers do not split it. See [Subdivisions of a country](/guides/subdivisions/).
+
+## Which one do I need?
+
+| I want to…                                      | Import                                                         |
+| ----------------------------------------------- | -------------------------------------------------------------- |
+| Draw a world or regional map                    | `choropleth-kit`, `choropleth-kit/geo` and `styles.css`        |
+| Draw my own geography                           | `choropleth-kit` and `styles.css` (skip `geo`)                 |
+| Drill from countries into states               | The above, plus `choropleth-kit/geo/admin1/<cc>` per country    |
+| Compute classes or join data without a map     | `choropleth-kit/core` only                                      |
+| Translate the UI                                | `es` from `choropleth-kit/core`, or your own `ChoroplethLabels` |
+
+## Module format and types
+
+- **ESM only.** There is no CommonJS build. In CommonJS code, use `await import("choropleth-kit")`.
+- **Types are included.** Use a module resolution that understands `exports` (`bundler` or `node16`). The package also ships `typesVersions`, so legacy `node` resolution finds the types of the subpaths.
+- The package declares itself free of side effects except for its CSS, so bundlers can drop what you do not import.
+
+For what each import costs, see [Performance model](/concepts/performance/).

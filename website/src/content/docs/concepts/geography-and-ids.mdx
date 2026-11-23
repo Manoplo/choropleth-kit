@@ -1,0 +1,56 @@
+---
+title: Geography and ids
+description: TopoJSON and GeoJSON, ISO ids, and how your data is joined to regions.
+---
+
+## What a geography is
+
+The shapes of the map, as **TopoJSON** or **GeoJSON**. For TopoJSON, `objectName` names the object to draw (`"countries"`, `"admin1"`). You can pass the geography directly, or an async function (`() => import("./map.json")`) so it is loaded when needed.
+
+The package ships geodata you can opt into:
+
+- `choropleth-kit/geo`: `world110m`, Natural Earth 1:110m with **ISO alpha-2** ids (`"ES"`), Kosovo (`XK`) included. About 40 KB gzip.
+- `choropleth-kit/geo/admin1/<cc>`: the first level below a country, with **ISO 3166-2** ids (`"US-CA"`, `"ES-M"`). One module per country, loaded on demand.
+
+If you do not import them, they do not enter your bundle.
+
+## Ids and the join
+
+Each row of your data is matched to a region by id:
+
+```tsx
+<ChoroplethMap
+  geography={world110m}
+  objectName="countries"
+  data={rows}
+  getId={(row) => row.country} // "ES"
+  getValue={(row) => row.sales}
+/>
+```
+
+By default the region id is `feature.id`, converted to a string (a numeric `724` becomes `"724"`). If your geography keeps the id elsewhere, pass `getFeatureId`:
+
+```tsx
+getFeatureId={(feature) => feature.properties?.iso_a2}
+```
+
+Returning `undefined` means "this region has no id": it cannot be joined and is drawn as a non-interactive layer.
+
+## The join is exact, and it reports
+
+The join never tries to repair ids. The most common reason for a gray map is that the data says `"ES"` while the geometry says `"724"`, and guessing would hide that. Instead the join returns a report:
+
+| Field                 | Meaning                                                           |
+| --------------------- | ----------------------------------------------------------------- |
+| `unmatchedData`       | Ids in your data that match no region (a typo, a different code). |
+| `featuresWithoutData` | Regions left without data; they are painted as "no data".         |
+| `duplicateDataIds`    | Ids that appear more than once; only the first row is kept.       |
+
+In development, the console prints a `[choropleth]` warning that explains it. `onJoinReport` gives you the full report in code, and `diagnostics={false}` silences the development messages.
+
+## Things worth knowing
+
+- Ids must match **as strings**, exactly. `"es"`, `"ESP"` and `"Spain"` do not match `"ES"`.
+- With `region`, rows for countries outside the region are ignored without warnings and listed in `joinReport.outOfRegion`. A typo still warns.
+- Some regions have no id (disputed territories, a few units whose code is shared in the source). They are drawn, but never joined, so data never lands on the wrong unit.
+- Borders in the bundled geodata follow Natural Earth's _de facto_ boundaries. If you publish a map, check that they are what you want to show, or pass your own geography.

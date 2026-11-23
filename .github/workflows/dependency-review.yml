@@ -21,3 +21,9 @@ jobs:
           # The library is MIT: avoid strong copyleft licenses in anything that could end up shipped.
           deny-licenses: AGPL-3.0-only, AGPL-3.0-or-later, GPL-2.0-only, GPL-2.0-or-later, GPL-3.0-only, GPL-3.0-or-later
           comment-summary-in-pr: on-failure
+          # GHSA-g3hv-75wg-m249 (minimatch, DoS through glob amplification; fixed in 11.0.1).
+          # It comes from `typedoc` (website/ devDependency, API reference generation), which pins minimatch 10.x
+          # and breaks on 11.x (`matchOne` was removed). Accepted because minimatch only runs at docs build time,
+          # on glob patterns we write, and the published site is static: nothing ships to users.
+          # Remove this line when typedoc supports minimatch >= 11.0.1.
+          allow-ghsas: GHSA-g3hv-75wg-m249

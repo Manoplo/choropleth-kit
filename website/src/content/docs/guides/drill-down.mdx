@@ -1,0 +1,99 @@
+---
+title: "Drill-down: world to country to region"
+description: Declare levels once, load states on demand, and drive the path from the URL.
+---
+
+## Declare the levels
+
+```tsx
+import { ChoroplethMap, defineDrillLevels } from "choropleth-kit";
+import { world110m } from "choropleth-kit/geo";
+
+// One explicit loader per country you support: the bundler turns each into its own file.
+const admin1 = {
+  US: () => import("choropleth-kit/geo/admin1/us"),
+  ES: () => import("choropleth-kit/geo/admin1/es"),
+};
+
+const levels = defineDrillLevels<Row>([
+  {
+    id: "country",
+    label: "World",
+    geography: world110m,
+    objectName: "countries",
+    canDrill: (item) => item.id in admin1,
+  },
+  {
+    id: "state",
+    objectName: "admin1",
+    geography: ({ parentId }) => admin1[parentId as keyof typeof admin1](),
+  },
+]);
+```
+
+Write each country out. Do not build the specifier with a variable (`` import(`choropleth-kit/geo/admin1/${cc}`) ``): bundlers such as Vite do not split it, and it fails in the browser.
+
+## Provide the data per level
+
+```tsx
+<ChoroplethMap
+  drill={levels}
+  data={({ depth, parentId }) => rows.filter((r) => r.depth === depth && r.parentId === parentId)}
+  getId={(r) => r.id}
+  variant="sequential"
+  getValue={(r) => r.value}
+/>
+```
+
+The library loads **geometry**, never business data. The second level uses ISO 3166-2 ids (`{ id: "US-CA", value: 12 }`). Each level has its own scale, because a parent's and a child's values are not comparable.
+
+## Callbacks
+
+| Prop           | When it fires                                                              |
+| -------------- | -------------------------------------------------------------------------- |
+| `onDrill`      | A level change starts (the route is already updated)                       |
+| `onDrillEnd`   | The new level has finished being shown                                     |
+| `onDrillError` | A level's geometry failed or has 0 regions; the map returns to the previous level |
+| `onDrillIntent`| The pointer stayed 150 ms over a drillable region, or it was tapped once on touch. Use it to prefetch your data |
+
+## Navigate from code
+
+The `ref` handle has `drillDown(id)`, `drillUp(steps?)` and `drillTo(path)`. They return promises and resolve `completed: false` if something cut them short, or if the request was not valid (an unknown id, `canDrill: false`).
+
+```tsx
+await ref.current?.drillDown("ES");
+await ref.current?.drillTo(["ES", "ES-M"]);
+await ref.current?.drillUp(2); // to the root
+```
+
+## Drive it from the URL
+
+`useDrillDown` makes the path controlled, so it can live in the URL or a router.
+
+```tsx
+import { useDrillDown } from "choropleth-kit";
+
+const drill = useDrillDown({
+  levels,
+  path, // e.g. read from the router
+  onPathChange: setPath, // e.g. push to the router
+});
+
+<ChoroplethMap drill={drill} /* … */ />;
+```
+
+The controller also exposes `breadcrumbs`, `status` (`idle`, `flying`, `loading` or `revealing`) and `canDrillUp`.
+
+## Navigation UI
+
+- The preset draws a `Breadcrumb` (top-left; `breadcrumb={{ position }}` moves it, `breadcrumb={false}` hides it).
+- `Escape` and `Backspace` go up a level.
+- On touch, the first tap on a drillable region previews it and the second drills down.
+
+## Gotchas
+
+- **Levels differ per country.** Spain comes as 52 provinces (`ES-M` is Madrid), the US as states, France as departments, Germany as Länder. See the [subdivisions guide](/guides/subdivisions/).
+- With `drill`, `geography` is ignored: each level brings its own.
+- Alaska, Hawaii or the Canary Islands are drawn where they are. Leave them out with `filterFeatures` if you want the contiguous US on its own.
+
+Background: [Drill-down model](/concepts/drill-down/).

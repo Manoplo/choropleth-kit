@@ -1,0 +1,76 @@
+---
+title: Zoom and programmatic flights
+description: Configure the camera and move it from code with promises.
+---
+
+## Configure the camera
+
+Zoom is on by default. Pass `zoom` an object to tune it, or `false` for a static map.
+
+```tsx
+<ChoroplethMap
+  {...common}
+  zoom={{
+    wheel: "cooperative", // only Ctrl/⌘ + wheel; the page keeps scrolling
+    controls: true, // + / − / reset buttons
+    max: 12, // default
+    inertia: true, // default
+  }}
+/>
+```
+
+| Option        | Default    | Meaning                                                              |
+| ------------- | ---------- | -------------------------------------------------------------------- |
+| `wheel`       | `"always"` | `"always"`, `"cooperative"` or `"never"`                             |
+| `min`, `max`  | `1`, `12`  | Scale limits, relative to the level's fit                            |
+| `pinch`, `pan`| `true`     | Two-finger pinch and drag                                            |
+| `doubleClick` | `"auto"`   | Zoom ×2; off by default when `onItemClick` or selection exists       |
+| `keyboard`    | `true`     | `+`, `−` and `0` with the map focused                                |
+| `constrain`   | `"contain"`| `"free"` removes the limits                                          |
+| `controls`    | `false`    | Opt-in buttons: `true` or `{ position, reset }`                      |
+| `padding`     | `24`       | Margin when framing a region, in px                                  |
+
+**Scroll-jacking:** with `wheel: "always"`, a map inside a scrolling page captures the wheel when the pointer passes over it. Use `"cooperative"` on long pages and dashboards.
+
+## Fly from code
+
+Keep a `ref` to the map. Every move returns a promise, so flights chain without timers.
+
+```tsx
+import { useRef } from "react";
+import { ChoroplethMap, type ChoroplethMapHandle } from "choropleth-kit";
+
+const ref = useRef<ChoroplethMapHandle>(null);
+
+await ref.current?.zoomTo("ES");
+await ref.current?.zoomTo("FR");
+await ref.current?.zoomTo({ center: [-3.7, 40.4], zoom: 4 });
+await ref.current?.zoomTo({ bounds: [[-10, 36], [5, 44]] });
+await ref.current?.resetView();
+```
+
+`zoomTo` accepts a region id, `{ bounds }` as `[[lonW, latS], [lonE, latN]]`, or `{ center, zoom }`. Options: `duration` in ms (`0` means no animation) and `padding`.
+
+A promise resolves with `completed: false` if the user interrupted it with a gesture. If zoom is off (`zoom={false}`) or the map is not ready, moves resolve `completed: false` instead of throwing.
+
+## Declarative focus
+
+`focusId` flies to a region whenever it changes, and `null` returns to the fit. On the first render it places the camera directly, without flying.
+
+```tsx
+<ChoroplethMap {...common} focusId={selectedId} />
+```
+
+`focusBounds` overrides the framing of a region. Spain is framed with the Canary Islands by default; `{ ES: null }` goes back to the main body.
+
+## Read the camera
+
+- `ref.current.getView()` returns `{ zoom, center, bounds, level… }`, also mid-flight.
+- `onViewChange` fires **once at the end** of each gesture or flight, never per frame.
+- With the compound API, `useCamera((view) => view.zoom > 3)` subscribes to the confirmed camera with a selector.
+
+## Start from a saved view
+
+`zoom={{ initialView: { center: [-3.7, 40.4], zoom: 4 } }}` places the camera on the first render without animation, which is useful for shareable URLs. `focusId` takes precedence.
+
+Background: [Camera and zoom model](/concepts/camera/).

@@ -1,0 +1,29 @@
+---
+title: Growth, up and down
+description: Show positive and negative change around zero with a diverging scale.
+---
+
+import Example from "../../../components/Example.astro";
+import Live from "../../../examples/growth-diverging.tsx";
+import source from "../../../examples/growth-diverging.tsx?raw";
+
+**Problem:** the value can be above or below a meaningful middle (growth, deviation from target), and you want the sign to be obvious.
+
+<Example source={source} filename="GrowthDiverging.tsx" note="Synthetic data: year-over-year change.">
+  <Live client:visible />
+</Example>
+
+## How it works
+
+- `variant="diverging"` uses two hues around a neutral color. The default palette is `rdbu`.
+- `midpoint={0}` is where the neutral color sits. Without `domain`, the range is symmetric around it, so +15 and −15 get equally strong colors.
+- `formatValue` adds the sign (`+8.4 %`), which the tooltip and legend both use.
+
+## Variations
+
+- Another palette: `palette="rdylgn"` for a red-to-green reading (check it with your audience; red and green are hard for some viewers).
+- Your own colors: `palette={{ negative: "#dc2626", neutral: "#f5f5f5", positive: "#2563eb" }}`.
+- A target other than zero: set `midpoint` to it, for example `midpoint={100}` for an index.
+- A fixed, asymmetric range: add `domain={[-20, 40]}`. It is used as given, and `midpoint` must lie inside it.
+
+Background: [Variants](/concepts/variants/).

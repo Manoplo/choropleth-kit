@@ -1,0 +1,47 @@
+---
+title: Palettes and color spaces
+description: Named palettes, your own ramps, and perceptual interpolation.
+---
+
+## Named palettes
+
+`palette="blues"` takes a named palette. The names are typed per variant, so a diverging palette on a sequential map is a compile-time error: that mix is a cartographic mistake, and it is caught before it reaches the reader.
+
+| Variant       | Names                                                                            | Default     |
+| ------------- | -------------------------------------------------------------------------------- | ----------- |
+| `sequential`  | `blues`, `greens`, `greys`, `oranges`, `purples`, `reds`, `viridis`              | `blues`     |
+| `diverging`   | `rdbu`, `brbg`, `piyg`, `prgn`, `puor`, `rdylbu`, `rdylgn`, `spectral`           | `rdbu`      |
+| `categorical` | `tableau10`, `set2`, `set3`, `accent`, `dark2`, `paired`, `pastel1`              | `tableau10` |
+
+## Your own colors
+
+```tsx
+// Two ends
+palette={{ from: "#ffffff", to: "#2563eb" }}
+
+// N stops, evenly spaced
+palette={["#fff7bc", "#fe9929", "#7a0177"]}
+
+// Diverging: a negative end, a neutral and a positive end
+palette={{ negative: "#dc2626", neutral: "#f5f5f5", positive: "#2563eb" }}
+```
+
+Any CSS color works. An invalid one throws an error that says what to pass.
+
+## Color spaces
+
+Interpolating between two colors depends on the space you do it in. The default is `rgb`, which is what a CSS gradient does. For steps that look evenly spaced to the eye, choose `lab` or `hcl`:
+
+```tsx
+palette={{ from: "#ffffff", to: "#2563eb", space: "lab" }}
+```
+
+## Choosing ends
+
+- **Pick ends with different lightness.** Black to blue loses most of its contrast in the lower half. A light-to-dark ramp (white to blue) is the safe choice.
+- **Avoid colors close to "no data".** The default empty fill is `#d4d4d4`; a light gray ramp end would be confused with it.
+- In development, the console warns when the two ends of a custom ramp differ by less than 50 points of lightness (CIE L\*). `diagnostics={false}` turns it off.
+
+## "No data" is not a palette color
+
+Regions without data are painted with the theme's empty fill, or with a pattern (`emptyPattern="hatch"`) so they can be told apart without relying on color alone.

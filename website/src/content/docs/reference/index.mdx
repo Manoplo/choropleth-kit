@@ -1,0 +1,36 @@
+---
+title: API reference
+description: Where to find every option, function, type and CSS variable of choropleth-kit.
+---
+
+The reference is **generated from the TSDoc inside the published package**, so it always matches the version of `choropleth-kit` this site documents. Two pages are written by hand because they describe things TypeScript cannot: the CSS contract and the console messages.
+
+## Where to look
+
+| I want to know…                                             | Go to                                              |
+| ----------------------------------------------------------- | -------------------------------------------------- |
+| What options a map accepts (`data`, `variant`, `zoom`…)     | [Map options](/reference/options/)                 |
+| What a component, hook or type from the React layer is      | [React API](/reference/react/)                     |
+| What a pure function from `choropleth-kit/core` does        | [Core API](/reference/core/)                       |
+| What geodata and region presets exist                       | [Geo API](/reference/geo/)                         |
+| Which CSS variables, `data-*` attributes and classes exist  | [Styles and CSS variables](/reference/styles/)     |
+| What a `[choropleth]` console message means                 | [Error and warning messages](/reference/errors/)   |
+
+## How the generated pages are organized
+
+- **[Map options](/reference/options/)** flattens every prop of `<ChoroplethMap>`, `<Choropleth.Root>` and `useChoropleth()` into one page, grouped by purpose, and marks the ones that exist only for some `variant`. It is the page you will use most.
+- **React API, Core API and Geo API** list every export of `choropleth-kit`, `choropleth-kit/core` and `choropleth-kit/geo`.
+  - Components, hooks and functions appear under **Variables**. That is how the package's bundled type declarations describe them (as `const`), not a statement about the code.
+  - Object types and unions appear under **Type Aliases**.
+
+## Reading the types
+
+- `TDatum` is the type of one row of your `data`. It is inferred from the array you pass.
+- Options that return a region's value (`getValue`, `getCategory`) may return `null`. A `null` means "no data", and a `0` is data.
+- The three API levels share their options. See [Choosing an API level](/api-levels/).
+
+## Gaps you may notice
+
+Some public types have no description yet in the library's own TSDoc. Where that happens, a page shows the signature without prose. The most important options (the ones on [Map options](/reference/options/)) have all been given a description.
+
+For the reasoning behind the options, read [Concepts](/concepts/how-a-map-is-built/). For worked solutions, see [Recipes](/recipes/).

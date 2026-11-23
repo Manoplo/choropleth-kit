@@ -1,0 +1,52 @@
+---
+title: Drill-down model
+description: Levels, parent ids, and how geometry is loaded while business data stays yours.
+---
+
+Drill-down lets a user click a region and go one level deeper: world, then country, then state or province, and so on.
+
+## Levels, declared once
+
+```tsx
+import { ChoroplethMap, defineDrillLevels } from "choropleth-kit";
+
+const levels = defineDrillLevels<Row>([
+  { id: "country", label: "Countries", geography: world110m, objectName: "countries" },
+  {
+    id: "region",
+    geography: ({ parentId }) => import(`./geo/admin1/${parentId}.json`),
+  },
+]);
+
+<ChoroplethMap
+  drill={levels}
+  data={({ depth, parentId }) => rows.filter((r) => r.depth === depth && r.parentId === parentId)}
+  getId={(r) => r.id}
+  variant="sequential"
+  getValue={(r) => r.value}
+/>;
+```
+
+## The library loads geometry, never business data
+
+The `geography` of a level can be a function of `parentId`, so it is loaded when the user drills in. Your **`data`** for the current level is yours to provide, as a function of `{ depth, parentId }`. The library never fetches or caches your numbers.
+
+## Path and phases
+
+The state is a pure reducer (`choropleth-kit/core`), tested without a DOM:
+
+- **path** is the list of ids from the root: `[]` is the world, `["ES"]` is Spain. It changes the instant of the click, as the optimistic target.
+- **phase** is `idle`, `flying`, `loading` or `revealing`: the camera flies to the region, the next geometry loads, and the new layer is revealed.
+- While going down, the level above stays drawn as gray **context**, and the camera it had is saved. Going up flies back to it.
+
+Edge cases such as a click during a flight, a load that fails, or going up before the descent ends are handled in the machine.
+
+## Navigation
+
+- A `Breadcrumb` shows where you are; `Escape` and `Backspace` go up.
+- `onDrillIntent` fires early (for prefetching the next geometry).
+- `useDrillDown({ path, onPathChange })` lets you drive the path from the URL.
+- On touch, the first tap on a drillable region previews it and the second one drills down.
+- `canDrill` on a level decides which regions can be drilled into.
+
+See the [Drill-down guide](/guides/drill-down/) for a worked example.

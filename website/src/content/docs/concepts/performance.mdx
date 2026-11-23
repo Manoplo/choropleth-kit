@@ -1,0 +1,39 @@
+---
+title: Performance model
+description: Why hover, zoom and pan do not re-render the map, and what it costs to ship.
+---
+
+## Interaction state lives outside React
+
+The usual way a map gets slow is that every mouse move or wheel tick sets React state, and React re-renders hundreds of region paths.
+
+choropleth-kit avoids that: **hover, zoom and pan do not re-render the map.** Interaction state lives in a small store outside React. The camera writes its transform straight to the DOM (a `transform` attribute and the `--cm-k`, `--cm-x` and `--cm-y` variables), and hover and selection are drawn as a small overlay on top of the regions instead of re-coloring them. React is involved only when something it should know about is confirmed.
+
+That is why:
+
+- `onViewChange` fires **at the end** of a gesture or flight, never per frame.
+- `useCamera(selector)` re-renders a component only when the selected value changes.
+- Components you build inside the compound API can read the camera without making the map render.
+
+## Two maps on one page
+
+Patterns and filters in the SVG need ids. Each map generates its own, so **two maps on the same page never share ids**.
+
+## What it costs to ship
+
+Measured with `size-limit` (gzip, minified). The numbers below come from the repository's README and move over time; check there for the current ones.
+
+| What                                                      | Gzip     |
+| --------------------------------------------------------- | -------- |
+| Own code (`core` + `react`, dependencies external)        | ≈ 31 KB  |
+| `ChoroplethMap` with all of `d3` included (without React) | ≈ 75 KB  |
+| `styles.css`                                              | ≈ 2 KB   |
+| `choropleth-kit/geo` (data)                               | ≈ 40 KB  |
+| One country's subdivisions, loaded on demand (the US)     | ≈ 47 KB  |
+
+The bundle is not tiny, and we do not claim it is. See [Known limitations](/project/limitations/).
+
+## Practical advice
+
+- **Do not import `choropleth-kit/geo` if you bring your own geography.** It is data, and it stays out of your bundle unless you import it.
+- **Load subdivisions on demand**, one explicit `import()` per country, so the bundler splits each into its own file.
