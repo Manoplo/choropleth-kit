@@ -1,12 +1,50 @@
 import { defineConfig } from "astro/config";
 import react from "@astrojs/react";
 import starlight from "@astrojs/starlight";
+import { createStarlightTypeDocPlugin } from "starlight-typedoc";
+
+// The API reference is generated from the TSDoc inside the PUBLISHED package (its .d.ts files), so the
+// site stays isolated from the library source and the reference always matches the installed version.
+const dist = "./node_modules/choropleth-kit/dist";
+const typeDocOptions = {
+  excludeInternal: true,
+  disableSources: true,
+  readme: "none",
+  skipErrorChecking: true,
+  validation: { notExported: false, invalidLink: false, notDocumented: false },
+};
+const [reactApi, reactApiGroup] = createStarlightTypeDocPlugin();
+const [coreApi, coreApiGroup] = createStarlightTypeDocPlugin();
+const [geoApi, geoApiGroup] = createStarlightTypeDocPlugin();
 
 export default defineConfig({
   integrations: [
     react(),
     starlight({
       title: "choropleth-kit",
+      plugins: [
+        reactApi({
+          entryPoints: [`${dist}/index.d.ts`],
+          tsconfig: "./tsconfig.typedoc.json",
+          output: "reference/react",
+          sidebar: { label: "React API", collapsed: true },
+          typeDoc: typeDocOptions,
+        }),
+        coreApi({
+          entryPoints: [`${dist}/core.d.ts`],
+          tsconfig: "./tsconfig.typedoc.json",
+          output: "reference/core",
+          sidebar: { label: "Core API", collapsed: true },
+          typeDoc: typeDocOptions,
+        }),
+        geoApi({
+          entryPoints: [`${dist}/geo.d.ts`],
+          tsconfig: "./tsconfig.typedoc.json",
+          output: "reference/geo",
+          sidebar: { label: "Geo API", collapsed: true },
+          typeDoc: typeDocOptions,
+        }),
+      ],
       logo: { src: "./src/assets/logo.svg" },
       customCss: [
         "@fontsource-variable/geist/index.css",
@@ -70,9 +108,11 @@ export default defineConfig({
         {
           label: "API reference",
           items: [
-            "reference/react",
-            "reference/core",
-            "reference/geo",
+            { label: "Overview", slug: "reference" },
+            "reference/options",
+            reactApiGroup,
+            coreApiGroup,
+            geoApiGroup,
             "reference/styles",
             "reference/errors",
           ],

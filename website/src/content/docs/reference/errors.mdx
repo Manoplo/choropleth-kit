@@ -1,6 +1,110 @@
 ---
-title: "Error and warning messages"
-description: "Every [choropleth] message, what causes it and how to fix it."
+title: Error and warning messages
+description: Every [choropleth] console message and error, what causes it and how to fix it.
 ---
 
-Stub page. The real content comes in a later step.
+Every message from the library starts with `[choropleth]`, names the function or option involved, and says what to pass instead. This page lists them by what you can do about them.
+
+There are three kinds:
+
+| Kind                     | How it shows up                                            | When                                       |
+| ------------------------ | ---------------------------------------------------------- | ------------------------------------------ |
+| **Errors**               | A thrown `Error`: React shows it, and the map does not render | Invalid configuration, always              |
+| **Development warnings** | `console.warn`                                             | **Only outside production**, never in a production build |
+| **Load failures**        | `console.error`, or your callback                          | When geometry fails to load                |
+
+`diagnostics={false}` silences the join, empty-region, no-id and palette warnings. It does not affect thrown errors.
+
+## Warnings about your data
+
+These are the ones you will see first. They are produced by the join between your rows and the map's regions; see [Geography and ids](/concepts/geography-and-ids/).
+
+| Message                                                        | Cause                                                                                   | Fix                                                                                             |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `N datum(s) have no matching geometry: "XK", "GI"…`            | Ids in `data` that match no region.                                                     | Check the ids. The warning adds a hint when it can tell what is wrong (see below).              |
+| `Hint: ids are case-sensitive; "es" would match "ES".`         | Your ids differ from the geometry's only by case.                                       | Use the geometry's casing.                                                                      |
+| `Hint: your data ids look like … but the geometry ids look like …` | Different id systems, such as alpha-2 (`ES`) against numeric (`724`).               | Convert one side, or use `getFeatureId` to read another property of the geometry.               |
+| `` N id(s) appear more than once in `data` (only the first row of each is used) `` | Duplicate ids in `data`.                                                | Remove or merge the duplicates.                                                                 |
+| `` N region(s) have no data and will use `emptyFill`. ``           | Regions with no row. **Expected** when your data covers only some regions.              | Nothing, or pass `diagnostics={false}` once you know it is intentional.                         |
+| `none of the N region(s) has an id, so no data can match`      | The geometry has no `feature.id`, and no `getFeatureId` was given.                      | Pass `getFeatureId`, for example `(f) => f.properties?.iso_a2`.                                 |
+| `region "…" matches no region of the geometry`                 | `region` was set, but the geometry's ids are not ISO alpha-2.                           | Use a geometry with alpha-2 ids, such as `world110m`, or pass `getFeatureId`.                   |
+
+Rows for countries outside a `region` are **not** warned about: they go to `joinReport.outOfRegion`.
+
+## Warnings about colors
+
+| Message                                                          | Cause                                                              | Fix                                                                      |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| `palette: #… and #… differ by N points of lightness (L*), under 50` | The two ends of a custom ramp look too alike.                    | Use a lighter start or a darker end. A white-to-blue ramp is the safe choice. |
+
+## Warnings about navigation and camera
+
+| Message                                                                 | Cause                                                                | Fix                                                                          |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `zoomTo: could not resolve …`                                           | An unknown region id, or a point outside the projection.             | Check the id against the geometry, or use `{ bounds }` or `{ center, zoom }`. |
+| `` drillTo() needs the `drill` prop; this map has none. `` (also `drillDown()`, `drillUp()`) | You called a drill method on a map without `drill`. | Pass `drill`, or do not call it.                                             |
+| `…: region "X" does not exist in …; navigation was ignored.`            | `drillDown` or `drillTo` with an unknown id.                         | Ids come from `getFeatureId` or `feature.id`.                                |
+| `` …: region "X" cannot be drilled into: `canDrill` is false for it… ``     | The level's `canDrill` forbids it.                                   | Allow it in `canDrill`, or do not navigate there.                            |
+| `…: cannot go to […]: only N level(s) are defined…`                     | A path deeper than your `drill` levels.                              | Add the level, or shorten the path.                                          |
+| `drill level "…" has 0 features for "…". Hint: return false from canDrill for it.` | The level's geometry loaded but has no regions for that parent. The map returns to the previous level. | Return `false` from `canDrill` for parents that have nothing below. |
+| `drill: could not frame region "…"`                                     | The region is not in its parent level, or has no extent.             | The map keeps the parent's framing; check the id.                            |
+| `useDrillDown: …`                                                       | A problem with the controlled path (for example an unknown level).   | Read the message; it names the cause.                                        |
+
+## Load failures
+
+| Message                                         | Cause                                         | What happens                                                                                       |
+| ----------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `Failed to load geography: …`                   | Your `geography` promise or `import()` rejected. | The map shows "The map could not be loaded." (translatable through `labels`). If you pass `onGeographyError`, it is called instead of logging. |
+| `drill: failed to load the geometry for […]: …` | A level's `geography` function rejected.      | The map returns to the previous level. `onDrillError` is called; without it, the message is logged in development. |
+
+## Errors: invalid configuration
+
+These are thrown, so fix them in code. They always tell you what was received.
+
+### Data and geography
+
+| Message                                                                  | Fix                                                                                   |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| `` Missing `geography`: pass `geography` (TopoJSON/GeoJSON) or `drill`… ``   | Provide one of the two.                                                               |
+| `toFeatureCollection: unrecognized format (type = …)`                    | `geography` is neither TopoJSON nor GeoJSON.                                          |
+| `toFeatureCollection: object "…" does not exist in the topology`         | `objectName` does not name an object in your TopoJSON. The message lists the existing ones. |
+| `Choropleth components (Svg, Regions, Legend…) must be rendered inside <Choropleth.Root>` | You used a `Choropleth.*` piece outside a `Choropleth.Root`.         |
+
+### Scale and classes
+
+| Message                                                     | Fix                                                                      |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `classify: "classes" must be an integer ≥ 1`                | Pass a positive whole number of classes.                                 |
+| `classify: "thresholds" must be … strictly ascending order` | Sort your thresholds, with no repeats. Otherwise the map would color wrongly. |
+| `domain: expected finite [min, max] with min < max`         | Pass two finite numbers in ascending order.                              |
+| `midpoint: N is outside domain [a, b]`                      | Move `midpoint` inside `domain`.                                         |
+
+### Palettes
+
+| Message                                                            | Fix                                                                         |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| `palette: a custom ramp is ["#from", …, "#to"], { from, to }, { stops } or { negative, neutral, positive }` | Use one of those shapes. |
+| `palette: a custom ramp needs at least two colors`                 | Give a start and an end.                                                    |
+| `palette: "…" is not a CSS color`                                  | Use `"#2563eb"`, `"rgb(37, 99, 235)"` or a color name.                      |
+| `palette: unknown space "…"`                                       | Use one of the spaces the message lists (`rgb`, `lab`, `hcl`).              |
+
+### Camera, region and projection
+
+| Message                                                         | Fix                                                                       |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `zoom: "min" must be > 0 and "max" must be finite and ≥ "min"`  | Fix `zoom.min` and `zoom.max`.                                            |
+| `region: the list is empty`                                     | Pass a preset or alpha-2 codes. The message lists the presets.            |
+| `region: unknown "…"`                                           | Use an alpha-2 code (`"ES"`) or a preset. The message lists the valid ones. |
+| `createProjection: width and height must be finite numbers > 0` | The container has no size yet. Give it a width, or pass `width` and `height`. |
+
+### Drill-down levels
+
+| Message                                                              | Fix                                                              |
+| -------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `drill: at least one level is required`                              | Pass at least one level.                                         |
+| `drill: duplicate level id "…". Each level needs a unique id.`       | Give each level its own `id`.                                    |
+| `drill: the first level ("…") cannot use geography: "inherit"`       | The first level has no parent. Pass its geometry.                |
+
+## Reporting a message that is unclear
+
+A message that does not say what to do is a bug. Please [open an issue](https://github.com/Manoplo/choropleth-kit/issues) with the full text.

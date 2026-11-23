@@ -9,7 +9,10 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "check": "astro check"
+    "check": "astro check",
+    "gen:options": "node scripts/gen-options.mjs",
+    "predev": "pnpm gen:options",
+    "prebuild": "pnpm gen:options"
   },
   "dependencies": {
     "@astrojs/react": "^7.1.9",
@@ -23,6 +26,9 @@
   },
   "devDependencies": {
     "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0"
+    "@types/react-dom": "^19.3.0",
+    "starlight-typedoc": "^0.23.3",
+    "typedoc": "^0.28.20",
+    "typedoc-plugin-markdown": "^4.14.1"
   }
 }

@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": []
+  },
+  "include": [
+    "node_modules/choropleth-kit/dist/index.d.ts",
+    "node_modules/choropleth-kit/dist/core.d.ts",
+    "node_modules/choropleth-kit/dist/geo.d.ts"
+  ]
+}

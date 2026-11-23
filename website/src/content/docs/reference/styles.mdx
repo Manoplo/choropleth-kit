@@ -1,6 +1,170 @@
 ---
-title: "Styles and CSS variables"
-description: "The --cm-* variables and the data-* attributes."
+title: Styles and CSS variables
+description: Every --cm-* variable with its default, the data-* attributes and the cm-* classes you can style.
 ---
 
-Stub page. The real content comes in a later step.
+Styling is a contract made of three parts: **CSS variables** you can override, **`data-*` attributes** that expose state, and **`cm-*` classes** you can target. The model behind it is in [Theming contract](/concepts/theming/); this page is the catalog.
+
+All base styles are wrapped in `:where(.cm-root:not([data-unstyled]))`, which has **zero specificity**: any rule of yours wins without `!important`, and the `unstyled` prop turns the whole layer off. Import it with `import "choropleth-kit/styles.css"`.
+
+## How to override a variable
+
+Set it on `.cm-root` or on **any ancestor**. Each default lives at its point of use (`var(--cm-x, default)`), so a value inherited from an ancestor is respected.
+
+```css
+.dashboard {
+  --cm-border-color: #94a3b8;
+  --cm-hover-stroke: #2563eb;
+}
+```
+
+A `theme` prop writes these same variables inline on `.cm-root`, so an explicit `theme` beats an inherited variable. `extendTheme` and `defineTheme` produce themes from the same groups. See the [theming guide](/guides/theming-and-tailwind/).
+
+## Variables
+
+Defaults are the values in `styles.css`.
+
+### Surface and text
+
+| Variable            | Default       | Controls                                |
+| ------------------- | ------------- | --------------------------------------- |
+| `--cm-background`   | `transparent` | Background of the map container         |
+| `--cm-font-family`  | `inherit`     | Font of the legend, tooltip and controls |
+| `--cm-font-size`    | `12px`        | Base font size                          |
+| `--cm-label-color`  | `inherit`     | Text color (also the base for patterns) |
+
+### Regions and borders
+
+| Variable                    | Default   | Controls                                      |
+| --------------------------- | --------- | --------------------------------------------- |
+| `--cm-border-color`         | `#ffffff` | Stroke between regions                        |
+| `--cm-border-width`         | `0.5px`   | Width of that stroke                          |
+| `--cm-context-fill`         | `#e5e5e5` | Fill of the levels above, while drilled in    |
+| `--cm-context-border-color` | `#ffffff` | Border of those context levels                |
+| `--cm-pattern-color`        | label color at 45 % | Color of the `hatch` and `dots` patterns |
+
+### Hover, selection and focus
+
+| Variable                      | Default   | Controls                                   |
+| ----------------------------- | --------- | ------------------------------------------ |
+| `--cm-hover-stroke`           | `#000000` | Outline of the hovered region              |
+| `--cm-hover-stroke-width`     | `1.5px`   | Its width                                  |
+| `--cm-selected-stroke`        | `#0b5fff` | Outline of the selected region             |
+| `--cm-selected-stroke-width`  | `2px`     | Its width                                  |
+| `--cm-focus-ring`             | `#0b5fff` | Keyboard focus ring on the map             |
+| `--cm-focus-ring-width`       | `2px`     | Its width                                  |
+| `--cm-dim-opacity`            | `0.45`    | Opacity of the rest of the map with `dimOthers` |
+| `--cm-drill-dim-opacity`      | `0.35`    | Opacity of other regions while drilling in |
+
+### Bubbles and markers
+
+| Variable              | Default                      | Controls                      |
+| --------------------- | ---------------------------- | ----------------------------- |
+| `--cm-bubble-fill`    | `#2563eb`                    | Bubble fill (without a color metric) |
+| `--cm-bubble-stroke`  | `#ffffff`                    | Bubble outline                |
+| `--cm-bubble-opacity` | `0.75`                       | Bubble fill opacity           |
+| `--cm-marker-fill`    | falls back to `--cm-bubble-fill` | Default dot of an HTML marker |
+| `--cm-marker-stroke`  | `#ffffff`                    | Border of that dot            |
+
+### Region labels
+
+| Variable                | Default   | Controls                         |
+| ----------------------- | --------- | -------------------------------- |
+| `--cm-label-size`       | `11px`    | Font size of region names        |
+| `--cm-label-weight`     | `500`     | Font weight                      |
+| `--cm-label-halo`       | `#ffffff` | Halo that keeps names legible    |
+| `--cm-label-halo-width` | `3px`     | Width of the halo                |
+
+### Tooltip
+
+| Variable              | Default   | Controls          |
+| --------------------- | --------- | ----------------- |
+| `--cm-tooltip-bg`     | `#ffffff` | Background        |
+| `--cm-tooltip-color`  | `#111111` | Text color        |
+| `--cm-tooltip-border` | `#cccccc` | Border color      |
+| `--cm-tooltip-radius` | `4px`     | Corner radius     |
+| `--cm-tooltip-shadow` | `none`    | `box-shadow`      |
+
+### Zoom controls and gesture hint
+
+| Variable                | Default                            | Controls                              |
+| ----------------------- | ---------------------------------- | ------------------------------------- |
+| `--cm-control-bg`       | `#ffffff`                          | Button background                     |
+| `--cm-control-color`    | `#111111`                          | Button icon color                     |
+| `--cm-control-border`   | `#cccccc`                          | Border color                          |
+| `--cm-control-radius`   | `6px`                              | Corner radius                         |
+| `--cm-control-hover-bg` | the background mixed 10 % with the icon color | Button hover background |
+| `--cm-hint-bg`          | `rgb(17 24 39 / 0.85)`             | "Ctrl + scroll to zoom" hint background |
+| `--cm-hint-color`       | `#ffffff`                          | Hint text color                       |
+
+### Motion and loading
+
+| Variable                   | Default   | Controls                                    |
+| -------------------------- | --------- | ------------------------------------------- |
+| `--cm-transition-duration` | `250ms`   | Fill and opacity transitions of regions     |
+| `--cm-reveal-duration`     | `200ms`   | Fade of layers during drill-down            |
+| `--cm-reveal-stagger`      | `250ms`   | Delay spread between regions when revealing |
+| `--cm-skeleton-color`      | `#e5e5e5` | Placeholder while the geography loads       |
+
+### Written by the library (do not set)
+
+`--cm-k`, `--cm-x`, `--cm-y` (the camera), `--cm-bubble-scale` and `--cm-wave` are written by the library on the root while the map runs. They let CSS follow the camera without React re-rendering. Read them if you need to, but do not set them.
+
+## `data-*` attributes
+
+State is exposed as attributes. Boolean attributes are present with an empty value, or absent.
+
+### On the root, `.cm-root`
+
+| Attribute                | Meaning                                                              |
+| ------------------------ | -------------------------------------------------------------------- |
+| `data-theme`             | The theme name, or `custom` for a theme object                       |
+| `data-unstyled`          | Present when `unstyled` is set                                       |
+| `data-status`            | State of the geography load: `loading`, `ready` or `error`           |
+| `data-loading`           | Present while your `data` is still loading                           |
+| `data-dim`               | The `dimOthers` value in effect                                      |
+| `data-has-selection`     | Present when a region is selected                                    |
+| `data-drill-phase`       | `flying`, `loading` or `revealing` during a drill; absent at rest    |
+| `data-zoomed`            | Present when the camera is not at the fit                            |
+| `data-interacting`       | Present while a pan or zoom gesture is in progress                   |
+| `data-highlight-class`   | The legend class being hovered                                       |
+
+### On regions, `.cm-region`
+
+| Attribute           | Meaning                                                           |
+| ------------------- | ----------------------------------------------------------------- |
+| `data-region-id`    | The region's id                                                   |
+| `data-class`        | The region's class in the scale (matches the legend item's)       |
+| `data-empty`        | Present when the region has no data                               |
+| `data-drillable`    | Present when the region can be drilled into                       |
+| `data-drill-target` | Present on the region being drilled into                          |
+| `data-pattern`      | `hatch` or `dots` on a no-data region when `emptyPattern` is set  |
+
+### Other layers
+
+| Attribute                      | Where and meaning                                                   |
+| ------------------------------ | ------------------------------------------------------------------- |
+| `data-selection`               | On the overlay path: `hover` or `selected`                          |
+| `data-class`                   | On `.cm-legend__item`: the class it represents (`empty` for "no data") |
+| `data-role`, `data-depth`      | On a drill layer: `context` or `exiting`, and its level             |
+| `data-context-id`              | On a region of a context layer                                      |
+| `data-bubble-id`               | On a bubble                                                         |
+| `data-label-id`                | On a region name                                                    |
+| `data-anchor`                  | On a marker: `bottom` or `center`                                   |
+| `data-visible`                 | On the gesture hint, while it is shown                              |
+
+## Classes
+
+These classes are stable hooks for your own selectors. Prefer the variables and `data-*` attributes first, and add your own classes with the `classNames` prop.
+
+| Area            | Classes                                                                                       |
+| --------------- | --------------------------------------------------------------------------------------------- |
+| Map             | `cm-root`, `cm-svg`, `cm-regions`, `cm-region`, `cm-borders`, `cm-context-region`, `cm-layer`  |
+| Bubbles, points | `cm-bubbles`, `cm-bubble`, `cm-fallback-points`, `cm-fallback-point`                           |
+| Overlays        | `cm-selection`, `cm-label`, `cm-skeleton`, `cm-error`                                          |
+| Legend          | `cm-legend` and its parts: `cm-legend__title`, `__items`, `__item`, `__swatch`, `__count`, `__bar`, `__segment`, `__ticks`, `__tick`, `__gradient`, `__sizes`, `__size`, `__circle` |
+| Tooltip         | `cm-tooltip`, `cm-tooltip--default`, `cm-tooltip__hint`                                        |
+| Controls        | `cm-zoom-controls`, `cm-zoom-button`, `cm-breadcrumb` (`__list`, `__item`, `__current`), `cm-gesture-hint` |
+| Markers         | `cm-marker`, `cm-marker__dot`                                                                  |
+
+The slots of the `classNames` prop are listed in the [React API](/reference/react/) under `ChoroplethClassNames`.
