@@ -7,6 +7,12 @@ export default defineConfig({
     react(),
     starlight({
       title: "choropleth-kit",
+      logo: { src: "./src/assets/logo.svg" },
+      customCss: [
+        "@fontsource-variable/geist/index.css",
+        "@fontsource-variable/geist-mono/index.css",
+        "./src/styles/docs.css",
+      ],
       social: [
         { icon: "github", label: "GitHub", href: "https://github.com/Manoplo/choropleth-kit" },
       ],
