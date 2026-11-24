@@ -86,6 +86,7 @@ export default defineConfig({
             "guides/bring-your-own-geography",
             "guides/bubbles-and-markers",
             "guides/labels-and-i18n",
+            "guides/patterns-and-background",
             "guides/theming-and-tailwind",
             "guides/accessibility",
             "guides/ssr-and-frameworks",

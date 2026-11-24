@@ -1,7 +1,7 @@
 # FEAT-027 · Features inspired by bklit's choropleth (analysis and plan)
 
 - **Type:** Feature (umbrella: analysis, viability and the plan for several child features)
-- **Status:** in progress (packages A: graticule, background pattern and pattern presets)
+- **Status:** in progress (package A done; B to E not started)
 - **Priority (proposed):** high (top priority, set by the maintainer on 2026-11-23)
 - **Origin:** maintainer, after reviewing bklit's choropleth chart (2026-11-23). Branch: `feat/patterns-and-graticule`.
 
@@ -259,7 +259,7 @@ decoration and camera work on top of an engine that already has the hard parts.
 
 ## Progress
 
-- **Package A: done** (pending docs, in the same PR). Graticule (FEAT-003, now `done`), background pattern with edge fades, and a
+- **Package A: done** (including its documentation guide, «Patterns, background and graticule»; live examples wait for the next release, because the site consumes the published package). Graticule (FEAT-003, now `done`), background pattern with edge fades, and a
   catalogue of 32 pattern presets for regions (`emptyPattern`, `getRegionStyle().pattern`) and the background. Story: «Layers / Patterns and graticule».
 - **Extra, from validation:** `showAntarctica` (default `false`; a map that drops it uses `aspectRatio="auto"` unless set), so Mercator maps are usable.
   Antarctica is no longer drawn by default on any world map (breaking, pre-1.0).
