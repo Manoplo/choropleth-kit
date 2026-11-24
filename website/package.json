@@ -20,7 +20,7 @@
     "@fontsource-variable/geist": "^5.3.0",
     "@fontsource-variable/geist-mono": "^5.3.0",
     "astro": "^7.4.13",
-    "choropleth-kit": "^0.3.0",
+    "choropleth-kit": "^0.4.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
