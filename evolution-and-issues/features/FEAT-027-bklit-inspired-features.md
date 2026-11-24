@@ -58,7 +58,7 @@ Checked in the code, not assumed:
 - **Patterns** are drawn over region colors via `<Choropleth.Defs>`; `empty.pattern` and `getRegionStyle().pattern` exist
   ([patterns.tsx](../../src/react/components/patterns.tsx), [defs.tsx](../../src/react/components/defs.tsx)).
 - **Constraints we have to respect:** no animation libraries (FEAT-004 / `dd.md §12.6`: so no `motion`), pure logic in
-  `src/core` with tests, bundle budgets in [.size-limit.json](../../.size-limit.json) (`ChoroplethMap` with d3 is limited to 80 KB gzip, and
+  `src/core` with tests, bundle budgets in [.size-limit.json](../../.size-limit.json) (`ChoroplethMap` with d3 is limited to 85 KB gzip (raised from 80 KB with the marker labels), and
   FEAT-026 notes it is already near it), `prefers-reduced-motion` must be honored, English everywhere.
 
 ---
@@ -263,7 +263,8 @@ decoration and camera work on top of an engine that already has the hard parts.
   catalogue of 32 pattern presets for regions (`emptyPattern`, `getRegionStyle().pattern`) and the background. Story: «Layers / Patterns and graticule».
 - **Extra, from validation:** `showAntarctica` (default `false`; a map that drops it uses `aspectRatio="auto"` unless set), so Mercator maps are usable.
   Antarctica is no longer drawn by default on any world map (breaking, pre-1.0).
-- Packages B to E: not started.
+- **Package B (markers and click): in progress**, tracked in FEAT-028 (marker presets). Click-to-zoom not started.
+- Packages C to E: not started.
 
 ## Suggested plan
 

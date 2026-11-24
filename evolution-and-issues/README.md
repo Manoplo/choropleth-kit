@@ -25,11 +25,12 @@ Statuses: `proposed` → `accepted` → `in progress` → `done` (or `discarded`
 The working rules in `AGENTS.md` still apply (one step at a time, tests in `src/core`, no commits
 without an explicit request).
 
-## Features (24)
+## Features (25)
 
 | Code                                                       | Title                                                         | Priority | Status      |
 | ---------------------------------------------------------- | ------------------------------------------------------------- | -------- | ----------- |
 | [FEAT-027](./features/FEAT-027-bklit-inspired-features.md) | Features inspired by bklit: graticule, patterns, dots, camera | **top**  | in progress |
+| [FEAT-028](./features/FEAT-028-marker-presets.md)          | Marker presets: shape, pulse, glow, label                     | high     | in progress |
 | [FEAT-003](./features/FEAT-003-sphere-graticule.md)        | `Sphere` and `Graticule` layers                               | low      | done        |
 | [FEAT-004](./features/FEAT-004-motion.md)                  | Motion ⭐: animations and the `animation` prop                | medium   | proposed    |
 | [FEAT-005](./features/FEAT-005-legend-extras.md)           | Legend: count tween, `filter`, `orientation`, `showEmpty`     | low      | proposed    |

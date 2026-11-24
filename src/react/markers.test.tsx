@@ -203,3 +203,182 @@ describe("markers prop on the preset", () => {
     expect(container.querySelector(".cm-markers")).toBeNull();
   });
 });
+
+describe("Marker presets", () => {
+  const preset = (props: Record<string, unknown>) =>
+    render(
+      <Choropleth.Root<Row> {...(base as unknown as RootProps<Row>)}>
+        <Choropleth.Svg />
+        <Choropleth.Marker coordinates={[0, 0]} {...props} />
+      </Choropleth.Root>,
+    );
+
+  it("keeps the plain dot when no preset option is given", () => {
+    const { container } = preset({});
+    expect(container.querySelector(".cm-marker__dot")).not.toBeNull();
+    expect(container.querySelector(".cm-marker__shape")).toBeNull();
+  });
+
+  it("any preset option draws the shape instead of the dot", () => {
+    const { container } = preset({ shape: "diamond", size: 20, color: "tomato" });
+    const shape = container.querySelector<HTMLElement>(".cm-marker__shape");
+    expect(container.querySelector(".cm-marker__dot")).toBeNull();
+    expect(shape?.getAttribute("data-shape")).toBe("diamond");
+    expect(shape?.style.width).toBe("20px");
+    expect(shape?.style.color).toBe("tomato");
+    expect(shape?.querySelector("path")?.getAttribute("fill")).toBe("currentColor");
+  });
+
+  it("your own children win over the preset", () => {
+    const { container } = preset({ shape: "pin", children: <b>HQ</b> });
+    expect(container.querySelector(".cm-marker__shape")).toBeNull();
+    expect(container.querySelector(".cm-marker")?.textContent).toBe("HQ");
+  });
+
+  it("a pin puts its tip on the coordinate, the others are centered, and `anchor` overrides", () => {
+    const anchorOf = (props: Record<string, unknown>) =>
+      preset(props).container.querySelector(".cm-marker")?.getAttribute("data-anchor");
+    expect(anchorOf({ shape: "pin" })).toBe("bottom");
+    expect(anchorOf({ shape: "square" })).toBe("center");
+    expect(anchorOf({ size: 8 })).toBe("center");
+    expect(anchorOf({ shape: "pin", anchor: "center" })).toBe("center");
+    expect(anchorOf({ children: "x" })).toBe("bottom");
+  });
+
+  it("pulse adds the ripple with its mode, and `none` adds nothing", () => {
+    const always = preset({ pulse: "always" }).container.querySelector(".cm-marker__shape");
+    expect(always?.getAttribute("data-pulse")).toBe("always");
+    expect(always?.querySelector(".cm-marker__pulse")).not.toBeNull();
+
+    const none = preset({ pulse: "none" }).container.querySelector(".cm-marker__shape");
+    expect(none?.hasAttribute("data-pulse")).toBe(false);
+    expect(none?.querySelector(".cm-marker__pulse")).toBeNull();
+  });
+
+  it("glow is a drop-shadow on the svg, and the outline can be turned off", () => {
+    const { container } = preset({ glow: 6, stroke: "none" });
+    const svg = container.querySelector<SVGElement>(".cm-marker__shape svg");
+    expect(svg?.style.filter).toContain("drop-shadow(0 0 6px currentColor)");
+    expect(container.querySelector(".cm-marker__shape path")?.hasAttribute("stroke")).toBe(false);
+  });
+
+  it("works through the `markers` prop of the preset map", () => {
+    const { container } = render(
+      <ChoroplethMap<Row>
+        {...base}
+        markers={[{ id: "a", coordinates: [0, 0], shape: "triangle", pulse: "hover" }]}
+      />,
+    );
+    expect(container.querySelector(".cm-marker__shape")?.getAttribute("data-shape")).toBe(
+      "triangle",
+    );
+  });
+});
+
+describe("Marker labels", () => {
+  const withLabel = (props: Record<string, unknown>) =>
+    render(
+      <Choropleth.Root<Row> {...(base as unknown as RootProps<Row>)}>
+        <Choropleth.Svg />
+        <Choropleth.Marker coordinates={[0, 0]} {...props} />
+      </Choropleth.Root>,
+    );
+
+  it("draws the label beside the shape, as decoration for assistive technology", () => {
+    const { container } = withLabel({ label: "Madrid", showLabel: true });
+    const text = container.querySelector(".cm-marker__shape .cm-marker__label");
+    expect(text?.textContent).toBe("Madrid");
+    expect(text?.getAttribute("aria-hidden")).toBe("true");
+    expect(text?.getAttribute("data-position")).toBe("right");
+    // Without `labelPosition` the side is automatic.
+    expect(text?.hasAttribute("data-auto")).toBe(true);
+    // The marker itself keeps its accessible name.
+    expect(container.querySelector(".cm-marker")?.getAttribute("aria-label")).toBe("Madrid");
+  });
+
+  it("showLabel alone turns the preset on; without it the label stays in the aria-label only", () => {
+    expect(
+      withLabel({ label: "Madrid", showLabel: true }).container.querySelector(".cm-marker__shape"),
+    ).not.toBeNull();
+    expect(withLabel({ label: "Madrid" }).container.querySelector(".cm-marker__label")).toBeNull();
+  });
+
+  it("draws nothing without text, and carries the position and priority", () => {
+    expect(withLabel({ showLabel: true }).container.querySelector(".cm-marker__label")).toBeNull();
+    const text = withLabel({
+      label: "X",
+      showLabel: true,
+      labelPosition: "top",
+      labelPriority: 7,
+    }).container.querySelector(".cm-marker__label");
+    expect(text?.getAttribute("data-position")).toBe("top");
+    expect(text?.getAttribute("data-preferred")).toBe("top");
+    expect(text?.hasAttribute("data-auto")).toBe(false);
+    expect(text?.getAttribute("data-priority")).toBe("7");
+  });
+
+  it("does not hide anything where there is no layout (jsdom measures empty boxes)", () => {
+    const { container } = render(
+      <Choropleth.Root<Row> {...(base as unknown as RootProps<Row>)}>
+        <Choropleth.Svg />
+        <Choropleth.Markers>
+          <Choropleth.Marker coordinates={[0, 0]} label="A" showLabel />
+          <Choropleth.Marker coordinates={[0, 0]} label="B" showLabel />
+        </Choropleth.Markers>
+      </Choropleth.Root>,
+    );
+    expect(container.querySelectorAll(".cm-marker__label[data-hidden]")).toHaveLength(0);
+  });
+});
+
+describe("Marker tooltip", () => {
+  const withTip = (props: Record<string, unknown>) =>
+    render(
+      <Choropleth.Root<Row> {...(base as unknown as RootProps<Row>)}>
+        <Choropleth.Svg />
+        <Choropleth.Marker coordinates={[0, 0]} {...props} />
+      </Choropleth.Root>,
+    );
+
+  it("draws no tooltip, and no tab stop, without one", () => {
+    const { container } = withTip({ label: "Madrid" });
+    expect(container.querySelector(".cm-marker__tooltip")).toBeNull();
+    expect(container.querySelector(".cm-marker")?.hasAttribute("tabindex")).toBe(false);
+  });
+
+  it("shows your content, describes the marker, and makes it focusable", () => {
+    const { container } = withTip({ label: "Madrid", tooltip: <b>3 stores</b> });
+    const marker = container.querySelector(".cm-marker");
+    const tip = container.querySelector(".cm-marker__tooltip");
+    expect(tip?.textContent).toBe("3 stores");
+    expect(tip?.getAttribute("role")).toBe("tooltip");
+    expect(tip?.getAttribute("data-side")).toBe("top");
+    expect(marker?.getAttribute("tabindex")).toBe("0");
+    expect(marker?.getAttribute("aria-describedby")).toBe(tip?.id);
+  });
+
+  it("`true` shows the label, and does nothing if there is no label", () => {
+    expect(
+      withTip({ label: "Madrid", tooltip: true }).container.querySelector(".cm-marker__tooltip")
+        ?.textContent,
+    ).toBe("Madrid");
+    expect(withTip({ tooltip: true }).container.querySelector(".cm-marker__tooltip")).toBeNull();
+    expect(
+      withTip({ label: "x", tooltip: false }).container.querySelector(".cm-marker__tooltip"),
+    ).toBeNull();
+  });
+
+  it("works with your own children and with the preset shapes", () => {
+    const own = withTip({ children: <i>card</i>, tooltip: "More" });
+    expect(own.container.querySelector(".cm-marker__tooltip")?.textContent).toBe("More");
+    const shape = withTip({ shape: "pin", tooltip: "More" });
+    expect(shape.container.querySelector(".cm-marker__shape")).not.toBeNull();
+    expect(shape.container.querySelector(".cm-marker__tooltip")?.textContent).toBe("More");
+  });
+
+  it("hovering where there is no layout leaves the default side (jsdom measures empty boxes)", () => {
+    const { container } = withTip({ tooltip: "x" });
+    fireEvent.pointerEnter(container.querySelector(".cm-marker") as Element);
+    expect(container.querySelector(".cm-marker__tooltip")?.getAttribute("data-side")).toBe("top");
+  });
+});
