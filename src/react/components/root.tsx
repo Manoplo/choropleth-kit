@@ -15,11 +15,13 @@ import {
 } from "react";
 import {
   FIT_TRANSFORM,
+  isPatternPresetId,
   isThemeName,
   resolveTheme,
   themeToCssVars,
   toViewState,
   type ChoroplethTheme,
+  type PatternPresetId,
   type ThemeName,
 } from "../../core";
 import { cx, type ChoroplethClassNames } from "../class-names";
@@ -45,7 +47,7 @@ export type RootProps<TDatum> = UseChoroplethOptions<TDatum> & {
    */
   theme?: ThemeName | ChoroplethTheme;
   /** Pattern over regions without data. It beats the theme's (`empty.pattern`); `"none"` removes it. */
-  emptyPattern?: "none" | "hatch" | "dots";
+  emptyPattern?: "none" | "hatch" | "dots" | PatternPresetId;
   /** One class of yours per piece, ADDED to the `cm-*` one (Tailwind, CSS Modules). */
   classNames?: ChoroplethClassNames;
 };
@@ -101,7 +103,8 @@ const RootInner = <TDatum,>(
   const instance = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const defId = useCallback((name: string) => `cm${instance}-${name}`, [instance]);
   const pattern = emptyPattern ?? resolveTheme(theme)?.empty?.pattern;
-  const resolvedPattern = pattern === "hatch" || pattern === "dots" ? pattern : null;
+  const resolvedPattern =
+    pattern === "hatch" || pattern === "dots" || isPatternPresetId(pattern) ? pattern : null;
 
   const handlePointer = (event: PointerEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();

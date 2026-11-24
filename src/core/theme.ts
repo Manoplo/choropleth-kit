@@ -1,3 +1,4 @@
+import type { PatternPresetId } from "./patterns";
 /**
  * Theme: a typed object that is translated into `--cm-*` CSS variables. **The
  * variables remain the single source of truth**: the object is sugar so there is autocompletion and
@@ -15,7 +16,7 @@ export type ChoroplethTheme = {
   /** Map background (the `.cm-root`). Transparent by default. */
   background?: string;
   /** Regions without data. `pattern`: a pattern over regions without data (not just color: they can be told apart without seeing it either). None by default. */
-  empty?: { fill?: string; pattern?: "none" | "hatch" | "dots" };
+  empty?: { fill?: string; pattern?: "none" | "hatch" | "dots" | PatternPresetId };
   /** The levels above in a drill: gray, with no data color. */
   context?: { fill?: string; border?: string };
   /** Borders between regions. */

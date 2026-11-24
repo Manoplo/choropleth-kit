@@ -182,3 +182,21 @@ export { buildProjectionChain } from "./drill-chain";
 export type { BuildProjectionChainParams, ChainLevel, ProjectionChain } from "./drill-chain";
 export { dropOverseas, regionRotation, resolveRegion } from "./region";
 export type { OverseasTable, RegionInput, RegionPresets } from "./region";
+export {
+  buildPatternTile,
+  DEFAULT_BACKGROUND_COLOR,
+  isPatternPresetId,
+  PATTERN_PRESET_IDS,
+  PATTERN_PRESETS,
+  resolveBackground,
+  resolvePatternPreset,
+} from "./patterns";
+export type {
+  BackgroundOptions,
+  PatternPresetId,
+  PatternPresetSpec,
+  PatternTile,
+  ResolvedBackground,
+} from "./patterns";
+export { DEFAULT_GRATICULE_STEP, graticuleGeometry, resolveGraticule } from "./graticule";
+export type { GraticuleOptions, GraticuleStep, ResolvedGraticule } from "./graticule";

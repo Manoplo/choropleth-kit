@@ -30,9 +30,9 @@ describe("README: the map in 10 lines", () => {
     expect(es.getAttribute("data-empty")).toBeNull();
     expect(us.hasAttribute("data-empty")).toBe(true);
     expect(screen.getByText("Ventas")).toBeTruthy();
-    // The only warning allowed: the development diagnostic for regions without data (3 countries of 177).
+    // The only warning allowed: the development diagnostic for regions without data (3 countries of 176: Antarctica is not drawn by default).
     expect(warn.mock.calls.map(([message]) => String(message))).toEqual([
-      expect.stringMatching(/172 region\(s\) have no data/),
+      expect.stringMatching(/171 region\(s\) have no data/),
     ]);
   });
 });

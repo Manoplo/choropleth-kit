@@ -1,3 +1,4 @@
+import { Background } from "./components/background";
 import { Borders } from "./components/borders";
 import { Breadcrumb } from "./components/breadcrumb";
 import { Bubbles } from "./components/bubbles";
@@ -5,6 +6,7 @@ import { Defs } from "./components/defs";
 import { Patterns } from "./components/patterns";
 import { DrillLayers } from "./components/drill-layers";
 import { FallbackPoints } from "./components/fallback-points";
+import { Graticule } from "./components/graticule";
 import { GestureHint } from "./components/gesture-hint";
 import { Labels } from "./components/labels";
 import { Marker, Markers } from "./components/marker";
@@ -22,8 +24,10 @@ export const Choropleth = {
   Root,
   Svg,
   Regions,
+  Background,
   Borders,
   Defs,
+  Graticule,
   Patterns,
   Breadcrumb,
   Bubbles,

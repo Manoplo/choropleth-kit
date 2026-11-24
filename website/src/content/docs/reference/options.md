@@ -63,7 +63,15 @@ geometry. Data outside the region is ignored without warnings (`joinReport.outOf
 
 Optional
 
-Discards regions before anything else (e.g. Antarctica: `(f) => f.id !== "010"`).
+Discards regions before anything else (e.g. Greenland: `(f) => f.id !== "GL"`).
+
+### `showAntarctica`
+
+`boolean`
+
+Optional
+
+Draw Antarctica (`"AQ"`). `false` by default: almost no thematic map wants it, and it takes a huge share of the map. Data for `"AQ"` is then ignored without warnings. If `aspectRatio` is unset, a map that drops Antarctica uses `"auto"`.
 
 ### `data`
 

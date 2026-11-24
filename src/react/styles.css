@@ -599,3 +599,18 @@
   );
   background-size: 4px 4px;
 }
+
+/* ── graticule and background ────────────────────────────────────────────────────────────── */
+
+:where(.cm-root:not([data-unstyled]))
+  .cm-graticule
+  :is(.cm-graticule-lines, .cm-graticule-outline) {
+  fill: none;
+  stroke: var(
+    --cm-graticule-color,
+    color-mix(in srgb, var(--cm-label-color, #111111) 26%, transparent)
+  );
+  stroke-width: var(--cm-graticule-width, 0.5px);
+  /* The grid does not thicken when zooming. */
+  vector-effect: non-scaling-stroke;
+}
