@@ -4,7 +4,7 @@
   "categories": {
     "correctness": "error"
   },
-  "ignorePatterns": ["dist/**", "coverage/**", "storybook-static/**"],
+  "ignorePatterns": ["dist/**", "coverage/**", "storybook-static/**", "website/**"],
   "env": {
     "builtin": true
   },

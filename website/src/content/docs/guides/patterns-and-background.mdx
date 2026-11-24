@@ -1,0 +1,124 @@
+---
+title: Patterns, background and graticule
+description: Fill regions with patterns, put a static pattern behind the map and draw the grid of meridians and parallels.
+---
+
+:::note[Not in the published package yet]
+`background`, `graticule`, the pattern catalogue and `showAntarctica` are in the library source and ship with its next version. The live maps on this site run the published package, so this page has code only for now.
+:::
+
+Three layers share one catalogue of repeating patterns:
+
+- **Region patterns** drawn on top of a region's color.
+- **A background** behind the map that does not zoom.
+- **A graticule**, the grid of meridians and parallels.
+
+## Patterns on regions
+
+A pattern sits **over the region's color**, so the datum still shows through. Use it for regions without data, or to flag a condition (estimated, disputed) without hiding the value.
+
+```tsx
+// Regions without data
+<ChoroplethMap {...common} emptyPattern="diagonal-up" />
+
+// Any region, from its data
+<ChoroplethMap
+  {...common}
+  getRegionStyle={(region) =>
+    region.datum?.estimated ? { pattern: "checkerboard-xs" } : undefined
+  }
+/>
+```
+
+A pattern name can be:
+
+- a **preset** from the catalogue below (`"diagonal-up"`, `"grid"`…),
+- the built-ins `"hatch"` and `"dots"`, which keep working as before,
+- the name of your own `<pattern>` defined in `<Choropleth.Defs>` (see [Theming and Tailwind](/guides/theming-and-tailwind/)).
+
+Color the artwork with `--cm-pattern-color` (the label color at 45 % by default). A pattern also helps readers who cannot tell the colors apart.
+
+## A background
+
+```tsx
+<ChoroplethMap {...common} background="dots" />
+
+<ChoroplethMap
+  {...common}
+  background={{
+    pattern: "grid",
+    opacity: 0.6,
+    scale: 2,
+    fadeHorizontalLength: 15,
+  }}
+/>
+```
+
+`background` is `true` (dots), a preset id, or an options object:
+
+| Option                                       | Default                       | What it does                                                    |
+| -------------------------------------------- | ----------------------------- | --------------------------------------------------------------- |
+| `pattern`                                    | `"dots"`                      | A preset id. `"none"` draws nothing.                            |
+| `color`                                      | `--cm-background-pattern-color` | Any CSS color. The default is the label color at 35 %.        |
+| `opacity`                                    | `1`                           | 0 to 1.                                                         |
+| `scale`                                      | `1`                           | Tile size multiplier. Line width scales with it.                |
+| `fadeHorizontal` / `fadeVertical`            | `true`                        | Fade the pattern out toward the left/right and top/bottom edges. |
+| `fadeHorizontalLength` / `fadeVerticalLength` | `10`                          | Length of each fade, as % of the width or height (0 to 45).     |
+
+The background is **outside the camera**: it stays put while you zoom and pan, and it takes no pointer events. With the compound API, put `<Choropleth.Background />` inside `<Choropleth.Svg>`, before `<Choropleth.Viewport>`.
+
+## A graticule
+
+```tsx
+<ChoroplethMap {...common} graticule />                 // every 10°
+<ChoroplethMap {...common} graticule={30} />            // a step in degrees
+<ChoroplethMap
+  {...common}
+  graticule={{ step: [30, 15], outline: true, above: true }}
+/>
+```
+
+| Option        | Default                       | What it does                                                    |
+| ------------- | ----------------------------- | --------------------------------------------------------------- |
+| `step`        | `10`                          | Degrees between lines: one number, or `[longitude, latitude]`.  |
+| `outline`     | `false`                       | Also draw the outline of the projected world.                   |
+| `above`       | `false`                       | Draw over the regions instead of under them.                    |
+| `stroke`, `strokeWidth` | theme                | Override the CSS variables for this map.                        |
+
+It moves with the camera and keeps a constant line width when you zoom. Style it with `--cm-graticule-color` and `--cm-graticule-width`.
+
+**The grid takes the shape of the projection.** In `equalEarth` (the default) the parallels are straight and the meridians curve; in `mercator` it is a rectangular grid; in `orthographic` it wraps a globe. For a regional map (a continent or a country) a 10° step is too coarse to read, so keep the graticule off or lower the step. With `mercator` the world outline does not draw, because that projection has no finite edge.
+
+## Mercator and Antarctica
+
+Mercator is the flat map most people know, and Antarctica stretches across the bottom of it. Antarctica is **not drawn by default**: almost no thematic map wants it. A map that drops it also uses `aspectRatio="auto"` unless you set one, so the world fills its box.
+
+```tsx
+<ChoroplethMap {...common} projection="mercator" />                  // no Antarctica
+<ChoroplethMap {...common} projection="mercator" showAntarctica />   // with it
+```
+
+Data with the id `"AQ"` is ignored without a warning when it is not drawn.
+
+## Preset catalogue
+
+Every id below works for `emptyPattern`, `getRegionStyle().pattern` and `background.pattern`. The list comes from `PATTERN_PRESET_IDS` (exported by `choropleth-kit` and `choropleth-kit/core`) if you want to build a picker.
+
+| Family           | Ids                                                                                                   |
+| ---------------- | ----------------------------------------------------------------------------------------------------- |
+| Lines            | `vertical`, `vertical-dense`, `horizontal`, `horizontal-dense`, `diagonal-up`, `diagonal-up-sparse`, `diagonal-down`, `diagonal-down-sparse` |
+| Grids            | `grid`, `grid-sparse`, `crosshatch`                                                                   |
+| Dashed           | `vertical-dashed`, `horizontal-dashed`, `grid-dashed`                                                 |
+| Dots             | `dots-dense`, `dots`, `dots-sparse`, `dots-staggered`, `diagonal-dots-up`, `diagonal-dots-down`        |
+| Circles          | `circles-dense`, `circles`, `circles-sparse`, `rings`                                                 |
+| Marks            | `plus`, `waves`, `zigzag`                                                                             |
+| Tiles            | `blocks`, `checkerboard-xs`, `checkerboard-sm`, `checkerboard`, `checkerboard-lg`                     |
+
+`-dense` and `-sparse` change only the spacing. Region patterns scale with the map when you zoom, like the regions they sit on.
+
+## Which one to pick
+
+- **Regions without data:** a light line pattern (`diagonal-up`, `horizontal`) reads as "missing" without competing with the colors.
+- **A flag over real values** (estimated, provisional): `dots` or `checkerboard-xs`, because the datum's color stays readable beneath them.
+- **A background:** the quieter ones (`dots`, `grid`, `dots-sparse`) with the default fades. Heavy tiles such as `checkerboard-lg` fight with the map.
+- Avoid the same preset for two different meanings on one map.

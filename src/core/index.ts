@@ -182,3 +182,61 @@ export { buildProjectionChain } from "./drill-chain";
 export type { BuildProjectionChainParams, ChainLevel, ProjectionChain } from "./drill-chain";
 export { dropOverseas, regionRotation, resolveRegion } from "./region";
 export type { OverseasTable, RegionInput, RegionPresets } from "./region";
+export {
+  buildPatternTile,
+  DEFAULT_BACKGROUND_COLOR,
+  isPatternPresetId,
+  PATTERN_PRESET_IDS,
+  PATTERN_PRESETS,
+  resolveBackground,
+  resolvePatternPreset,
+} from "./patterns";
+export type {
+  BackgroundOptions,
+  PatternPresetId,
+  PatternPresetSpec,
+  PatternTile,
+  ResolvedBackground,
+} from "./patterns";
+export { DEFAULT_GRATICULE_STEP, graticuleGeometry, resolveGraticule } from "./graticule";
+export type { GraticuleOptions, GraticuleStep, ResolvedGraticule } from "./graticule";
+export {
+  defaultMarkerAnchor,
+  DEFAULT_MARKER_SIZE,
+  isMarkerShape,
+  MARKER_PULSES,
+  MARKER_SHAPES,
+  MARKER_SHAPE_SPECS,
+  resolveMarkerPreset,
+} from "./marker-shapes";
+export type {
+  MarkerPresetOptions,
+  MarkerPulse,
+  MarkerShape,
+  MarkerShapeSpec,
+  ResolvedMarkerPreset,
+} from "./marker-shapes";
+export {
+  createLabelPlacer,
+  DEFAULT_MARKER_LABEL_PADDING,
+  hideCollidingLabels,
+  LABEL_POSITION_ORDER,
+  labelPositionCandidates,
+  orderByPriority,
+} from "./marker-labels";
+export type {
+  HideCollidingLabelsParams,
+  LabelBox,
+  LabelPlacer,
+  LabelPlacerParams,
+  LabelPosition,
+  MarkerLabelItem,
+  MarkerObstacle,
+} from "./marker-labels";
+export { chooseTooltipSide, DEFAULT_TOOLTIP_GAP, TOOLTIP_SIDE_ORDER } from "./marker-tooltip";
+export type {
+  ChooseTooltipSideParams,
+  TooltipPlacement,
+  TooltipSide,
+  TooltipSize,
+} from "./marker-tooltip";

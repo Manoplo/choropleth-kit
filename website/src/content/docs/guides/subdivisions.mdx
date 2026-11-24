@@ -1,0 +1,58 @@
+---
+title: Subdivisions of a country
+description: States, provinces and departments of 238 countries, each loaded on demand.
+---
+
+The package ships the first level below the country for **238 countries** (Natural Earth admin-1, with ISO 3166-2 ids such as `US-CA` or `ES-M`). Each country is its own module, and **it does not enter your bundle**: you load the ones you use, when the user drills into them.
+
+## Draw one country on its own
+
+A static import does put the module in your bundle, which is fine for a page about that country.
+
+```tsx
+import usStates from "choropleth-kit/geo/admin1/us";
+
+<ChoroplethMap
+  geography={usStates}
+  objectName="admin1"
+  data={[{ id: "US-CA", value: 12 }]}
+  getId={(r) => r.id}
+  getValue={(r) => r.value}
+  variant="sequential"
+/>;
+```
+
+## Load them on drill
+
+Use one explicit loader per country. See the [Drill-down guide](/guides/drill-down/) for the full example.
+
+```tsx
+const admin1 = {
+  US: () => import("choropleth-kit/geo/admin1/us"),
+  ES: () => import("choropleth-kit/geo/admin1/es"),
+};
+```
+
+Do not build the specifier with a variable. Bundlers such as Vite do not split it, and it fails in the browser.
+
+## The level is not the same in every country
+
+- Spain: 52 **provinces** (Madrid is `ES-M`). The autonomous communities (`ES-MD`) are not in the data.
+- United States: 50 states, DC and Puerto Rico.
+- France: departments. Germany: Länder.
+
+The full list, with the number of units per country, is in [`docs/geo-admin1.md`](https://github.com/Manoplo/choropleth-kit/blob/master/docs/geo-admin1.md). Check it before you rely on a country.
+
+## Units without an id
+
+Some units have no id: disputed ones (Kosovo's municipalities, Western Sahara…) and the few whose ISO code the source shares between units (Bosnia's cantons). They are drawn as a non-interactive layer, so a join never lands on the wrong unit.
+
+## What it costs
+
+- **Your bundle does not grow** for countries you do not load.
+- `npm install` downloads about 2 MB more (the data of every country), in `node_modules`.
+- Loading one country on demand costs about 47 KB gzip for the US, and about 106 KB for the heaviest one (Canada).
+
+## Borders
+
+The subdivisions come from Natural Earth at 1:10m (public domain). Disputed borders follow Natural Earth's _de facto_ boundaries. If you publish a map, check that they are what you want to show, or pass your own geography.

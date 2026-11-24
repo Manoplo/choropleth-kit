@@ -1,0 +1,27 @@
+---
+import { Code } from "@astrojs/starlight/components";
+
+interface Props {
+  /** Raw source of the example (`import src from "…?raw"`). It is the file that is running above. */
+  source: string;
+  filename?: string;
+  /** Extra note under the map. */
+  note?: string;
+}
+
+const { source, filename, note } = Astro.props;
+
+// Lines marked `@docs-only` wire the example to this site (page theme, quiet console) and are not
+// part of what a reader should copy.
+const code = source
+  .split("\n")
+  .filter((line) => !line.includes("@docs-only"))
+  .join("\n")
+  .trim();
+---
+
+<figure class="example not-content">
+  <div class="example-live"><slot /></div>
+  {note && <p class="example-note">{note}</p>}
+</figure>
+<Code code={code} lang="tsx" title={filename} />

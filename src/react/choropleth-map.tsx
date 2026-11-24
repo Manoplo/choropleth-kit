@@ -6,7 +6,13 @@ import {
   type ReactNode,
   type Ref,
 } from "react";
-import { resolveControls, resolveLabels, type ChoroplethTheme, type ThemeName } from "../core";
+import {
+  resolveControls,
+  resolveLabels,
+  type ChoroplethTheme,
+  type PatternPresetId,
+  type ThemeName,
+} from "../core";
 import type { ChoroplethClassNames } from "./class-names";
 import { Breadcrumb } from "./components/breadcrumb";
 import { GestureHint } from "./components/gesture-hint";
@@ -14,7 +20,7 @@ import { Legend } from "./components/legend";
 import { Marker, Markers, type MarkerSpec } from "./components/marker";
 import { Root } from "./components/root";
 import type { ChoroplethMapHandle } from "./handle";
-import { Svg } from "./components/svg";
+import { Svg, type SvgProps } from "./components/svg";
 import { ZoomControls } from "./components/zoom-controls";
 import { Tooltip, type TooltipContext } from "./components/tooltip";
 import type { UseChoroplethOptions } from "./use-choropleth";
@@ -46,8 +52,12 @@ export type ChoroplethMapProps<TDatum> = UseChoroplethOptions<TDatum> & {
   unstyled?: boolean;
   /** `"light"` · `"dark"` · `"minimal"` · `"contrast"` or an object (`defineTheme`, `extendTheme`). */
   theme?: ThemeName | ChoroplethTheme;
-  /** Pattern over regions without data (`"hatch"`, `"dots"`); it beats the theme's. */
-  emptyPattern?: "none" | "hatch" | "dots";
+  /** Pattern over regions without data (`"hatch"`, `"dots"` or any preset of the catalogue); it beats the theme's. */
+  emptyPattern?: "none" | "hatch" | "dots" | PatternPresetId;
+  /** A static pattern behind the map: `true` (dots), a preset id or options. See `Svg`. */
+  background?: SvgProps["background"];
+  /** Meridians and parallels: `true`, a step in degrees or options. See `Svg`. */
+  graticule?: SvgProps["graticule"];
   /** One class of yours per piece, ADDED to the `cm-*` one (Tailwind, CSS Modules). */
   classNames?: ChoroplethClassNames;
   ariaLabel?: string;
@@ -78,6 +88,8 @@ const ChoroplethMapInner = <TDatum,>(
     emptyPattern,
     classNames,
     ariaLabel,
+    background,
+    graticule,
     ...options
   }: ChoroplethMapProps<TDatum>,
   ref: ForwardedRef<ChoroplethMapHandle>,
@@ -99,7 +111,7 @@ const ChoroplethMapInner = <TDatum,>(
       emptyPattern={emptyPattern}
       classNames={classNames}
     >
-      <Svg ariaLabel={ariaLabel} />
+      <Svg ariaLabel={ariaLabel} background={background} graticule={graticule} />
       {markers !== undefined && markers.length > 0 && (
         <Markers>
           {markers.map(({ id, ...marker }) => (

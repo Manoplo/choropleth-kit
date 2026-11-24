@@ -1,0 +1,73 @@
+---
+title: Testing your map
+description: How to test code that renders a map, with jsdom and Testing Library.
+---
+
+## The environment
+
+This library is tested with Vitest, jsdom and Testing Library, and the same setup works for your own tests.
+
+jsdom has no `ResizeObserver`, so the map cannot measure its container. It falls back to a default size, or to the `width` and `height` you pass. Pass them in tests to get a stable result:
+
+```tsx
+import { render, screen } from "@testing-library/react";
+import { ChoroplethMap } from "choropleth-kit";
+import { world110m } from "choropleth-kit/geo";
+
+test("renders the map", () => {
+  render(
+    <ChoroplethMap
+      geography={world110m}
+      objectName="countries"
+      data={[{ country: "ES", sales: 120 }]}
+      getId={(r) => r.country}
+      getValue={(r) => r.sales}
+      variant="sequential"
+      width={960}
+      height={500}
+      ariaLabel="Sales by country"
+    />,
+  );
+
+  expect(screen.getByRole("img", { name: "Sales by country" })).toBeInTheDocument();
+});
+```
+
+## Use the `data-*` contract
+
+Regions expose their state as attributes, which makes assertions easy and stable:
+
+```tsx
+const spain = container.querySelector('[data-region-id="ES"]');
+expect(spain).not.toHaveAttribute("data-empty");
+```
+
+## Silence the diagnostics
+
+In development builds the map warns about ids that do not join, and about how many regions have no data. In tests with small samples this is noise. Pass `diagnostics={false}`, or spy on `console.warn` as this library's own setup does:
+
+```ts
+beforeEach(() => {
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+});
+```
+
+To assert on the join, use `onJoinReport`:
+
+```tsx
+const onJoinReport = vi.fn();
+render(<ChoroplethMap /* … */ onJoinReport={onJoinReport} />);
+expect(onJoinReport).toHaveBeenCalledWith(expect.objectContaining({ unmatchedData: [] }));
+```
+
+## Test the logic without rendering
+
+Scales, classification, the join and the drill reducer are pure functions in `choropleth-kit/core`. They need no DOM:
+
+```ts
+import { joinData } from "choropleth-kit/core";
+```
+
+## What jsdom cannot verify
+
+Layout, real pixel sizes, wheel and pinch gestures, and flights depend on a real browser. Cover them with an end-to-end tool such as Playwright, or review them visually.

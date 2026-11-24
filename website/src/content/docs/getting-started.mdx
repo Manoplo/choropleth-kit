@@ -1,0 +1,73 @@
+---
+title: Getting started
+description: Install choropleth-kit and render your first choropleth map in ten lines.
+---
+
+import SalesMap from "../../components/SalesMap";
+
+## Install
+
+```bash
+pnpm add choropleth-kit
+# or: npm i choropleth-kit / yarn add choropleth-kit
+```
+
+Requirements: `react` and `react-dom` 18 or later (peer dependencies). The package is **ESM only** and ships its own types.
+
+## Your first map
+
+```tsx
+import { ChoroplethMap } from "choropleth-kit";
+import { world110m } from "choropleth-kit/geo"; // world at 1:110m, ISO alpha-2 ids ("ES")
+import "choropleth-kit/styles.css";
+
+const data = [
+  { country: "ES", sales: 120 },
+  { country: "FR", sales: 95 },
+  { country: "DE", sales: 150 },
+];
+
+export const SalesMap = () => (
+  <ChoroplethMap
+    geography={world110m}
+    objectName="countries"
+    data={data}
+    getId={(row) => row.country}
+    getValue={(row) => row.sales}
+    variant="sequential"
+    legend={{ title: "Sales" }}
+  />
+);
+```
+
+This renders:
+
+<div class="not-content">
+  <SalesMap client:visible />
+</div>
+
+_The data is synthetic._
+
+## What just happened
+
+1. **`geography` and `objectName`** tell the map which shapes to draw. `world110m` is a TopoJSON world map with ISO alpha-2 ids, and `"countries"` is the object inside it.
+2. **`getId`** says which region each row belongs to. Here, a row with `country: "ES"` is joined to the shape with id `"ES"`.
+3. **`getValue`** says which number to paint. The values are grouped into classes and mapped to a palette; the legend is built from that same scale.
+4. **Regions with no row** are drawn as "no data".
+5. **`styles.css`** carries the base styles. Everything uses `:where()` and `--cm-*` variables, so it is easy to override.
+
+The map takes the width of its container.
+
+## Common first-run problems
+
+- **The map has no colors or looks unstyled.** You forgot `import "choropleth-kit/styles.css"`.
+- **Everything is gray.** Your ids do not match the geography. In development the console prints a `[choropleth]` warning that explains it, and `onJoinReport` gives you the full report. `world110m` uses ISO alpha-2 codes (`"ES"`, not `"ESP"` or `"Spain"`).
+- **A console message says `172 region(s) have no data`.** Expected with a three-country sample. Pass `diagnostics={false}` to silence development diagnostics.
+- **You do not want the bundled geography.** Do not import `choropleth-kit/geo`, and it stays out of your bundle (it weighs about 40 KB gzip because it is data). Pass your own TopoJSON or GeoJSON instead; see [Bring your own geography](/guides/bring-your-own-geography/).
+
+## Where to go next
+
+- [What to import from where](/imports/): the five entry points of the package.
+- [Choosing an API level](/api-levels/): preset, compound or headless.
+- [Variants](/concepts/variants/): `sequential`, `diverging`, `categorical` and `bubble`.
+- [Why choropleth-kit?](/why/): how it compares with other map libraries.

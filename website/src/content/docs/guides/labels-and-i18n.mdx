@@ -1,0 +1,62 @@
+---
+title: Labels and i18n
+description: Region names on the map, and how to replace the UI texts or use the Spanish pack.
+---
+
+Two different things are called "labels" in the library. Do not confuse them.
+
+| Prop           | What it is                                                   |
+| -------------- | ------------------------------------------------------------ |
+| `regionLabels` | The **names of regions** drawn on the map                    |
+| `labels`       | The **UI texts** (tooltips, buttons, hints), for translation |
+
+## Region names
+
+```tsx
+<ChoroplethMap {...common} regionLabels /> // defaults
+
+<ChoroplethMap
+  {...common}
+  regionLabels={{
+    format: (region) => region.feature.properties?.name,
+    priority: (region) => region.datum?.population ?? 0,
+    fontSize: 11,
+    padding: 2,
+  }}
+/>
+```
+
+- Labels avoid overlapping: the ones with lower priority are hidden, and zooming in reveals more.
+- By default the text is the region's `properties.name`, or its id. Return `null` or `""` for no label.
+- By default, bigger regions are named first (priority is the projected area).
+- Keep `fontSize` equal to `--cm-label-size`, because it is used to estimate collisions.
+
+## UI texts
+
+English by default. Replace any of them:
+
+```tsx
+<ChoroplethMap {...common} labels={{ noData: "Sin datos", zoomIn: "Acercar" }} />
+```
+
+The texts are: `noData`, `geographyError`, `zoomIn`, `zoomOut`, `resetView`, the gesture hints (`gestureHintWheel`, `gestureHintWheelMac`, `gestureHintTouch`), and the drill ones (`breadcrumb`, `breadcrumbRoot`, `drillUp`, `drillHint`, `tapAgainHint`).
+
+## The Spanish pack
+
+```tsx
+import { es } from "choropleth-kit/core";
+
+<ChoroplethMap {...common} labels={es} />;
+```
+
+## Other languages
+
+Write a full object of type `ChoroplethLabels` (exported from `choropleth-kit/core`) and pass it as `labels`. Any key you leave out falls back to English.
+
+## Numbers
+
+`formatValue` formats numbers in the tooltip and legend. For locale-aware output use `Intl`:
+
+```tsx
+formatValue={(v) => new Intl.NumberFormat("es-ES").format(v)}
+```

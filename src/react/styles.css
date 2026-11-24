@@ -132,6 +132,138 @@
   border: 2px solid var(--cm-marker-stroke, #ffffff);
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
 }
+/* Preset shapes (`shape`, `size`, `color`, `pulse`, `glow`): the box, its ripple and the reduced-motion rule. */
+:where(.cm-root:not([data-unstyled])) .cm-marker__shape {
+  position: relative;
+  display: block;
+}
+:where(.cm-root:not([data-unstyled])) .cm-marker__pulse {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0;
+  translate: -50% -50%;
+  pointer-events: none;
+}
+/* A pin's ripple spreads on the ground, at its tip, as a flattened ellipse. */
+:where(.cm-root:not([data-unstyled])) .cm-marker__shape[data-shape="pin"] .cm-marker__pulse {
+  top: 100%;
+  height: 40%;
+}
+:where(.cm-root:not([data-unstyled])) .cm-marker__shape[data-pulse="always"] .cm-marker__pulse {
+  animation: cm-marker-pulse 1.8s ease-out infinite;
+}
+:where(.cm-root:not([data-unstyled]))
+  .cm-marker:hover
+  .cm-marker__shape[data-pulse="hover"]
+  .cm-marker__pulse {
+  animation: cm-marker-pulse 1.8s ease-out infinite;
+}
+@keyframes cm-marker-pulse {
+  from {
+    opacity: 0.45;
+    scale: 0.5;
+  }
+  to {
+    opacity: 0;
+    scale: 2.6;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(.cm-root:not([data-unstyled])) .cm-marker__pulse {
+    animation: none !important;
+  }
+}
+
+/* The label beside a preset marker. It is HTML in the marker's box, so it follows the map with no JS. */
+:where(.cm-root:not([data-unstyled])) .cm-marker__label {
+  position: absolute;
+  white-space: nowrap;
+  pointer-events: none;
+  font-size: var(--cm-label-size, 11px);
+  font-weight: var(--cm-label-weight, 500);
+  line-height: 1.2;
+  color: var(--cm-label-color, #111111);
+  /* A halo keeps the text legible over any fill (the same idea as the region names' stroke). */
+  text-shadow:
+    0 0 3px var(--cm-label-halo, #ffffff),
+    0 0 3px var(--cm-label-halo, #ffffff),
+    0 0 2px var(--cm-label-halo, #ffffff);
+  transition: opacity 150ms;
+}
+:where(.cm-root:not([data-unstyled])) .cm-marker__label[data-hidden] {
+  opacity: 0;
+}
+:where(.cm-root:not([data-unstyled])) .cm-marker__label[data-position="right"] {
+  left: calc(100% + 6px);
+  top: 50%;
+  translate: 0 -50%;
+}
+:where(.cm-root:not([data-unstyled])) .cm-marker__label[data-position="left"] {
+  right: calc(100% + 6px);
+  top: 50%;
+  translate: 0 -50%;
+}
+:where(.cm-root:not([data-unstyled])) .cm-marker__label[data-position="top"] {
+  bottom: calc(100% + 4px);
+  left: 50%;
+  translate: -50% 0;
+}
+:where(.cm-root:not([data-unstyled])) .cm-marker__label[data-position="bottom"] {
+  top: calc(100% + 4px);
+  left: 50%;
+  translate: -50% 0;
+}
+/* A pin's head is in the upper part of its box: the side labels line up with it, not with its tip. */
+:where(.cm-root:not([data-unstyled]))
+  .cm-marker__shape[data-shape="pin"]
+  .cm-marker__label:is([data-position="right"], [data-position="left"]) {
+  top: 37.5%;
+}
+/* The tooltip of a marker: anchored to it, shown with :hover or keyboard focus, no JS state. */
+:where(.cm-root:not([data-unstyled])) .cm-marker__tooltip {
+  position: absolute;
+  z-index: 1;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 120ms,
+    visibility 120ms;
+}
+:where(.cm-root:not([data-unstyled])) .cm-marker:is(:hover, :focus-visible) {
+  /* Above the markers that come later in the layer. */
+  z-index: 3;
+}
+:where(.cm-root:not([data-unstyled])) .cm-marker:is(:hover, :focus-visible) > .cm-marker__tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+/* 8px is `DEFAULT_TOOLTIP_GAP` in core; `--cm-tip-shift` is written by `placeTooltip`. */
+:where(.cm-root:not([data-unstyled])) .cm-marker__tooltip[data-side="top"] {
+  bottom: calc(100% + 8px);
+  left: 50%;
+  translate: calc(-50% + var(--cm-tip-shift, 0px)) 0;
+}
+:where(.cm-root:not([data-unstyled])) .cm-marker__tooltip[data-side="bottom"] {
+  top: calc(100% + 8px);
+  left: 50%;
+  translate: calc(-50% + var(--cm-tip-shift, 0px)) 0;
+}
+:where(.cm-root:not([data-unstyled])) .cm-marker__tooltip[data-side="right"] {
+  left: calc(100% + 8px);
+  top: 50%;
+  translate: 0 calc(-50% + var(--cm-tip-shift, 0px));
+}
+:where(.cm-root:not([data-unstyled])) .cm-marker__tooltip[data-side="left"] {
+  right: calc(100% + 8px);
+  top: 50%;
+  translate: 0 calc(-50% + var(--cm-tip-shift, 0px));
+}
 /* No hover or tooltips from the map during a gesture; markers follow the same rule. */
 :where(.cm-root:not([data-unstyled]))[data-interacting] .cm-marker {
   pointer-events: none !important;
@@ -598,4 +730,19 @@
     transparent 1.2px
   );
   background-size: 4px 4px;
+}
+
+/* ── graticule and background ────────────────────────────────────────────────────────────── */
+
+:where(.cm-root:not([data-unstyled]))
+  .cm-graticule
+  :is(.cm-graticule-lines, .cm-graticule-outline) {
+  fill: none;
+  stroke: var(
+    --cm-graticule-color,
+    color-mix(in srgb, var(--cm-label-color, #111111) 26%, transparent)
+  );
+  stroke-width: var(--cm-graticule-width, 0.5px);
+  /* The grid does not thicken when zooming. */
+  vector-effect: non-scaling-stroke;
 }

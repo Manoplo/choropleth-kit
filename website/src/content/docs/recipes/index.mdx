@@ -1,0 +1,19 @@
+---
+title: Recipes
+description: Copy-paste solutions to common problems, each with a live map. All data is synthetic.
+---
+
+A recipe solves one problem. Each page has a **live map** and, right below it, the **exact source file that is running above**: what you see is what you copy. The data is synthetic and inline, so every recipe is self-contained.
+
+The code shown leaves out the few lines that wire the example to this site (following the page's light or dark mode, and silencing development diagnostics).
+
+| Recipe                                                      | Problem                                              | Uses                                      |
+| ----------------------------------------------------------- | ---------------------------------------------------- | ----------------------------------------- |
+| [Sales by country](/recipes/sales-by-country/)              | Color a continent by one number                      | `region`, `sequential`, `formatValue`     |
+| [A percentage on a fixed scale](/recipes/fixed-domain/)     | Make 0 % and 100 % mean the same on every map        | `domain`, `palette`, `linear`             |
+| [Growth, up and down](/recipes/growth-diverging/)           | Show positive and negative change around zero        | `diverging`, `midpoint`                   |
+| [Stores as bubbles](/recipes/stores-bubbles/)               | Plot points that are not regions                     | `bubble`, `getCoordinates`, `getColorValue` |
+| [A detail panel](/recipes/detail-panel/)                    | Click a region and show its details beside the map   | `selectedId`, `onSelectedIdChange`        |
+| [A guided tour](/recipes/flight-tour/)                      | Move the camera from code and chain flights          | `ref`, `zoomTo`, `resetView`              |
+
+For one live example of each variant, see the [Examples gallery](/gallery/). For the reasoning behind these options, read [Concepts](/concepts/how-a-map-is-built/).

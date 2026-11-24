@@ -1,0 +1,90 @@
+/* Docs typography: same families as the landing page (see landing.css). */
+:root {
+  --sl-font: "Geist Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --sl-font-system: "Geist Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --sl-font-mono: "Geist Mono Variable", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --sl-font-system-mono: "Geist Mono Variable", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+
+/* Same wordmark treatment as the landing's .brand. */
+.site-title {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  gap: 10px;
+}
+.site-title img {
+  height: 20px;
+  width: 20px;
+}
+
+/* Live examples: the map above, its own source below. */
+.example {
+  margin: 1.5rem 0 0;
+}
+.example-live {
+  border: 1px solid var(--sl-color-hairline);
+  border-radius: 10px 10px 0 0;
+  padding: 12px;
+  background: var(--sl-color-bg-nav);
+}
+.example-note {
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--sl-color-hairline);
+  border-top: 0;
+  font-size: 0.8125rem;
+  color: var(--sl-color-gray-3);
+}
+.example + .expressive-code {
+  margin-top: 0;
+}
+.example + .expressive-code .frame {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+.ex-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.ex-actions button {
+  font: inherit;
+  padding: 6px 12px;
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 8px;
+  background: var(--sl-color-bg);
+  color: var(--sl-color-text);
+  cursor: pointer;
+}
+.ex-actions button:hover {
+  border-color: var(--sl-color-accent);
+}
+.ex-layout {
+  display: grid;
+  gap: 12px;
+}
+@media (min-width: 720px) {
+  .ex-layout {
+    grid-template-columns: 1fr 220px;
+  }
+}
+.ex-panel {
+  border: 1px solid var(--sl-color-hairline);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 0.875rem;
+  background: var(--sl-color-bg);
+}
+.ex-panel h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+}
+.ex-panel p {
+  margin: 4px 0;
+}
+
+/* Generated reference pages: option names in headings, not shouting. */
+.sl-markdown-content h3 > code {
+  font-size: 0.9em;
+}

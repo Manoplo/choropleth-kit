@@ -25,33 +25,35 @@ Statuses: `proposed` → `accepted` → `in progress` → `done` (or `discarded`
 The working rules in `AGENTS.md` still apply (one step at a time, tests in `src/core`, no commits
 without an explicit request).
 
-## Features (23)
+## Features (25)
 
-| Code                                                       | Title                                                     | Priority | Status      |
-| ---------------------------------------------------------- | --------------------------------------------------------- | -------- | ----------- |
-| [FEAT-003](./features/FEAT-003-sphere-graticule.md)        | `Sphere` and `Graticule` layers                           | low      | proposed    |
-| [FEAT-004](./features/FEAT-004-motion.md)                  | Motion ⭐: animations and the `animation` prop            | medium   | proposed    |
-| [FEAT-005](./features/FEAT-005-legend-extras.md)           | Legend: count tween, `filter`, `orientation`, `showEmpty` | low      | proposed    |
-| [FEAT-006](./features/FEAT-006-accessibility-complete.md)  | Full accessibility                                        | high     | proposed    |
-| [FEAT-007](./features/FEAT-007-export.md)                  | Export: `toSVGString` and `toPNG`                         | medium   | proposed    |
-| [FEAT-008](./features/FEAT-008-visual-regression.md)       | Visual tests with Playwright                              | medium   | proposed    |
-| [FEAT-009](./features/FEAT-009-drill-deferred.md)          | Drill-down: what was deferred                             | medium   | proposed    |
-| [FEAT-010](./features/FEAT-010-zoom-lod.md)                | Zoom: level of detail (LOD)                               | low      | proposed    |
-| [FEAT-011](./features/FEAT-011-palette-reverse.md)         | Ramp reversal (`palette: { name, reverse: true }`)        | low      | proposed    |
-| [FEAT-012](./features/FEAT-012-pattern-counterscale.md)    | Patterns that do not scale with zoom                      | low      | proposed    |
-| [FEAT-013](./features/FEAT-013-scroll-jacking-warning.md)  | `scroll-jacking` warning in development                   | low      | proposed    |
-| [FEAT-014](./features/FEAT-014-docs-site-astro.md)         | Landing page and documentation site (Astro)               | high     | proposed    |
-| [FEAT-015](./features/FEAT-015-production-v1.md)           | Production and v1.0                                       | high     | proposed    |
-| [FEAT-016](./features/FEAT-016-globe.md)                   | Globe (`geoOrthographic`)                                 | low      | proposed    |
-| [FEAT-017](./features/FEAT-017-heatmap-canvas.md)          | `heatmap` on Canvas                                       | low      | proposed    |
-| [FEAT-018](./features/FEAT-018-clustering.md)              | Point clustering (`supercluster`)                         | low      | proposed    |
-| [FEAT-019](./features/FEAT-019-vanilla-api.md)             | Vanilla API (no React)                                    | low      | proposed    |
-| [FEAT-020](./features/FEAT-020-small-multiples.md)         | Small multiples                                           | low      | proposed    |
-| [FEAT-021](./features/FEAT-021-use-timeline.md)            | `useTimeline`                                             | low      | proposed    |
-| [FEAT-022](./features/FEAT-022-regional-maps.md)           | Regional maps (`region="europe"`, country lists)          | high     | proposed    |
-| [FEAT-023](./features/FEAT-023-overseas-territories.md)    | Overseas territories: show or hide, per country           | medium   | proposed    |
-| [FEAT-025](./features/FEAT-025-subnational-geographies.md) | Subnational geographies (states, provinces, NUTS)         | medium   | in progress |
-| [FEAT-026](./features/FEAT-026-composition-markers.md)     | Composition per region: pie or stacked-bar markers        | medium   | proposed    |
+| Code                                                       | Title                                                         | Priority | Status      |
+| ---------------------------------------------------------- | ------------------------------------------------------------- | -------- | ----------- |
+| [FEAT-027](./features/FEAT-027-bklit-inspired-features.md) | Features inspired by bklit: graticule, patterns, dots, camera | **top**  | in progress |
+| [FEAT-028](./features/FEAT-028-marker-presets.md)          | Marker presets: shape, pulse, glow, label                     | high     | in progress |
+| [FEAT-003](./features/FEAT-003-sphere-graticule.md)        | `Sphere` and `Graticule` layers                               | low      | done        |
+| [FEAT-004](./features/FEAT-004-motion.md)                  | Motion ⭐: animations and the `animation` prop                | medium   | proposed    |
+| [FEAT-005](./features/FEAT-005-legend-extras.md)           | Legend: count tween, `filter`, `orientation`, `showEmpty`     | low      | proposed    |
+| [FEAT-006](./features/FEAT-006-accessibility-complete.md)  | Full accessibility                                            | high     | proposed    |
+| [FEAT-007](./features/FEAT-007-export.md)                  | Export: `toSVGString` and `toPNG`                             | medium   | proposed    |
+| [FEAT-008](./features/FEAT-008-visual-regression.md)       | Visual tests with Playwright                                  | medium   | proposed    |
+| [FEAT-009](./features/FEAT-009-drill-deferred.md)          | Drill-down: what was deferred                                 | medium   | proposed    |
+| [FEAT-010](./features/FEAT-010-zoom-lod.md)                | Zoom: level of detail (LOD)                                   | low      | proposed    |
+| [FEAT-011](./features/FEAT-011-palette-reverse.md)         | Ramp reversal (`palette: { name, reverse: true }`)            | low      | proposed    |
+| [FEAT-012](./features/FEAT-012-pattern-counterscale.md)    | Patterns that do not scale with zoom                          | low      | proposed    |
+| [FEAT-013](./features/FEAT-013-scroll-jacking-warning.md)  | `scroll-jacking` warning in development                       | low      | proposed    |
+| [FEAT-014](./features/FEAT-014-docs-site-astro.md)         | Landing page and documentation site (Astro)                   | high     | proposed    |
+| [FEAT-015](./features/FEAT-015-production-v1.md)           | Production and v1.0                                           | high     | proposed    |
+| [FEAT-016](./features/FEAT-016-globe.md)                   | Globe (`geoOrthographic`)                                     | low      | proposed    |
+| [FEAT-017](./features/FEAT-017-heatmap-canvas.md)          | `heatmap` on Canvas                                           | low      | proposed    |
+| [FEAT-018](./features/FEAT-018-clustering.md)              | Point clustering (`supercluster`)                             | low      | proposed    |
+| [FEAT-019](./features/FEAT-019-vanilla-api.md)             | Vanilla API (no React)                                        | low      | proposed    |
+| [FEAT-020](./features/FEAT-020-small-multiples.md)         | Small multiples                                               | low      | proposed    |
+| [FEAT-021](./features/FEAT-021-use-timeline.md)            | `useTimeline`                                                 | low      | proposed    |
+| [FEAT-022](./features/FEAT-022-regional-maps.md)           | Regional maps (`region="europe"`, country lists)              | high     | proposed    |
+| [FEAT-023](./features/FEAT-023-overseas-territories.md)    | Overseas territories: show or hide, per country               | medium   | proposed    |
+| [FEAT-025](./features/FEAT-025-subnational-geographies.md) | Subnational geographies (states, provinces, NUTS)             | medium   | in progress |
+| [FEAT-026](./features/FEAT-026-composition-markers.md)     | Composition per region: pie or stacked-bar markers            | medium   | proposed    |
 
 ## Issues (10)
 

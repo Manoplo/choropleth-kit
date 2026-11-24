@@ -3,7 +3,7 @@
  * ADDED to the library's `cm-*` one (it never replaces it, so selectors like `.cm-region[data-drillable]`
  * and the base styles keep working; to remove the base ones there is `unstyled`).
  *
- * Only the pieces that exist today are here. `sphere` and `graticule` are planned and arrive with their layers.
+ * Only the pieces that exist today are here.
  */
 export const CLASS_SLOTS = [
   "root",
@@ -19,6 +19,8 @@ export const CLASS_SLOTS = [
   "markers",
   "marker",
   "selection",
+  "graticule",
+  "background",
   "legend",
   "legendItem",
   "tooltip",

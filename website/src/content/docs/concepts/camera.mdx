@@ -1,0 +1,45 @@
+---
+title: Camera and zoom model
+description: The confirmed view, programmatic flights and the cooperative wheel.
+---
+
+## The model
+
+The camera is an affine transform `{ k, x, y }` applied to the already-projected map: a point `[px, py]` appears on screen at `[px·k + x, py·k + y]`. **`k = 1` is the level's fit**, where the map fills its container exactly. The math is pure and lives in `choropleth-kit/core`, with no DOM.
+
+Limits keep the map reachable: a map smaller than the view is centered, and a larger one cannot leave the view.
+
+## Turning it on and off
+
+```tsx
+<ChoroplethMap {...common} zoom={{ wheel: "cooperative", controls: true }} />
+<ChoroplethMap {...common} zoom={false} /> // camera off
+```
+
+- `wheel: "always"` (the default) zooms with the wheel whenever the pointer is over the map.
+- `wheel: "cooperative"` only zooms with Ctrl or Cmd, so a map inside a scrolling page does not hijack the scroll.
+- Pinch, drag, inertia and keyboard zoom are available too, and `controls: true` shows zoom buttons.
+
+## Flights return promises
+
+The imperative handle (`ref`) moves the camera and returns a promise per move, so flights chain without timers:
+
+```tsx
+const ref = useRef<ChoroplethMapHandle>(null);
+
+await ref.current?.zoomTo("ES");
+await ref.current?.zoomTo("FR");
+ref.current?.getView(); // { zoom, center, bounds, level… }
+```
+
+A promise resolves with `completed: false` if a user gesture interrupted the flight.
+
+## `onViewChange` fires at the end
+
+`onViewChange` is called **at the end** of each gesture or flight, never on every frame. Inside the compound API, `useCamera((view) => view.zoom > 3)` subscribes to that confirmed camera with a selector, so a component re-renders only when the selected value changes.
+
+This is what keeps zoom and pan cheap: see [Performance model](/concepts/performance/).
+
+## Initial view
+
+`focusId` and `initialView` place the camera on the first render without animation and without notifying `onViewChange`.
