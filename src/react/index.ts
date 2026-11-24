@@ -64,6 +64,8 @@ export { FallbackPoints } from "./components/fallback-points";
 export { Labels } from "./components/labels";
 export { Marker, Markers } from "./components/marker";
 export type { MarkerProps, MarkerSpec } from "./components/marker";
+export { MARKER_SHAPES, MARKER_PULSES } from "../core";
+export type { MarkerPulse, MarkerShape } from "../core";
 export { Legend } from "./components/legend";
 export type { LegendProps, LegendRenderContext } from "./components/legend";
 export { Regions } from "./components/regions";

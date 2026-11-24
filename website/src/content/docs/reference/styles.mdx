@@ -66,7 +66,7 @@ Defaults are the values in `styles.css`.
 | `--cm-bubble-fill`    | `#2563eb`                    | Bubble fill (without a color metric) |
 | `--cm-bubble-stroke`  | `#ffffff`                    | Bubble outline                |
 | `--cm-bubble-opacity` | `0.75`                       | Bubble fill opacity           |
-| `--cm-marker-fill`    | falls back to `--cm-bubble-fill` | Default dot of an HTML marker |
+| `--cm-marker-fill`    | falls back to `--cm-bubble-fill` | Default dot and preset shapes of a marker |
 | `--cm-marker-stroke`  | `#ffffff`                    | Border of that dot            |
 
 ### Region labels
@@ -154,6 +154,9 @@ State is exposed as attributes. Boolean attributes are present with an empty val
 | `data-bubble-id`               | On a bubble                                                         |
 | `data-label-id`                | On a region name                                                    |
 | `data-anchor`                  | On a marker: `bottom` or `center`                                   |
+| `data-shape`, `data-pulse`     | On a preset marker's shape: its shape, and `hover` or `always` if it pulses |
+| `data-position`, `data-hidden` | On a marker label: its side, and present while it is hidden by a collision |
+| `data-side`                    | On a marker tooltip: `top`, `bottom`, `right` or `left`             |
 | `data-visible`                 | On the gesture hint, while it is shown                              |
 
 ## Classes
@@ -168,6 +171,6 @@ These classes are stable hooks for your own selectors. Prefer the variables and 
 | Legend          | `cm-legend` and its parts: `cm-legend__title`, `__items`, `__item`, `__swatch`, `__count`, `__bar`, `__segment`, `__ticks`, `__tick`, `__gradient`, `__sizes`, `__size`, `__circle` |
 | Tooltip         | `cm-tooltip`, `cm-tooltip--default`, `cm-tooltip__hint`                                        |
 | Controls        | `cm-zoom-controls`, `cm-zoom-button`, `cm-breadcrumb` (`__list`, `__item`, `__current`), `cm-gesture-hint` |
-| Markers         | `cm-marker`, `cm-marker__dot`                                                                  |
+| Markers         | `cm-marker`, `cm-marker__dot`, `cm-marker__shape`, `cm-marker__pulse`, `cm-marker__label`, `cm-marker__tooltip` |
 
 The slots of the `classNames` prop are listed in the [React API](/reference/react/) under `ChoroplethClassNames`.
