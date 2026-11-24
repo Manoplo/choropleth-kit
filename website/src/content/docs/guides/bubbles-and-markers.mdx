@@ -3,6 +3,10 @@ title: Bubbles and markers
 description: Points with their own coordinates, microstates as dots, and HTML markers anchored to the map.
 ---
 
+import Example from "../../../components/Example.astro";
+import Live from "../../../examples/markers-playground.tsx";
+import source from "../../../examples/markers-playground.tsx?raw";
+
 ## Bubbles
 
 `variant="bubble"` draws a circle per datum. Its **area** follows `getValue`, and an optional second metric colors it.
@@ -39,11 +43,11 @@ A datum whose id joins no region but is listed there is painted as a dot with th
 
 Markers are HTML elements anchored to `[lon, lat]` that follow the map. Give them a look from the **preset**, or bring your own content.
 
-:::note[Not in the published package yet]
-The preset look (`shape`, `size`, `color`, `pulse`, `glow`, `showLabel`) and `tooltip` are in the library source and ship with its next version. Markers with your own `children` work today.
-:::
-
 ### The preset look
+
+<Example source={source} filename="MarkersPlayground.tsx" note="Synthetic offices. Change the shape and the pulse, and turn the glow, labels and tooltip on and off. Hover a marker or press Tab.">
+  <Live client:visible />
+</Example>
 
 With no `children`, any of the options below draws a shape instead of the default dot.
 

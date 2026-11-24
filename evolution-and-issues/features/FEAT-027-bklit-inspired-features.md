@@ -259,7 +259,7 @@ decoration and camera work on top of an engine that already has the hard parts.
 
 ## Progress
 
-- **Package A: done** (including its documentation guide, «Patterns, background and graticule»; live examples wait for the next release, because the site consumes the published package). Graticule (FEAT-003, now `done`), background pattern with edge fades, and a
+- **Package A: done** (including its documentation guide, «Patterns, background and graticule»; with a live example with switches, added after the 0.4.0 release). Graticule (FEAT-003, now `done`), background pattern with edge fades, and a
   catalogue of 32 pattern presets for regions (`emptyPattern`, `getRegionStyle().pattern`) and the background. Story: «Layers / Patterns and graticule».
 - **Extra, from validation:** `showAntarctica` (default `false`; a map that drops it uses `aspectRatio="auto"` unless set), so Mercator maps are usable.
   Antarctica is no longer drawn by default on any world map (breaking, pre-1.0).
