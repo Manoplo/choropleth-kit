@@ -53,6 +53,8 @@ export type { UseZoomParams } from "./use-zoom";
 export { useContainerSize } from "./use-container-size";
 export type { ContainerSize, UseContainerSizeOptions } from "./use-container-size";
 export { Choropleth } from "./choropleth";
+export { Background } from "./components/background";
+export { Graticule } from "./components/graticule";
 export { Borders } from "./components/borders";
 export { Breadcrumb } from "./components/breadcrumb";
 export type { BreadcrumbProps, BreadcrumbRenderContext } from "./components/breadcrumb";
@@ -80,6 +82,13 @@ export { ChoroplethMap } from "./choropleth-map";
 export type { ChoroplethMapProps, LegendOptions, LegendPosition } from "./choropleth-map";
 export type { CameraOptions, TransitionResult, ViewState, ZoomOptions, ZoomTarget } from "../core";
 export type { DrillContext } from "../core";
+export { PATTERN_PRESET_IDS, PATTERN_PRESETS } from "../core";
+export type {
+  BackgroundOptions,
+  GraticuleOptions,
+  PatternPresetId,
+  PatternPresetSpec,
+} from "../core";
 export { THEMES, defineTheme, extendTheme, themeToCssVars } from "../core";
 export { placeLabels, zoomBucket } from "../core";
 export type { LabelCandidate, PlaceLabelsParams } from "../core";

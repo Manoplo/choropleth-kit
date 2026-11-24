@@ -35,10 +35,16 @@ An unknown name throws an error that lists the valid ones.
 
 ## Remove regions you do not want
 
-For anything `region` does not cover, `filterFeatures` discards shapes before anything else:
+Antarctica is **not drawn by default** (almost no thematic map wants it, and it takes a huge share of a world map). Add it back with `showAntarctica`:
 
 ```tsx
-filterFeatures={(f) => f.id !== "AQ"} // no Antarctica
+<ChoroplethMap showAntarctica /* … */ />
+```
+
+For anything else `region` does not cover, `filterFeatures` discards shapes before anything else:
+
+```tsx
+filterFeatures={(f) => f.id !== "GL"} // no Greenland
 ```
 
 ## Aspect ratio

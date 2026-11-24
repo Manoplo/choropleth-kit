@@ -8,7 +8,7 @@ import {
   type PointerEventHandler,
 } from "react";
 import type { Feature, FeatureCollection, MultiLineString } from "geojson";
-import { geoPath, type GeoProjection } from "d3-geo";
+import { geoPath, type GeoPermissibleObjects, type GeoProjection } from "d3-geo";
 import {
   buildProjectionChain,
   FIT_TRANSFORM,
@@ -66,6 +66,7 @@ import {
   type VariantConfig,
   type ZoomOptions,
   type ZoomTarget,
+  type PatternPresetId,
 } from "../core";
 import { isDrillable, sourceDepth, type DrillEvent, type DrillLevel } from "./drill-levels";
 import { useDrillChoreography } from "./use-drill-choreography";
@@ -127,7 +128,7 @@ export type RegionStyle = {
    * your own `<pattern>` defined in `<Choropleth.Defs>` with `useDefId(name)`. It needs `<Choropleth.Defs>`
    * and `<Choropleth.Patterns>` (the preset and `Choropleth.Svg` already include them).
    */
-  pattern?: "hatch" | "dots" | (string & {});
+  pattern?: "hatch" | "dots" | PatternPresetId | (string & {});
 };
 
 /**
@@ -200,8 +201,14 @@ type BaseOptions<TDatum> = {
    * geometry. Data outside the region is ignored without warnings (`joinReport.outOfRegion`).
    */
   region?: RegionProp;
-  /** Discards regions before anything else (e.g. Antarctica: `(f) => f.id !== "010"`). */
+  /** Discards regions before anything else (e.g. Greenland: `(f) => f.id !== "GL"`). */
   filterFeatures?: (feature: Feature) => boolean;
+  /**
+   * Draw Antarctica (`"AQ"`). `false` by default: almost no thematic map wants it, and it takes a huge share of the
+   * map (a lot, in Mercator). Data for `"AQ"` is then ignored without warnings. If you leave `aspectRatio` unset, a map
+   * that drops Antarctica uses `"auto"`, so the world fills its box.
+   */
+  showAntarctica?: boolean;
   /**
    * `undefined` = loading (the previous data is kept, no warnings); `[]` = loaded and empty. With `drill`
    * it can be a selector for the current level: `({ depth, parentId }) => rows.filter(…)`.
@@ -384,6 +391,8 @@ export type UseChoroplethResult<TDatum> = {
   zoom: ResolvedZoom | null;
   /** The user's `onViewChange` (not part of `zoom`: it must not reinstall the behavior). */
   onViewChange: ZoomOptions["onViewChange"];
+  /** Any GeoJSON object → SVG path data in the map's projection (the graticule layer uses it). */
+  toPath: (object: GeoPermissibleObjects) => string | null;
   /** Canvas pixels → [lon, lat] (`projection.invert`); `null` if it falls outside the globe. */
   invert: (point: Point) => Point | null;
   /** [lon, lat] → canvas pixels; `null` if it does not project. */
@@ -443,8 +452,19 @@ export type UseChoroplethResult<TDatum> = {
  * require the consumer to stabilize `getId`/`getValue`/`classification`, and almost nobody does.
  */
 export const useChoropleth = <TDatum>(
-  rawOptions: UseChoroplethOptions<TDatum>,
+  input: UseChoroplethOptions<TDatum>,
 ): UseChoroplethResult<TDatum> => {
+  // Antarctica is dropped by composing it into the user's filter, so every later step (drill levels, borders,
+  // paths, the fit) sees the geometry without it.
+  const showAntarctica = input.showAntarctica === true;
+  const rawOptions: UseChoroplethOptions<TDatum> = showAntarctica
+    ? input
+    : {
+        ...input,
+        filterFeatures: (feature: Feature): boolean =>
+          (input.getFeatureId ?? defaultFeatureId)(feature) !== ANTARCTICA_ID &&
+          (input.filterFeatures?.(feature) ?? true),
+      };
   // Interaction state (hover, pointer, camera) outside React. It goes first: the drill reads the camera.
   const [store] = useState(createMapStore);
 
@@ -569,9 +589,17 @@ export const useChoropleth = <TDatum>(
   );
 
   // ── size ────────────────────────────────────────────────────────────────────────────────────────
+  // A map that dropped Antarctica fits the world better with its own proportion (Mercator especially): unless the
+  // consumer chose one, the ratio follows the geometry. Maps that never had Antarctica keep the default.
+  const droppedAntarctica =
+    !showAntarctica &&
+    ((engine.active ? engine.rootAll : allFeatures)?.features ?? []).some(
+      (f) => (getFeatureId ?? defaultFeatureId)(f) === ANTARCTICA_ID,
+    );
+  const aspectRatio = options.aspectRatio ?? (droppedAntarctica ? "auto" : undefined);
   const autoAspect = useMemo(
     () =>
-      options.aspectRatio === "auto"
+      aspectRatio === "auto"
         ? computeAspectRatio({
             name: projection,
             // With drill the proportion is the root's: it must not change when going down a level.
@@ -579,10 +607,10 @@ export const useChoropleth = <TDatum>(
             rotate,
           })
         : undefined,
-    [options.aspectRatio, projection, features, engine.active, engine.rootFeatures, rotate],
+    [aspectRatio, projection, features, engine.active, engine.rootFeatures, rotate],
   );
   const measured = useContainerSize({
-    aspectRatio: options.aspectRatio === "auto" ? autoAspect : options.aspectRatio,
+    aspectRatio: aspectRatio === "auto" ? autoAspect : aspectRatio,
   });
   const width = options.width ?? measured.width;
   const height = options.height ?? measured.height;
@@ -869,7 +897,10 @@ export const useChoropleth = <TDatum>(
   // set apart BEFORE warning. Only ids that exist in the world (its geometry or the fallback points) count: a
   // typo ("UK" for "GB") is in neither, so it keeps warning. With `drill`, only the level that draws the root.
   const outOfRegion: string[] = [];
-  let unmatchedIds = join.unmatchedData;
+  // Data for Antarctica on a map that does not draw it is expected, not a mistake.
+  let unmatchedIds = showAntarctica
+    ? join.unmatchedData
+    : join.unmatchedData.filter((id) => id !== ANTARCTICA_ID);
   const regionDrawn = !engine.active || sourceDepth(engine.levels, engine.depth) === 0;
   if (region !== undefined && regionDrawn && unmatchedIds.length > 0) {
     const world = engine.active ? engine.rootAll : allFeatures;
@@ -1470,6 +1501,7 @@ export const useChoropleth = <TDatum>(
     labels,
     zoom: zoomOptions,
     onViewChange: typeof options.zoom === "object" ? options.zoom.onViewChange : undefined,
+    toPath,
     invert,
     project,
     focusId: options.focusId,
@@ -1495,6 +1527,9 @@ export const useChoropleth = <TDatum>(
 
 // `useLayoutEffect` warns on the server; there is no camera to reset there.
 const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
+
+/** Antarctica's id in the bundled geography (ISO 3166-1 alpha-2). */
+const ANTARCTICA_ID = "AQ";
 
 const NO_GEOGRAPHY: GeographyData = { type: "FeatureCollection", features: [] };
 const EMPTY_FEATURES: FeatureCollection = { type: "FeatureCollection", features: [] };

@@ -16,7 +16,7 @@ export type ChoroplethContextValue = {
   /** Id (unique per map instance) of an SVG definition: `defId("hatch")`. */
   defId: (name: string) => string;
   /** Pattern of the regions without data (`emptyPattern` or the theme's). */
-  emptyPattern: "hatch" | "dots" | null;
+  emptyPattern: string | null;
 };
 
 export const ChoroplethContext = createContext<ChoroplethContextValue | null>(null);
@@ -32,7 +32,7 @@ export const useChoroplethContext = <TDatum = unknown>(): {
   api: ChoroplethMapHandle;
   classNames: ChoroplethClassNames;
   defId: (name: string) => string;
-  emptyPattern: "hatch" | "dots" | null;
+  emptyPattern: string | null;
 } => {
   const value = useContext(ChoroplethContext);
   if (value === null) {
@@ -47,7 +47,7 @@ export const useChoroplethContext = <TDatum = unknown>(): {
     api: ChoroplethMapHandle;
     classNames: ChoroplethClassNames;
     defId: (name: string) => string;
-    emptyPattern: "hatch" | "dots" | null;
+    emptyPattern: string | null;
   };
 };
 

@@ -1,16 +1,23 @@
 import { useRef, type KeyboardEvent, type ReactNode } from "react";
 import { cx } from "../class-names";
 import { useChoroplethContext } from "../choropleth-context";
+import { Background } from "./background";
 import { Borders } from "./borders";
 import { Defs } from "./defs";
 import { Patterns } from "./patterns";
 import { Bubbles } from "./bubbles";
 import { DrillLayers } from "./drill-layers";
 import { FallbackPoints } from "./fallback-points";
+import { Graticule } from "./graticule";
 import { Labels } from "./labels";
 import { Regions } from "./regions";
 import { Selection } from "./selection";
-import { zoomKeyAction } from "../../core";
+import {
+  zoomKeyAction,
+  type BackgroundOptions,
+  type GraticuleOptions,
+  type PatternPresetId,
+} from "../../core";
 import { useZoom } from "../use-zoom";
 import { Viewport } from "./viewport";
 
@@ -23,6 +30,16 @@ export type SvgProps = {
   children?: ReactNode;
   className?: string;
   ariaLabel?: string;
+  /**
+   * A static pattern behind the map (it does not zoom): `true` (dots), a preset id (`"grid"`) or options.
+   * Only applies to the default layers; with your own `children`, add `<Choropleth.Background>`.
+   */
+  background?: boolean | PatternPresetId | "none" | BackgroundOptions;
+  /**
+   * Meridians and parallels: `true` (every 10°), a step in degrees (`15`) or options. Only applies to the default
+   * layers; with your own `children`, add `<Choropleth.Graticule>` inside the `Viewport`.
+   */
+  graticule?: boolean | number | GraticuleOptions;
 };
 
 /**
@@ -33,7 +50,7 @@ export type SvgProps = {
  * While the asynchronous geometry has not arrived, it draws a skeleton with the same proportion the
  * map will have: the page does not jump when it appears.
  */
-export const Svg = ({ children, className, ariaLabel }: SvgProps) => {
+export const Svg = ({ children, className, ariaLabel, background, graticule }: SvgProps) => {
   const { choropleth, store, viewportRef, classNames } = useChoroplethContext();
   const {
     width,
@@ -104,6 +121,23 @@ export const Svg = ({ children, className, ariaLabel }: SvgProps) => {
     else void api?.zoomBy(action === "in" ? 2 : 0.5);
   };
 
+  const backgroundProps: BackgroundOptions | null =
+    background === undefined || background === false
+      ? null
+      : background === true
+        ? {}
+        : typeof background === "string"
+          ? { pattern: background }
+          : background;
+  const graticuleProps: GraticuleOptions | null =
+    graticule === undefined || graticule === false
+      ? null
+      : graticule === true
+        ? {}
+        : typeof graticule === "number"
+          ? { step: graticule }
+          : graticule;
+
   return (
     <svg
       ref={svgRef}
@@ -118,11 +152,16 @@ export const Svg = ({ children, className, ariaLabel }: SvgProps) => {
       {children ?? (
         <>
           <Defs />
+          {backgroundProps !== null && <Background {...backgroundProps} />}
           <Viewport>
+            {graticuleProps !== null && graticuleProps.above !== true && (
+              <Graticule {...graticuleProps} />
+            )}
             <DrillLayers role="context" />
             <Regions />
             <Patterns />
             <Borders />
+            {graticuleProps?.above === true && <Graticule {...graticuleProps} />}
             <Bubbles />
             <FallbackPoints />
             <Selection />
