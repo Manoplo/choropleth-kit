@@ -5,6 +5,13 @@ description: What changed in each version of choropleth-kit, and what breaks whe
 
 The package is pre-1.0: check the version you install, and read the breaking notes before you upgrade a minor version. The full history, commit by commit, is on [GitHub](https://github.com/Manoplo/choropleth-kit).
 
+## 0.5.0 · 2026-11-25
+
+- **Dot-matrix renderer** (`dots`): the map drawn as a lattice of dots (hex or square), each one colored like the region under its center. Regions stay as an invisible hit layer, so tooltip, selection, click and legend highlight keep working. Also `Choropleth.Dots` and `Choropleth.Regions hitOnly` for hand composition.
+- Documentation: the status, changelog and known-limitations pages are written, and the npm page points to this site.
+
+Not in this version: a zoom cap for dots (they grow large when zoomed in), ocean dots, drill-down and "no data" patterns on dots.
+
 ## 0.4.0 · 2026-11-24
 
 - **Graticule**: meridians and parallels (`graticule`), with an optional world outline. Its line width does not grow when you zoom.
