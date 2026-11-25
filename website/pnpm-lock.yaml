@@ -182,8 +182,8 @@ importers:
         specifier: ^7.4.13
         version: 7.4.13(@types/node@26.6.6)(yaml@2.9.1)
       choropleth-kit:
-        specifier: ^0.4.0
-        version: 0.4.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        specifier: ^0.5.0
+        version: 0.5.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       react:
         specifier: ^19.3.1
         version: 19.3.1
@@ -1166,8 +1166,8 @@ packages:
     resolution: {integrity: sha512-TQMmc3w+5AxjpL8iIiwebF73dRDF4fBIieAqGn9RGCWaEVwQ6Fb2cGe31Yns0RRIzii5goJ1Y7xbMwo1TxMplw==}
     engines: {node: '>= 20.19.0'}
 
-  choropleth-kit@0.4.0:
-    resolution: {integrity: sha512-4FR85iNZU3EFh3noXV3KT1cHNi6nPY9BxcFzl+/uoic3sqc2QP3NvoawRVXmUQurgobaNnDRZHMQ0KYUV2/2oA==}
+  choropleth-kit@0.5.0:
+    resolution: {integrity: sha512-zZE8rQ5qN4uqeC8TuNbJ1SSeaxQ0BTRCV7Ax1KrCsR49q8lcg/C098RaZSL8FQoQsCtatj5+iprS/X7dGNZ/HQ==}
     peerDependencies:
       react: '>=18'
       react-dom: '>=18'
@@ -3078,7 +3078,7 @@ snapshots:
     dependencies:
       readdirp: 5.1.1
 
-  choropleth-kit@0.4.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
+  choropleth-kit@0.5.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
     dependencies:
       '@types/d3-geo': 3.1.1
       '@types/d3-interpolate': 3.0.4

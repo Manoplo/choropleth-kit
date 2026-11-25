@@ -1,7 +1,13 @@
 ---
 title: "Interaction: hover, click, selection, tooltips"
-description: React to the user with item callbacks, controlled selection and a custom tooltip.
+description: React to the user with item callbacks, controlled selection, a custom tooltip and the dot-matrix renderer.
 ---
+
+import Example from "../../../components/Example.astro";
+import TooltipDatum from "../../../examples/tooltip-datum.tsx";
+import TooltipDatumSource from "../../../examples/tooltip-datum.tsx?raw";
+import DotsInteractive from "../../../examples/dots-interactive.tsx";
+import DotsInteractiveSource from "../../../examples/dots-interactive.tsx?raw";
 
 ## Click and hover
 
@@ -66,6 +72,39 @@ By default the tooltip shows the region's name and formatted value. Replace its 
 
 In the compound API, use `<Choropleth.Tooltip>` and pass your render function as its child.
 
+### The whole datum is there
+
+`renderTooltip` receives more than the value of the region. Its `datum` field is **the row you passed in `data`, as it is**, with every field of your object. The value that colors the map (`getValue`) is only one of them, so you can show any other field next to it:
+
+```tsx
+type Row = { id: string; currentData: number; lastYearData: number };
+
+<ChoroplethMap<Row>
+  data={rows}
+  getId={(row) => row.id}
+  getValue={(row) => row.currentData} // what colors the map
+  renderTooltip={({ label, datum }) =>
+    datum === undefined ? (
+      <b>{label}: no data</b>
+    ) : (
+      <div>
+        <b>{label}</b>
+        <div>Now: {datum.currentData}</div>
+        <div>Last year: {datum.lastYearData}</div>
+      </div>
+    )
+  }
+/>;
+```
+
+- `datum` is `undefined` for a region without a row. Check it before you read a field.
+- With `<ChoroplethMap<Row>` (or the compound `Choropleth.Root<Row>`), `datum` is typed as your row.
+- The default box (`cm-tooltip--default`) only wraps the default content. Your content has no background or border: style it yourself, or use `--cm-tooltip-*` variables on your wrapper.
+
+<Example source={TooltipDatumSource} filename="TooltipDatum.tsx" note="Synthetic data. Hover a country: the tooltip shows the value that colors the map and last year's value, which is in the same row.">
+  <TooltipDatum client:visible />
+</Example>
+
 ## Legend interaction
 
 Hovering a legend class highlights its regions. Turn it off with `legend={{ interactive: false }}`.
@@ -73,3 +112,21 @@ Hovering a legend class highlights its regions. Turn it off with `legend={{ inte
 ## Cursor
 
 When there is an `onItemClick`, regions get a `pointer` cursor automatically.
+
+## Dots: the map as a lattice
+
+`dots` draws the map as a lattice of dots instead of filled regions. Each dot takes the color of the region under its center, and every region with a value gets at least one dot, even the small ones.
+
+```tsx
+<ChoroplethMap {...common} dots />
+<ChoroplethMap {...common} dots={{ gap: 8, size: 0.6, lattice: "square" }} />
+```
+
+- `gap` is the distance between dots, in pixels (default 6). `size` is the dot's diameter as a fraction of the gap (default 0.7). `lattice` is `"hex"` (default) or `"square"`.
+- Hover, click, the tooltip, selection and the legend highlight work as on the filled map. The hovered and selected regions get a halo around their dots.
+- Borders and region patterns are not drawn with dots.
+- Known limits: the dots do not stop growing when you zoom in (a cap is planned), there are no ocean dots, and drill-down levels are not drawn with dots yet.
+
+<Example source={DotsInteractiveSource} filename="DotsInteractive.tsx" note="Synthetic data. Switch the dots on and off and change the lattice. Hover, click and zoom work the same in both.">
+  <DotsInteractive client:visible />
+</Example>
