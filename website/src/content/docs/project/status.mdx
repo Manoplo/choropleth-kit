@@ -1,20 +1,33 @@
 ---
 title: Status and roadmap
-description: What state choropleth-kit is in and what is planned. Incoming.
-sidebar:
-  badge:
-    text: Incoming
-    variant: caution
+description: What state choropleth-kit is in, what you can rely on, and what is planned.
 ---
 
-:::caution[Incoming]
-A written roadmap for this site is not ready yet.
-:::
+choropleth-kit is **pre-1.0**. The current version is on [npm](https://www.npmjs.com/package/choropleth-kit) and the source is on [GitHub](https://github.com/Manoplo/choropleth-kit).
 
-## What you can rely on today
+## What you can rely on
 
-- choropleth-kit is **pre-1.0**. The API may change between minor versions, and breaking changes are made without a compatibility alias.
-- The package is published on [npm](https://www.npmjs.com/package/choropleth-kit) and the source is on [GitHub](https://github.com/Manoplo/choropleth-kit).
-- Planned features and known issues are tracked, one document each, in the repository's [`evolution-and-issues/`](https://github.com/Manoplo/choropleth-kit/tree/master/evolution-and-issues) folder.
+- **The three API levels** (`<ChoroplethMap>`, the compound `<Choropleth.*>` pieces and the headless `useChoropleth`) and the variants `sequential`, `diverging`, `categorical` and `bubble`.
+- **Zoom, pan and programmatic flights** (`zoomTo`, `focusId`, `resetView`), and **drill-down** between levels.
+- **Subdivisions** of several countries (`choropleth-kit/geo/admin1/*`), regional maps (`region`), region and marker labels, and theming.
+- **Graticule, background patterns and 32 pattern presets**, and **marker presets** (shape, pulse, glow, label, tooltip).
+
+## Breaking changes are normal before 1.0
+
+The API may change between minor versions. Breaking changes are made without a compatibility alias, and each one is noted in the [changelog](/project/changelog/). Pin the minor version if you need stability.
+
+## In progress
+
+- **Dot-matrix renderer** (`dots`): the map drawn as a lattice of dots. It is in review; see [the changelog](/project/changelog/) once it is released.
+
+## Planned
+
+These are tracked, one document each, in the repository's [`evolution-and-issues/`](https://github.com/Manoplo/choropleth-kit/tree/master/evolution-and-issues) folder. The order is not a promise.
+
+- **Click to zoom** on regions and markers, with a custom easing and a maximum zoom for focus.
+- **Full accessibility**: arrow-key navigation between regions, an alternative table and live announcements.
+- **Motion**: animations and an `animation` prop.
+- **Export** to SVG and PNG.
+- **Globe**, **point clustering** and a **framework-free API**.
 
 See also [Known limitations](/project/limitations/).

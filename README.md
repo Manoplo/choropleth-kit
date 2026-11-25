@@ -14,8 +14,10 @@ down a level without rewriting anything.
 - **Theming:** `--cm-*` variables, four themes, `classNames` (Tailwind) and a `data-*` contract.
 - **Two maps on the same page never share ids** (patterns, filters).
 
-> Status: **MVP, published on npm as [`choropleth-kit@0.1.0`](https://www.npmjs.com/package/choropleth-kit)**. The API may change before 1.0. What is left out of the MVP and the known
-> issues live in [`evolution-and-issues/`](./evolution-and-issues/README.md).
+> **Documentation and live examples: [choropleth-kit.vercel.app](https://choropleth-kit.vercel.app/).**
+>
+> Status: **pre-1.0, published on npm as [`choropleth-kit@0.4.0`](https://www.npmjs.com/package/choropleth-kit)**. The API may change between minor versions. Planned features and known issues
+> live in [`evolution-and-issues/`](./evolution-and-issues/README.md).
 
 ## Installation
 
@@ -316,10 +318,10 @@ Measured with [`size-limit`](https://github.com/ai/size-limit) (gzip, minified; 
 
 - ESM only. In CommonJS: `await import("choropleth-kit")`.
 - **Full accessibility** (arrow-key navigation between regions, alternative table, `aria-live`
-  announcements) is **not in the MVP**. Today there is semantic structure in the breadcrumb, `Escape`
-  and keyboard zoom.
-- Out of the MVP: label/marker layers, ⭐ animations, SVG/PNG export, globe, clustering. List and
-  priorities in [`evolution-and-issues/`](./evolution-and-issues/README.md).
+  announcements) is **not finished yet**. Today there is semantic structure in the breadcrumb, `Escape`
+  and keyboard zoom. Details: [the accessibility guide](https://choropleth-kit.vercel.app/guides/accessibility/).
+- Not built yet: ⭐ animations, SVG/PNG export, globe, clustering. List and priorities in
+  [`evolution-and-issues/`](./evolution-and-issues/README.md).
 
 ## Development
 
@@ -330,6 +332,7 @@ pnpm verify           # typecheck + lint + format + tests + build + size + publi
 ```
 
 Planned features and known issues: [`evolution-and-issues/`](./evolution-and-issues/README.md).
+The documentation site (`website/`, Astro + Starlight) is deployed at [choropleth-kit.vercel.app](https://choropleth-kit.vercel.app/).
 Rules for coding agents: [`AGENTS.md`](./AGENTS.md). Publishing steps: [`PUBLISHING.md`](./PUBLISHING.md).
 
 ## Data and third-party notices

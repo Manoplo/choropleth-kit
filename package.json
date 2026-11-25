@@ -24,7 +24,7 @@
   "bugs": {
     "url": "https://github.com/Manoplo/choropleth-kit/issues"
   },
-  "homepage": "https://github.com/Manoplo/choropleth-kit#readme",
+  "homepage": "https://choropleth-kit.vercel.app/",
   "type": "module",
   "packageManager": "pnpm@12.6.0",
   "sideEffects": [
