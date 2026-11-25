@@ -3,15 +3,19 @@ title: Patterns, background and graticule
 description: Fill regions with patterns, put a static pattern behind the map and draw the grid of meridians and parallels.
 ---
 
-:::note[Not in the published package yet]
-`background`, `graticule`, the pattern catalogue and `showAntarctica` are in the library source and ship with its next version. The live maps on this site run the published package, so this page has code only for now.
-:::
+import Example from "../../../components/Example.astro";
+import Live from "../../../examples/patterns-playground.tsx";
+import source from "../../../examples/patterns-playground.tsx?raw";
 
 Three layers share one catalogue of repeating patterns:
 
 - **Region patterns** drawn on top of a region's color.
 - **A background** behind the map that does not zoom.
 - **A graticule**, the grid of meridians and parallels.
+
+<Example source={source} filename="PatternsPlayground.tsx" note="Synthetic data. Pick a pattern for the regions without data, a background and a projection, and toggle the graticule.">
+  <Live client:visible />
+</Example>
 
 ## Patterns on regions
 

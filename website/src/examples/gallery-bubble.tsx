@@ -10,7 +10,6 @@ export default function GalleryBubble() {
     <ChoroplethMap
       geography={world110m}
       objectName="countries"
-      filterFeatures={(feature) => feature.id !== "AQ"} // no Antarctica
       data={sales}
       getId={(row) => row.country}
       getValue={(row) => row.sales} // circle area
