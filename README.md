@@ -307,10 +307,10 @@ Measured with [`size-limit`](https://github.com/ai/size-limit) (gzip, minified; 
 
 | What                                                      | Gzip     |
 | --------------------------------------------------------- | -------- |
-| Own code (`core` + `react`, dependencies external)        | ≈ 31 KB  |
-| `ChoroplethMap` with all of `d3` included (without React) | ≈ 75 KB  |
-| `styles.css`                                              | ≈ 2 KB   |
-| `choropleth-kit/geo` (data)                               | ≈ 40 KB  |
+| Own code (`core` + `react`, dependencies external)        | ≈ 44 KB  |
+| `ChoroplethMap` with all of `d3` included (without React) | ≈ 83 KB  |
+| `styles.css`                                              | ≈ 3 KB   |
+| `choropleth-kit/geo` (data)                               | ≈ 42 KB  |
 | One country's subdivisions, loaded on demand (the US)     | ≈ 47 KB  |
 | The heaviest one (Canada)                                 | ≈ 106 KB |
 
