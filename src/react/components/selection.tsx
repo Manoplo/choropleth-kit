@@ -8,21 +8,25 @@ import { useMapStore } from "../map-store";
  * this layer does not steal the mouse from what is underneath.
  *
  * A region is highlighted with a copy of its outline; a point, with a ring around its bubble.
+ * `regions={false}` leaves regions to the layer that paints them (`<Choropleth.Dots>`) and keeps the points.
  */
-export const Selection = () => {
+export const Selection = ({ regions: outlineRegions = true }: { regions?: boolean }) => {
   const { choropleth, store, classNames } = useChoroplethContext();
   const { regions, bubbles, fallbackPoints, selectedId } = choropleth;
   const hovered = useMapStore(store, (s) => s.hovered);
 
   const hoveredRegion =
-    hovered?.kind === "region" ? regions.find((r) => r.id === hovered.id) : undefined;
+    outlineRegions && hovered?.kind === "region"
+      ? regions.find((r) => r.id === hovered.id)
+      : undefined;
   const hoveredPoint =
     hovered?.kind === "point"
       ? (bubbles.find((b) => b.coordinates !== null && b.id === hovered.id) ??
         fallbackPoints.find((p) => p.id === hovered.id))
       : undefined;
   // The selected one goes last: if it coincides with the hover, the selection blue wins.
-  const selectedRegion = selectedId === null ? undefined : regions.find((r) => r.id === selectedId);
+  const selectedRegion =
+    !outlineRegions || selectedId === null ? undefined : regions.find((r) => r.id === selectedId);
 
   return (
     <g className={cx("cm-selection", classNames.selection)} pointerEvents="none">

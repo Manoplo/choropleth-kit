@@ -11,6 +11,7 @@ export const CLASS_SLOTS = [
   "layer",
   "regions",
   "region",
+  "dots",
   "borders",
   "bubbles",
   "bubble",

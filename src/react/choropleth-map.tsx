@@ -58,6 +58,8 @@ export type ChoroplethMapProps<TDatum> = UseChoroplethOptions<TDatum> & {
   background?: SvgProps["background"];
   /** Meridians and parallels: `true`, a step in degrees or options. See `Svg`. */
   graticule?: SvgProps["graticule"];
+  /** The map as a lattice of dots instead of filled regions: `true` or options. See `Svg`. */
+  dots?: SvgProps["dots"];
   /** One class of yours per piece, ADDED to the `cm-*` one (Tailwind, CSS Modules). */
   classNames?: ChoroplethClassNames;
   ariaLabel?: string;
@@ -90,6 +92,7 @@ const ChoroplethMapInner = <TDatum,>(
     ariaLabel,
     background,
     graticule,
+    dots,
     ...options
   }: ChoroplethMapProps<TDatum>,
   ref: ForwardedRef<ChoroplethMapHandle>,
@@ -111,7 +114,7 @@ const ChoroplethMapInner = <TDatum,>(
       emptyPattern={emptyPattern}
       classNames={classNames}
     >
-      <Svg ariaLabel={ariaLabel} background={background} graticule={graticule} />
+      <Svg ariaLabel={ariaLabel} background={background} graticule={graticule} dots={dots} />
       {markers !== undefined && markers.length > 0 && (
         <Markers>
           {markers.map(({ id, ...marker }) => (

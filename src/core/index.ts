@@ -240,3 +240,5 @@ export type {
   TooltipSide,
   TooltipSize,
 } from "./marker-tooltip";
+// The dot-matrix builder stays out of this entry for now (the `core` size budget): only its types.
+export type { DotLattice, DotMatrixOptions } from "./dot-matrix";
