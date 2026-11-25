@@ -88,3 +88,18 @@
 .sl-markdown-content h3 > code {
   font-size: 0.9em;
 }
+
+.ex-actions label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--sl-text-sm);
+}
+.ex-actions select {
+  font: inherit;
+  padding: 4px 8px;
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 8px;
+  background: var(--sl-color-bg);
+  color: var(--sl-color-text);
+}

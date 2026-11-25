@@ -43,6 +43,7 @@ export { useChoroplethApi, useDefId } from "./choropleth-context";
 export { Defs } from "./components/defs";
 export type { DefsProps } from "./components/defs";
 export { Patterns } from "./components/patterns";
+export { Dots } from "./components/dots";
 export { createMapStore, useMapStore } from "./map-store";
 export type { MapState, MapStore, PointerPosition, ZoomApi } from "./map-store";
 export { clearGeographyCache, useGeography } from "./use-geography";
@@ -69,6 +70,7 @@ export type { MarkerPulse, MarkerShape } from "../core";
 export { Legend } from "./components/legend";
 export type { LegendProps, LegendRenderContext } from "./components/legend";
 export { Regions } from "./components/regions";
+export type { RegionsProps } from "./components/regions";
 export { Root } from "./components/root";
 export type { RootProps } from "./components/root";
 export { Selection } from "./components/selection";
@@ -87,6 +89,8 @@ export type { DrillContext } from "../core";
 export { PATTERN_PRESET_IDS, PATTERN_PRESETS } from "../core";
 export type {
   BackgroundOptions,
+  DotLattice,
+  DotMatrixOptions,
   GraticuleOptions,
   PatternPresetId,
   PatternPresetSpec,

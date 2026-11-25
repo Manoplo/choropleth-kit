@@ -3,6 +3,7 @@ import { Borders } from "./components/borders";
 import { Breadcrumb } from "./components/breadcrumb";
 import { Bubbles } from "./components/bubbles";
 import { Defs } from "./components/defs";
+import { Dots } from "./components/dots";
 import { Patterns } from "./components/patterns";
 import { DrillLayers } from "./components/drill-layers";
 import { FallbackPoints } from "./components/fallback-points";
@@ -27,6 +28,7 @@ export const Choropleth = {
   Background,
   Borders,
   Defs,
+  Dots,
   Graticule,
   Patterns,
   Breadcrumb,

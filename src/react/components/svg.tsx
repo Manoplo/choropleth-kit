@@ -4,6 +4,7 @@ import { useChoroplethContext } from "../choropleth-context";
 import { Background } from "./background";
 import { Borders } from "./borders";
 import { Defs } from "./defs";
+import { Dots } from "./dots";
 import { Patterns } from "./patterns";
 import { Bubbles } from "./bubbles";
 import { DrillLayers } from "./drill-layers";
@@ -15,6 +16,7 @@ import { Selection } from "./selection";
 import {
   zoomKeyAction,
   type BackgroundOptions,
+  type DotMatrixOptions,
   type GraticuleOptions,
   type PatternPresetId,
 } from "../../core";
@@ -40,6 +42,12 @@ export type SvgProps = {
    * layers; with your own `children`, add `<Choropleth.Graticule>` inside the `Viewport`.
    */
   graticule?: boolean | number | GraticuleOptions;
+  /**
+   * Draw the map as a lattice of dots: `true` or options (`gap`, `size`, `lattice`). The regions stay as an
+   * invisible hit layer; borders and region patterns are not drawn. Only applies to the default layers; with
+   * your own `children`, use `<Choropleth.Regions hitOnly />` + `<Choropleth.Dots />`.
+   */
+  dots?: boolean | DotMatrixOptions;
 };
 
 /**
@@ -50,7 +58,7 @@ export type SvgProps = {
  * While the asynchronous geometry has not arrived, it draws a skeleton with the same proportion the
  * map will have: the page does not jump when it appears.
  */
-export const Svg = ({ children, className, ariaLabel, background, graticule }: SvgProps) => {
+export const Svg = ({ children, className, ariaLabel, background, graticule, dots }: SvgProps) => {
   const { choropleth, store, viewportRef, classNames } = useChoroplethContext();
   const {
     width,
@@ -138,6 +146,9 @@ export const Svg = ({ children, className, ariaLabel, background, graticule }: S
           ? { step: graticule }
           : graticule;
 
+  const dotProps: DotMatrixOptions | null =
+    dots === undefined || dots === false ? null : dots === true ? {} : dots;
+
   return (
     <svg
       ref={svgRef}
@@ -158,13 +169,22 @@ export const Svg = ({ children, className, ariaLabel, background, graticule }: S
               <Graticule {...graticuleProps} />
             )}
             <DrillLayers role="context" />
-            <Regions />
-            <Patterns />
-            <Borders />
+            {dotProps === null ? (
+              <>
+                <Regions />
+                <Patterns />
+                <Borders />
+              </>
+            ) : (
+              <>
+                <Regions hitOnly />
+                <Dots {...dotProps} />
+              </>
+            )}
             {graticuleProps?.above === true && <Graticule {...graticuleProps} />}
             <Bubbles />
             <FallbackPoints />
-            <Selection />
+            <Selection regions={dotProps === null} />
             <Labels />
             <DrillLayers role="exiting" />
           </Viewport>

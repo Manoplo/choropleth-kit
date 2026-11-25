@@ -40,7 +40,7 @@ A default look for `<Choropleth.Marker>` (and the `markers` prop of `ChoroplethM
    (top, bottom, right, left) and slides to stay in (`chooseTooltipSide`, pure, in `src/core/marker-tooltip.ts`). It is separate from the
    map's own `<Tooltip>` (regions and data points).
 4. **Blocked on click-to-zoom (FEAT-027, section 6):** click a marker to fly the camera to it.
-5. **Done:** documentation, in the «Bubbles and markers» guide (code only: live examples wait for a release, because the site consumes the published package). The options reference page is generated from the published package, so it picks the new options up after the release.
+5. **Done:** documentation, in the «Bubbles and markers» guide and a live example with switches (shape, pulse, glow, labels, tooltip), added once 0.4.0 was published. The options reference page is generated from the published package.
 
 ## Acceptance criteria
 

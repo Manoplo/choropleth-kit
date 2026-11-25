@@ -23,7 +23,6 @@ const levels = defineDrillLevels<Row>([
     label: "World",
     geography: world110m,
     objectName: "countries",
-    filterFeatures: (feature) => feature.id !== "AQ", // no Antarctica
     canDrill: (item) => item.id === "US", // only the US has a level below in this example
   },
   {

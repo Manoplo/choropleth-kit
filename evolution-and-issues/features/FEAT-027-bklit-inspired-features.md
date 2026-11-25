@@ -1,19 +1,23 @@
 # FEAT-027 · Features inspired by bklit's choropleth (analysis and plan)
 
 - **Type:** Feature (umbrella: analysis, viability and the plan for several child features)
-- **Status:** in progress (package A done; B to E not started)
+- **Status:** in progress (packages A and B done; D in progress; C and E not started)
 - **Priority (proposed):** high (top priority, set by the maintainer on 2026-11-23)
-- **Origin:** maintainer, after reviewing bklit's choropleth chart (2026-11-23). Branch: `feat/patterns-and-graticule`.
+- **Origin:** maintainer, after reviewing bklit's choropleth chart (2026-11-23). Branches: `feat/patterns-and-graticule`
+  (package A), `feat/marker-presets` (B), `feat/dot-matrix` (D).
 
 ## What
 
 Evaluate what bklit's choropleth offers that we lack (graticule, dot-matrix map, background patterns, click-to-zoom with
-a cinematic camera, marker presets) and how viable each piece is for us. Package A (the three "very high" items) is
-being built first; the rest stays as analysis until the maintainer picks it.
+a cinematic camera, marker presets) and how viable each piece is for us. Sections 1 to 9 are the analysis as written before
+building anything; what has been built since is in «Progress».
 
 ## Sources and caveats
 
 - Docs: <https://bklit.com/docs/components/choropleth-chart> · Gallery: <https://bklit.com/charts/choropleth-chart>
+- Source (MIT license): <https://github.com/bklit/bklit-ui/tree/main/packages/ui/src/charts/choropleth>. The dot grid
+  is `choropleth-dot-grid.tsx`; the camera, `choropleth-camera.tsx`. These two were read on 2026-11-25, after the analysis
+  below.
 - Both pages were read as **text** (props tables, code samples, one-line captions). **The live visual effects
   (the tilt, the flight, the dot lattice) were not rendered or seen**; what I say about how they look comes from
   their captions and props. Before committing to anything in sections 4 and 5, open their gallery and
@@ -259,20 +263,50 @@ decoration and camera work on top of an engine that already has the hard parts.
 
 ## Progress
 
-- **Package A: done** (including its documentation guide, «Patterns, background and graticule»; live examples wait for the next release, because the site consumes the published package). Graticule (FEAT-003, now `done`), background pattern with edge fades, and a
-  catalogue of 32 pattern presets for regions (`emptyPattern`, `getRegionStyle().pattern`) and the background. Story: «Layers / Patterns and graticule».
-- **Extra, from validation:** `showAntarctica` (default `false`; a map that drops it uses `aspectRatio="auto"` unless set), so Mercator maps are usable.
-  Antarctica is no longer drawn by default on any world map (breaking, pre-1.0).
-- **Package B (markers and click): in progress**, tracked in FEAT-028 (marker presets). Click-to-zoom not started.
-- Packages C to E: not started.
+- **Package A: done** (including its documentation guide, «Patterns, background and graticule», with a live example with
+  switches, added after the 0.4.0 release). Graticule (FEAT-003, now `done`), background pattern with edge fades, and a
+  catalogue of 32 pattern presets for regions (`emptyPattern`, `getRegionStyle().pattern`) and the background. Story:
+  «Layers / Patterns and graticule».
+- **Extra, from validation:** `showAntarctica` (default `false`; a map that drops it uses `aspectRatio="auto"` unless set),
+  so Mercator maps are usable. Antarctica is no longer drawn by default on any world map (breaking, pre-1.0).
+- **Package B (markers and click): done** (marker presets, FEAT-028). **Click-to-zoom (section 6) is not part of what
+  shipped**: it is not in the code, and with it stays pending «click a marker to fly there» (FEAT-028, step 4).
+- **Package D (dot-matrix renderer): in progress.** See below.
+- Packages C and E: not started.
+
+### Package D: steps
+
+1. **D1, lattice and renderer: done, pending the maintainer's review.**
+   - `src/core/dot-matrix.ts`: hex or square lattice over the projected region paths, filled row by row (even-odd rule,
+     so holes stay empty), computed once per geometry and size. A region with a value that catches no dot borrows the
+     nearest one within two rows and columns.
+   - `dots` prop on `ChoroplethMap` and `Choropleth.Svg` (`true` or `{ gap, size, lattice }`; defaults 6 px, 0.7, hex),
+     plus `Choropleth.Dots` and `Choropleth.Regions hitOnly` for hand composition. It is a prop beside `background` and
+     `graticule`, not the `renderer: "dots"` of section 7.
+   - One `<path>` per look (color, legend class, opacity, class name). The regions stay as an invisible hit layer, so
+     tooltip, selection, click and legend highlight work; the hovered and selected regions get a halo around each dot.
+   - Not drawn with dots: borders and region patterns.
+   - Story: «Layers / Dot matrix» (checked in headless Chrome: light and dark themes, hover, click, legend highlight,
+     wheel zoom, square lattice, `region="europe"`).
+   - Difference with bklit: it rasterizes the map on an offscreen canvas and reads pixels; we scan the polygons in
+     `core` (testable without a DOM) and, unlike it, give tiny regions a dot.
+   - The builder is **not exported from `choropleth-kit/core`** (only the option types): exporting it put the `core`
+     bundle 128 B over its 50 KB budget.
+2. **D2, zoom:** dots currently scale with the camera, so at high zoom they become very large. Cap the zoom for this
+   renderer (option (a) of section 7) and decide whether the dot grows relative to the gap.
+3. **D3, ocean and edge fade:** smaller, dimmer dots outside the regions, and a soft fade at the edges.
+4. **D4, gaps:** drill-down (the parent levels are still drawn as filled gray shapes, and the reveal animation does not
+   show on dots), a way to tell «no data» apart without color (patterns are off), and hovering a borrowed dot that
+   falls outside its region's shape (it does not react).
+5. **D5, documentation:** guide, options reference and live example on the website.
 
 ## Suggested plan
 
-1. **Package A, "decoration" (S, low risk, visible):** graticule + `Sphere` (FEAT-003), background pattern, pattern presets, edge fade.
-2. **Package B, "markers and click":** marker presets (shape, pulse, glow, label), click-to-zoom with the `onRegionClick` mode decision,
-   custom ease and `focusMaxZoom`.
+1. ~~**Package A, "decoration":** graticule + `Sphere` (FEAT-003), background pattern, pattern presets, edge fade.~~ Done.
+2. ~~**Package B, "markers and click":** marker presets (shape, pulse, glow, label).~~ Done; click-to-zoom with the
+   `onRegionClick` mode decision, custom ease and `focusMaxZoom` is still pending.
 3. **Package C, "beyond bubbles":** value badges first, then spike markers (needs your decision on a `symbol` option vs new variants).
-4. **Package D, dot-matrix renderer:** core lattice + one-path-per-class rendering + invisible hit layer, zoom capped.
+4. **Package D, dot-matrix renderer:** in progress (steps above).
 5. **Package E, perspective camera:** static tilt proof of concept in a story, then decide.
 
 Per `AGENTS.md`, each package would be split into bounded steps, each with its own story opened in a browser before being marked done.

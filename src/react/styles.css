@@ -381,11 +381,33 @@
   .cm-regions,
 :where(.cm-root:not([data-unstyled]))[data-dim="hover-and-selection"]
   .cm-svg:has(path[data-selection="hover"])
-  .cm-regions {
+  .cm-regions,
+:where(.cm-root:not([data-unstyled]))[data-dim="selection"][data-has-selection] .cm-dots-base,
+:where(.cm-root:not([data-unstyled]))[data-dim="hover-and-selection"][data-has-selection]
+  .cm-dots-base,
+:where(.cm-root:not([data-unstyled]))[data-dim="hover-and-selection"]
+  .cm-svg:has(g[data-selection="hover"])
+  .cm-dots-base {
   opacity: var(--cm-dim-opacity, 0.45);
 }
-:where(.cm-root:not([data-unstyled])) .cm-regions {
+:where(.cm-root:not([data-unstyled])) :is(.cm-regions, .cm-dots-base) {
   transition: opacity var(--cm-transition-duration, 250ms);
+}
+
+/* ── dot matrix ──────────────────────────────────────────────────────────────────────────── */
+
+/* Each group's `stroke` (the datum's color) goes inline; here, only the transition and the highlight. */
+:where(.cm-root:not([data-unstyled])) .cm-dot-group {
+  transition:
+    stroke var(--cm-transition-duration, 250ms),
+    opacity var(--cm-transition-duration, 250ms);
+}
+/* A halo around each dot of the hovered or selected region (the dot-matrix version of its outline). */
+:where(.cm-root:not([data-unstyled])) .cm-dots [data-selection="hover"] .cm-dots-halo {
+  stroke: var(--cm-hover-stroke, #000000);
+}
+:where(.cm-root:not([data-unstyled])) .cm-dots [data-selection="selected"] .cm-dots-halo {
+  stroke: var(--cm-selected-stroke, #0b5fff);
 }
 
 /* ── loading ────────────────────────────────────────────────────────────────────────────────── */
@@ -412,7 +434,7 @@
 }
 
 /* Data on its way: the map "breathes" without emptying (the last data is kept). */
-:where(.cm-root:not([data-unstyled]))[data-loading] .cm-regions {
+:where(.cm-root:not([data-unstyled]))[data-loading] :is(.cm-regions, .cm-dots-base) {
   animation: cm-pulse 1.5s ease-in-out infinite;
 }
 
@@ -428,7 +450,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   :where(.cm-root:not([data-unstyled])) .cm-skeleton,
-  :where(.cm-root:not([data-unstyled]))[data-loading] .cm-regions {
+  :where(.cm-root:not([data-unstyled]))[data-loading] :is(.cm-regions, .cm-dots-base) {
     animation: none;
   }
 }
@@ -663,20 +685,32 @@
  * region already carries its `data-class` (which depends only on the datum), so NO region is re-rendered.
  * Static rules for classes 0-11 and "empty" (more than 12 classes are not highlighted).
  */
-:where(.cm-root:not([data-unstyled]))[data-highlight-class="0"] .cm-region:not([data-class="0"]),
-:where(.cm-root:not([data-unstyled]))[data-highlight-class="1"] .cm-region:not([data-class="1"]),
-:where(.cm-root:not([data-unstyled]))[data-highlight-class="2"] .cm-region:not([data-class="2"]),
-:where(.cm-root:not([data-unstyled]))[data-highlight-class="3"] .cm-region:not([data-class="3"]),
-:where(.cm-root:not([data-unstyled]))[data-highlight-class="4"] .cm-region:not([data-class="4"]),
-:where(.cm-root:not([data-unstyled]))[data-highlight-class="5"] .cm-region:not([data-class="5"]),
-:where(.cm-root:not([data-unstyled]))[data-highlight-class="6"] .cm-region:not([data-class="6"]),
-:where(.cm-root:not([data-unstyled]))[data-highlight-class="7"] .cm-region:not([data-class="7"]),
-:where(.cm-root:not([data-unstyled]))[data-highlight-class="8"] .cm-region:not([data-class="8"]),
-:where(.cm-root:not([data-unstyled]))[data-highlight-class="9"] .cm-region:not([data-class="9"]),
-:where(.cm-root:not([data-unstyled]))[data-highlight-class="10"] .cm-region:not([data-class="10"]),
-:where(.cm-root:not([data-unstyled]))[data-highlight-class="11"] .cm-region:not([data-class="11"]),
+:where(.cm-root:not([data-unstyled]))[data-highlight-class="0"]
+  :is(.cm-region, .cm-dot-group):not([data-class="0"]),
+:where(.cm-root:not([data-unstyled]))[data-highlight-class="1"]
+  :is(.cm-region, .cm-dot-group):not([data-class="1"]),
+:where(.cm-root:not([data-unstyled]))[data-highlight-class="2"]
+  :is(.cm-region, .cm-dot-group):not([data-class="2"]),
+:where(.cm-root:not([data-unstyled]))[data-highlight-class="3"]
+  :is(.cm-region, .cm-dot-group):not([data-class="3"]),
+:where(.cm-root:not([data-unstyled]))[data-highlight-class="4"]
+  :is(.cm-region, .cm-dot-group):not([data-class="4"]),
+:where(.cm-root:not([data-unstyled]))[data-highlight-class="5"]
+  :is(.cm-region, .cm-dot-group):not([data-class="5"]),
+:where(.cm-root:not([data-unstyled]))[data-highlight-class="6"]
+  :is(.cm-region, .cm-dot-group):not([data-class="6"]),
+:where(.cm-root:not([data-unstyled]))[data-highlight-class="7"]
+  :is(.cm-region, .cm-dot-group):not([data-class="7"]),
+:where(.cm-root:not([data-unstyled]))[data-highlight-class="8"]
+  :is(.cm-region, .cm-dot-group):not([data-class="8"]),
+:where(.cm-root:not([data-unstyled]))[data-highlight-class="9"]
+  :is(.cm-region, .cm-dot-group):not([data-class="9"]),
+:where(.cm-root:not([data-unstyled]))[data-highlight-class="10"]
+  :is(.cm-region, .cm-dot-group):not([data-class="10"]),
+:where(.cm-root:not([data-unstyled]))[data-highlight-class="11"]
+  :is(.cm-region, .cm-dot-group):not([data-class="11"]),
 :where(.cm-root:not([data-unstyled]))[data-highlight-class="empty"]
-  .cm-region:not([data-class="empty"]) {
+  :is(.cm-region, .cm-dot-group):not([data-class="empty"]) {
   opacity: var(--cm-dim-opacity, 0.45);
 }
 :where(.cm-root:not([data-unstyled])) .cm-legend [data-class] {
