@@ -64,12 +64,20 @@ const AnonymousPath = memo(({ d, fill }: { d: string; fill: string }) => (
 const regionIdFrom = (event: SyntheticEvent): string | null =>
   (event.target as Element).closest?.("[data-region-id]")?.getAttribute("data-region-id") ?? null;
 
+export type RegionsProps = {
+  /**
+   * The regions stay invisible and only take the pointer (hover, click, tooltip, drill): for a layer that
+   * paints them differently on top, like `<Choropleth.Dots>`.
+   */
+  hitOnly?: boolean;
+};
+
 /**
  * The colored regions. ONE listener per event type on the `<g>` (delegation) instead of one
  * per `<path>`: with hundreds of regions it is less work and no closures are recreated.
  * Pointer Events: the same code for mouse, pen and touch.
  */
-export const Regions = () => {
+export const Regions = ({ hitOnly }: RegionsProps = {}) => {
   const { choropleth, store, classNames } = useChoroplethContext();
   const {
     regions,
@@ -91,7 +99,7 @@ export const Regions = () => {
   // With GeoJSON there are no `borders` (mesh): the CSS draws each region's outline.
   const outlined = borders === null;
 
-  return (
+  const layer = (
     <g
       className={cx("cm-regions", classNames.regions)}
       data-outlined={outlined ? "" : undefined}
@@ -135,5 +143,13 @@ export const Regions = () => {
         />
       ))}
     </g>
+  );
+  // On a wrapper, not on `.cm-regions`: the CSS animates and dims that group's opacity.
+  return hitOnly === true ? (
+    <g className="cm-hit-layer" opacity={0}>
+      {layer}
+    </g>
+  ) : (
+    layer
   );
 };

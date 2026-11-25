@@ -1,18 +1,28 @@
 ---
 title: Known limitations
-description: What choropleth-kit does not do yet or does with caveats. Incoming.
-sidebar:
-  badge:
-    text: Incoming
-    variant: caution
+description: What choropleth-kit does not do yet, or does with caveats.
 ---
 
-:::caution[Incoming]
-The complete list is not written yet. These are the limits that are already documented elsewhere on this site.
-:::
+This is the list of limits we know about today. Each one that is planned has a link to its document in the repository.
+
+## Interaction
 
 - **Accessibility is not complete.** The map has `role="img"`, keyboard zoom and drill-up, and semantic breadcrumbs. Arrow-key navigation between regions, an alternative data table and live announcements are not there yet. See [Accessibility](/guides/accessibility/).
+- **Clicking a marker does not fly to it.** Click-to-zoom is planned; until then a marker's click is up to your code.
+
+## Labels and markers
+
+- **Marker labels do not avoid region names.** They avoid each other, but a marker label can sit on top of a region name.
+- **Markers are not clustered.** Many markers in a small area overlap. Clustering is planned.
+
+## Rendering
+
+- **SVG rendering.** The map is drawn as SVG, which is not the right tool for millions of points. See [Why choropleth-kit?](/why/).
+- **The dot-matrix renderer** (`dots`) does not cap its zoom yet: dots grow large when you zoom in a lot, and it does not draw ocean dots, drill-down levels or "no data" patterns.
+- **No `animation` prop yet.** Apart from the zoom flights, the drill reveal and the marker pulse (CSS, off with reduced motion), changes between states are instant.
+
+## Packaging
+
 - **ESM only.** There is no CommonJS build. See [What to import from where](/imports/).
 - **The bundle is not tiny.** The geodata and the d3 modules add up. See [Performance model](/concepts/performance/).
-- **SVG rendering.** The map is drawn as SVG, which is not the right tool for millions of points. See [Why choropleth-kit?](/why/).
-- **Pre-1.0.** The API may change. See [Status and roadmap](/project/status/).
+- **Pre-1.0.** The API may change between minor versions. See [Status and roadmap](/project/status/).

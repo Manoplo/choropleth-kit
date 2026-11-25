@@ -1,14 +1,29 @@
 ---
-title: Migration and changelog
-description: Breaking changes between versions. Incoming.
-sidebar:
-  badge:
-    text: Incoming
-    variant: caution
+title: Changelog
+description: What changed in each version of choropleth-kit, and what breaks when you upgrade.
 ---
 
-:::caution[Incoming]
-A changelog and migration notes are not published on this site yet.
-:::
+The package is pre-1.0: check the version you install, and read the breaking notes before you upgrade a minor version. The full history, commit by commit, is on [GitHub](https://github.com/Manoplo/choropleth-kit).
 
-Until then, the history of changes is in the repository: [github.com/Manoplo/choropleth-kit](https://github.com/Manoplo/choropleth-kit). The package is pre-1.0, so check the version you install and expect the API to change between minor versions.
+## 0.4.0 · 2026-11-24
+
+- **Graticule**: meridians and parallels (`graticule`), with an optional world outline. Its line width does not grow when you zoom.
+- **Background pattern** behind the map (`background`), with soft fades at the edges, and **32 pattern presets** for regions and the background.
+- **Marker presets**: `shape` (circle, triangle, square, diamond, pin), `pulse`, `glow`, `label` and `tooltip`.
+- **This documentation site.**
+
+**Breaking:** Antarctica is no longer drawn by default on any world map. Pass `showAntarctica` to bring it back. A map that drops it uses `aspectRatio="auto"` unless you set one.
+
+## 0.3.0 · 2026-11-17
+
+- **Region labels** (`regionLabels`), with collision handling: lower-priority names are hidden and zooming in reveals more.
+- **HTML markers** (`<Choropleth.Marker>`, `markers`), anchored to a coordinate and kept in place while the map moves.
+- **Custom color ramps**: `palette` as `{ from, to }` or as a list of stops, with a fixed `domain`.
+
+## 0.2.0 · 2026-11-15
+
+- **Subdivisions of a country** (`choropleth-kit/geo/admin1/*`), loaded on demand, with drill-down from the country.
+
+## 0.1.0 · 2026-11-12
+
+- First public version: the three API levels, the four variants, zoom and pan with flights, drill-down, legends, tooltips, theming and the headless hook.
